@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 
 class Appdata extends ChangeNotifier {
   String _username = '';
-  int _uid = 0;
+  String _uid = '';
   String _email = '';
   String _errorMessage = '';
   String _profileImage = '';
@@ -14,12 +14,12 @@ class Appdata extends ChangeNotifier {
 
   GetStorage gs = GetStorage();
 
-  int get uid => _uid;
+  String get uid => _uid;
   String get username => _username;
   String get email => _email;
   String get profileImage => _profileImage;
 
-  set uid(int value) {
+  set uid(String value) {
     _uid = value;
     notifyListeners();
   }
@@ -43,33 +43,71 @@ class Appdata extends ChangeNotifier {
 
   Future<void> fetchUserData() async {
     GetStorage gs = GetStorage();
-    _uid = gs.read('uid') ?? 0;
+    final storedUid = gs.read('uid');
+    _uid = storedUid == null ? '' : storedUid.toString();
 
-    if (_uid != 0) {
+    if (_uid.isNotEmpty) {
       final response = await http.get(Uri.parse('$API_ENDPOINT/users/$_uid'));
 
       if (response.statusCode == 200) {
-        final userData = jsonDecode(response.body);
-        _username = userData['username'] ?? '';
-        _uid = int.tryParse(userData['uid'].toString()) ?? 0;
-        _email = userData['email'] ?? '';
-        _profileImage = userData['profile_image'] ?? '';
-        _errorMessage = '';
-        notifyListeners();
+        final userData = _extractUserMap(jsonDecode(response.body));
+        if (userData.isNotEmpty) {
+          _applyUserData(userData);
+          _errorMessage = '';
+        } else {
+          _handleUserError('ไม่พบข้อมูลผู้ใช้ในข้อมูลตอบกลับ');
+        }
       } else {
-        _errorMessage = 'ไม่สามารถดึงข้อมูลผู้ใช้ได้: ${response.statusCode}';
-        notifyListeners();
+        _handleUserError('ไม่สามารถดึงข้อมูลผู้ใช้ได้: ${response.statusCode}');
       }
     } else {
-      _username = '';
-      _email = '';
-      _profileImage = '';
-      _errorMessage = '';
-      notifyListeners();
+      _clearUserData();
     }
+  }
+
+  void updateFromMap(Map<String, dynamic> userData) {
+    _applyUserData(userData);
+  }
+
+  Map<String, dynamic> _extractUserMap(dynamic responseBody) {
+    if (responseBody is Map<String, dynamic>) {
+      if (responseBody['data'] is Map<String, dynamic>) {
+        return responseBody['data'] as Map<String, dynamic>;
+      }
+      return responseBody;
+    }
+    return <String, dynamic>{};
+  }
+
+  void _applyUserData(Map<String, dynamic> userData) {
+    _username = userData['username']?.toString() ?? _username;
+    _uid =
+        userData['uid']?.toString() ??
+        userData['id']?.toString() ??
+        _uid;
+    _email = userData['email']?.toString() ?? _email;
+    _profileImage =
+        userData['profile_image']?.toString() ??
+        userData['profileImage']?.toString() ??
+        _profileImage;
+    notifyListeners();
+  }
+
+  void _handleUserError(String message) {
+    _errorMessage = message;
+    notifyListeners();
+  }
+
+  void _clearUserData() {
+    _username = '';
+    _uid = '';
+    _email = '';
+    _profileImage = '';
+    _errorMessage = '';
+    notifyListeners();
   }
 }
 
 class UserProfile {
-  int uid = 0;
+  String uid = '';
 }

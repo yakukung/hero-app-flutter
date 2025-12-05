@@ -321,7 +321,6 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      log('Login API at $API_ENDPOINT/auth/login');
       final response = await http.post(
         Uri.parse('$API_ENDPOINT/auth/login'),
         headers: {'Content-Type': 'application/json'},
@@ -330,20 +329,43 @@ class _LoginPageState extends State<LoginPage> {
           'password': _passwordCtl.text.trim(),
         }),
       );
+      log(response.body);
 
       if (response.statusCode != 200) {
         _handleInvalidCredentials();
         return;
       }
 
-      final uid = _parseUid(response.body);
-      if (uid == null) {
+      final payload = _decodeLoginPayload(response.body);
+      if (payload == null) {
+        _showUnexpectedResponse();
+        return;
+      }
+
+      final int apiCode = _parseApiCode(payload['code']);
+      if (apiCode != 200) {
+        final String message =
+            payload['message']?.toString() ??
+            'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+        _showErrorDialog('เข้าสู่ระบบไม่สำเร็จ', message);
+        return;
+      }
+
+      final dynamic data = payload['data'];
+      if (data is! Map<String, dynamic>) {
+        log('Error: data field missing or invalid in response');
+        _showUnexpectedResponse();
+        return;
+      }
+
+      final String? uid = _extractUid(data);
+      if (uid == null || uid.isEmpty) {
         log('Error: uid is null in response');
         _showUnexpectedResponse();
         return;
       }
 
-      await _completeLogin(uid);
+      await _completeLogin(uid, data);
     } catch (error) {
       log('Login error: $error');
       _showNetworkError();
@@ -381,19 +403,37 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  int? _parseUid(String responseBody) {
-    final dynamic jsonResponse = jsonDecode(responseBody);
-    final dynamic uidValue = jsonResponse['uid'];
-    return uidValue == null ? null : int.tryParse(uidValue.toString());
+  Map<String, dynamic>? _decodeLoginPayload(String responseBody) {
+    try {
+      final dynamic decoded = jsonDecode(responseBody);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (error) {
+      log('Error decoding login response: $error');
+      return null;
+    }
   }
 
-  Future<void> _completeLogin(int uid) async {
+  int _parseApiCode(dynamic code) {
+    if (code is int) return code;
+    if (code is String) {
+      return int.tryParse(code) ?? 0;
+    }
+    return 0;
+  }
+
+  String? _extractUid(Map<String, dynamic> data) {
+    final dynamic uidValue = data['uid'] ?? data['id'];
+    return uidValue?.toString();
+  }
+
+  Future<void> _completeLogin(String uid, Map<String, dynamic> userData) async {
     final storage = GetStorage();
     storage.write('uid', uid);
     log('GetStorage: uid=$uid saved');
 
     if (!mounted) return;
     final appData = Provider.of<Appdata>(context, listen: false);
+    appData.updateFromMap(userData);
     await appData.fetchUserData();
 
     final NavigationService navService = Get.find<NavigationService>();

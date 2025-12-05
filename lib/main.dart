@@ -74,7 +74,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     final appData = Provider.of<Appdata>(context);
-    return appData.uid == 0 ? IntroPage() : MainPage();
+    return appData.uid.isEmpty ? IntroPage() : MainPage();
   }
 }
 

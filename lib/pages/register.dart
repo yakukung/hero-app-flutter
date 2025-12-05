@@ -329,36 +329,40 @@ class _RegisterPageState extends State<RegisterPage> {
           'username': username,
           'email': email,
           'password': password,
+          'confirmPassword': cfPassword,
         }),
       );
+      log('Register response: ${response.body}');
 
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['status'] == 'ok') {
-        setState(() {
-          isLoading = false;
-        });
+      final payload = _decodeRegisterPayload(response.body);
+      if (payload == null) {
+        setState(() => isLoading = false);
         showCustomDialog(
-          'สำเร็จ',
-          'สมัครสมาชิกสำเร็จ',
-          isSuccess: true,
-          onOk: () {
-            Get.offAll(() => const LoginPage());
-          },
+          'เกิดข้อผิดพลาด',
+          'ไม่สามารถสมัครสมาชิกได้ กรุณาลองใหม่',
         );
+        return;
+      }
+
+      final bool isSuccessful =
+          response.statusCode == 200 && _parseApiCode(payload['code']) == 200;
+
+      if (isSuccessful) {
+        setState(() => isLoading = false);
+        final successMessage =
+            payload['message']?.toString() ?? 'สมัครสมาชิกสำเร็จ';
+        showCustomDialog('สำเร็จ', successMessage, isSuccess: true);
+        return;
+      }
+
+      setState(() => isLoading = false);
+      final String errorMsg = _extractErrorMessage(payload);
+      if (errorMsg.contains('username')) {
+        showCustomDialog('ชื่อผู้ใช้ซ้ำ', 'ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว');
+      } else if (errorMsg.contains('email')) {
+        showCustomDialog('อีเมลซ้ำ', 'อีเมลนี้ถูกใช้ไปแล้ว');
       } else {
-        setState(() {
-          isLoading = false;
-        });
-        // ตรวจสอบข้อความ error จาก backend
-        String errorMsg = data['error'] ?? 'ไม่สามารถสมัครสมาชิกได้';
-        if (errorMsg.contains('username')) {
-          showCustomDialog('ชื่อผู้ใช้ซ้ำ', 'ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว');
-        } else if (errorMsg.contains('email')) {
-          showCustomDialog('อีเมลซ้ำ', 'อีเมลนี้ถูกใช้ไปแล้ว');
-        } else {
-          showCustomDialog('เกิดข้อผิดพลาด', errorMsg);
-        }
+        showCustomDialog('เกิดข้อผิดพลาด', errorMsg);
       }
     } catch (e) {
       setState(() {
@@ -366,6 +370,54 @@ class _RegisterPageState extends State<RegisterPage> {
       });
       showCustomDialog('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
     }
+  }
+
+  Map<String, dynamic>? _decodeRegisterPayload(String responseBody) {
+    try {
+      final dynamic decoded = jsonDecode(responseBody);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (error) {
+      log('Error decoding register response: $error');
+      return null;
+    }
+  }
+
+  int _parseApiCode(dynamic code) {
+    if (code is int) return code;
+    if (code is String) {
+      return int.tryParse(code) ?? 0;
+    }
+    return 0;
+  }
+
+  String _extractErrorMessage(Map<String, dynamic> payload) {
+    final dynamic errorField = payload['error'];
+    if (errorField is Map<String, dynamic>) {
+      final dynamic messageField = errorField['message'];
+      if (messageField is Map<String, dynamic>) {
+        return messageField['th']?.toString() ??
+            messageField['en']?.toString() ??
+            messageField.values
+                .firstWhere(
+                  (value) => value != null,
+                  orElse: () => 'ไม่สามารถสมัครสมาชิกได้',
+                )
+                .toString();
+      }
+      if (messageField != null) {
+        return messageField.toString();
+      }
+      return errorField.values
+          .firstWhere(
+            (value) => value != null,
+            orElse: () => 'ไม่สามารถสมัครสมาชิกได้',
+          )
+          .toString();
+    }
+    if (errorField != null) {
+      return errorField.toString();
+    }
+    return payload['message']?.toString() ?? 'ไม่สามารถสมัครสมาชิกได้';
   }
 }
 
@@ -437,10 +489,10 @@ void showCustomDialog(
               ),
             ),
             onPressed: () {
-              Get.back();
-              if (onOk != null) {
-                onOk();
+              if (Get.isDialogOpen ?? false) {
+                Get.back();
               }
+              onOk?.call();
             },
             child: const Text('ตกลง'),
           ),
