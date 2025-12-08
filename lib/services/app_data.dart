@@ -47,7 +47,7 @@ class Appdata extends ChangeNotifier {
     _uid = storedUid == null ? '' : storedUid.toString();
 
     if (_uid.isNotEmpty) {
-      final response = await http.get(Uri.parse('$API_ENDPOINT/users/$_uid'));
+      final response = await http.get(Uri.parse('$apiEndpoint/users/$_uid'));
 
       if (response.statusCode == 200) {
         final userData = _extractUserMap(jsonDecode(response.body));
@@ -81,10 +81,7 @@ class Appdata extends ChangeNotifier {
 
   void _applyUserData(Map<String, dynamic> userData) {
     _username = userData['username']?.toString() ?? _username;
-    _uid =
-        userData['uid']?.toString() ??
-        userData['id']?.toString() ??
-        _uid;
+    _uid = userData['uid']?.toString() ?? userData['id']?.toString() ?? _uid;
     _email = userData['email']?.toString() ?? _email;
     _profileImage =
         userData['profile_image']?.toString() ??

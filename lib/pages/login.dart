@@ -322,7 +322,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('$API_ENDPOINT/auth/login'),
+        Uri.parse('$apiEndpoint/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'usernameOrEmail': _usernameOrEmailCtl.text.trim(),

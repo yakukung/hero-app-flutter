@@ -32,7 +32,7 @@ class ProductData extends ChangeNotifier {
     while (retryCount < maxRetries) {
       try {
         final response = await http
-            .get(Uri.parse('$API_ENDPOINT/product'))
+            .get(Uri.parse('$apiEndpoint/product'))
             .timeout(timeoutDuration);
 
         if (response.statusCode == 200) {

@@ -3,7 +3,6 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
-import 'package:flutter_application_1/pages/login.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 
@@ -320,10 +319,10 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    log('Register API at $API_ENDPOINT/auth/register');
+    log('Register API at $apiEndpoint/auth/register');
     try {
       final response = await http.post(
-        Uri.parse('$API_ENDPOINT/auth/register'),
+        Uri.parse('$apiEndpoint/auth/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'username': username,
