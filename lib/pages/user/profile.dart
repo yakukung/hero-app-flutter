@@ -50,7 +50,7 @@ class _ProfilePageState extends State<ProfilePage> {
         appData.setProfileImage(downloadURL);
 
         final response = await http.put(
-          Uri.parse('$API_ENDPOINT/users/update-profile'),
+          Uri.parse('$apiEndpoint/users/update-profile'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'uid': appData.uid, 'profile_image': downloadURL}),
         );

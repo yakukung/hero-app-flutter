@@ -28,7 +28,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
   Future<void> _fetchProductDetails() async {
     try {
       final response = await http.get(
-        Uri.parse('$API_ENDPOINT/product/${widget.productId}'),
+        Uri.parse('$apiEndpoint/product/${widget.productId}'),
       );
 
       log('API Status Code: ${response.statusCode}');
