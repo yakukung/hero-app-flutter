@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "imageUrl": "https://cdn-icons-png.flaticon.com/512/2772/2772128.png",
+    "title": "ชีทสรุปรวมคำสั่ง SQL",
+    "author": "สมพงษ์",
+    "rating": 4.7,
+    "price": 150,
+    "is_favorite": 1
+  },
+  {
+    "id": 2,
+    "imageUrl": "https://cdn-icons-png.flaticon.com/512/3063/3063205.png",
+    "title": "ชีทสรุปแคลคูลัส",
+    "author": "สมพงษ์",
+    "rating": 4.9,
+    "price": 0,
+    "is_favorite": 0
+  },
+  {
+    "id": 3,
+    "imageUrl": "https://cdn-icons-png.flaticon.com/512/2772/2772128.png",
+    "title": "ชีทสรุปรวมคำสั่ง SQL ขั้นสูง",
+    "author": "สมพงษ์",
+    "rating": 4.8,
+    "price": 200,
+    "is_favorite": 0
+  },
+  {
+    "id": 4,
+    "imageUrl": "https://cdn-icons-png.flaticon.com/512/3063/3063205.png",
+    "title": "ชีทสรุปแคลคูลัส 2",
+    "author": "สมพงษ์",
+    "rating": 4.5,
+    "price": 0,
+    "is_favorite": 1
+  }
+]

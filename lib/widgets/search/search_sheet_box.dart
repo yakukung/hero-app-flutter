@@ -7,7 +7,7 @@ class SearchSheetBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 200,
-      width: 379,
+      width: 360,
       decoration: BoxDecoration(
         color: const Color(0xFFD6E3FF),
         borderRadius: BorderRadius.circular(45),

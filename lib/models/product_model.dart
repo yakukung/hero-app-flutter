@@ -29,7 +29,7 @@ class Product {
       author: json['author'],
       rating: json['rating']?.toDouble(),
       price: json['price']?.toString(),
-      isFavorite: json['isFavorite'] ?? false,
+      isFavorite: json['isFavorite'] ?? (json['is_favorite'] == 1),
     );
   }
 
