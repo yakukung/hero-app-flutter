@@ -34,20 +34,19 @@ class SideBar extends StatelessWidget {
                             radius: 40,
                             backgroundColor: Colors.white,
                             child: ClipOval(
-                              child:
-                                  appData.profileImage.isNotEmpty
-                                      ? Image.network(
-                                        appData.profileImage,
-                                        width: 90,
-                                        height: 90,
-                                        fit: BoxFit.cover,
-                                      )
-                                      : Image.asset(
-                                        'assets/images/default/avatar.png',
-                                        width: 90,
-                                        height: 90,
-                                        fit: BoxFit.cover,
-                                      ),
+                              child: appData.profileImage.isNotEmpty
+                                  ? Image.network(
+                                      appData.profileImage,
+                                      width: 90,
+                                      height: 90,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.asset(
+                                      'assets/images/default/avatar.png',
+                                      width: 90,
+                                      height: 90,
+                                      fit: BoxFit.cover,
+                                    ),
                             ),
                           ),
                         ),
@@ -189,7 +188,7 @@ class SideBar extends StatelessWidget {
                   ),
                   SidebarMenuItem(
                     icon: Icons.upload_rounded,
-                    label: 'โพสต์ชีต',
+                    label: 'อัปโหลดชีต',
                     selected: navigationService.currentIndex.value == 2,
                     onTap: () {
                       navigationService.changeIndex(2);
@@ -253,96 +252,95 @@ class SideBar extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder:
-          (context) => Stack(
-            children: [
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                  child: const SizedBox(),
+      builder: (context) => Stack(
+        children: [
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: const SizedBox(),
+            ),
+          ),
+          Container(
+            height: 350,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Container(
+                  width: 80,
+                  height: 6,
+                  margin: const EdgeInsets.only(bottom: 60),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
                 ),
-              ),
-              Container(
-                height: 350,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
+                const Text(
+                  'ยืนยันออกจากระบบ',
+                  style: TextStyle(
+                    fontFamily: 'SukhumvitSet',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 30,
+                    color: Colors.black,
+                  ),
                 ),
-                padding: const EdgeInsets.all(20),
-                child: Column(
+                const SizedBox(height: 10),
+                const Text(
+                  'คุณต้องการออกจากระบบใช่ไหม?',
+                  style: TextStyle(
+                    fontFamily: 'SukhumvitSet',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFF6E6E6E),
+                  ),
+                ),
+                const SizedBox(height: 50),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    Container(
-                      width: 80,
-                      height: 6,
-                      margin: const EdgeInsets.only(bottom: 60),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                    ),
-                    const Text(
-                      'ยืนยันออกจากระบบ',
-                      style: TextStyle(
-                        fontFamily: 'SukhumvitSet',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 30,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      'คุณต้องการออกจากระบบใช่ไหม?',
-                      style: TextStyle(
-                        fontFamily: 'SukhumvitSet',
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Color(0xFF6E6E6E),
-                      ),
-                    ),
-                    const SizedBox(height: 50),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        TextButton(
-                          onPressed: () => Get.back(),
-                          child: const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Text(
-                              'ยกเลิก',
-                              style: TextStyle(
-                                fontFamily: 'SukhumvitSet',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.black,
-                              ),
-                            ),
+                    TextButton(
+                      onPressed: () => Get.back(),
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'ยกเลิก',
+                          style: TextStyle(
+                            fontFamily: 'SukhumvitSet',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.black,
                           ),
                         ),
-                        TextButton(
-                          onPressed: () {
-                            GetStorage().erase();
-                            Get.offAll(() => IntroPage());
-                          },
-                          child: const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Text(
-                              'ออกจากระบบ',
-                              style: TextStyle(
-                                fontFamily: 'SukhumvitSet',
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Color(0xFFF92A47),
-                              ),
-                            ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        GetStorage().erase();
+                        Get.offAll(() => IntroPage());
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'ออกจากระบบ',
+                          style: TextStyle(
+                            fontFamily: 'SukhumvitSet',
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Color(0xFFF92A47),
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ],
+      ),
     );
   }
 }

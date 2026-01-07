@@ -31,27 +31,25 @@ class ProductCard extends StatelessWidget {
           Center(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              child:
-                  (product.imageUrl != null && product.imageUrl!.isNotEmpty)
-                      ? Image.network(
-                        product.imageUrl!,
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (context, error, stackTrace) =>
-                                const Icon(Icons.broken_image, size: 80),
-                      )
-                      : Container(
-                        width: 80,
-                        height: 80,
-                        color: Colors.grey[300],
-                        child: const Icon(
-                          Icons.image,
-                          size: 50,
-                          color: Colors.white,
-                        ),
+              child: (product.imageUrl != null && product.imageUrl!.isNotEmpty)
+                  ? Image.network(
+                      product.imageUrl!,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.broken_image, size: 80),
+                    )
+                  : Container(
+                      width: 80,
+                      height: 80,
+                      color: Colors.grey[300],
+                      child: const Icon(
+                        Icons.image,
+                        size: 50,
+                        color: Colors.white,
                       ),
+                    ),
             ),
           ),
           const SizedBox(height: 12),
@@ -73,7 +71,7 @@ class ProductCard extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           Text(
-            'คะแนนชีท ${product.rating?.toStringAsFixed(1) ?? "-"}',
+            'คะแนนชีต ${product.rating?.toStringAsFixed(1) ?? "-"}',
             style: const TextStyle(
               color: Colors.black54,
               fontWeight: FontWeight.w800,

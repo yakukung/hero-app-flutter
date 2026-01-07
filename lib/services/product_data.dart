@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:flutter/services.dart'; // For rootBundle
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:http/http.dart' as http;
@@ -25,45 +27,21 @@ class ProductData extends ChangeNotifier {
     _errorMessage = '';
     notifyListeners();
 
-    const int maxRetries = 3;
-    const Duration timeoutDuration = Duration(seconds: 10);
-    int retryCount = 0;
+    try {
+      // Mock data loading
+      await Future.delayed(const Duration(seconds: 1)); // Simulate delay
+      final String responseBody = await rootBundle.loadString(
+        'assets/mock_products.json',
+      );
+      final List<dynamic> data = jsonDecode(responseBody);
 
-    while (retryCount < maxRetries) {
-      try {
-        final response = await http
-            .get(Uri.parse('$apiEndpoint/product'))
-            .timeout(timeoutDuration);
-
-        if (response.statusCode == 200) {
-          final List<dynamic> data = jsonDecode(response.body);
-          _products = List<Map<String, dynamic>>.from(data);
-          _isLoading = false;
-          notifyListeners();
-          await _updateProductColors();
-          return;
-        } else {
-          _errorMessage = 'ไม่สามารถดึงข้อมูลได้ (${response.statusCode})';
-          _isLoading = false;
-          notifyListeners();
-          retryCount++;
-        }
-      } catch (e) {
-        log('Product API error: $e (Attempt ${retryCount + 1}/$maxRetries)');
-        _errorMessage = 'เกิดข้อผิดพลาด: ${e.toString()}';
-        _isLoading = false;
-        notifyListeners();
-        retryCount++;
-      }
-
-      if (retryCount < maxRetries) {
-        log('Retrying in 2 seconds...');
-        await Future.delayed(const Duration(seconds: 2));
-      }
-    }
-
-    if (retryCount == maxRetries) {
-      _errorMessage = 'ไม่สามารถดึงข้อมูลได้หลังจากลอง $maxRetries ครั้ง';
+      _products = List<Map<String, dynamic>>.from(data);
+      _isLoading = false;
+      notifyListeners();
+      await _updateProductColors();
+    } catch (e) {
+      log('Product API error: $e');
+      _errorMessage = 'เกิดข้อผิดพลาด: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
     }
@@ -114,5 +92,24 @@ class ProductData extends ChangeNotifier {
   Future<void> refreshProducts() async {
     _products = [];
     await fetchProducts();
+  }
+
+  void toggleFavorite(String productId) {
+    final index = _products.indexWhere(
+      (element) => element['id'].toString() == productId,
+    );
+    if (index != -1) {
+      final currentStatus = _products[index]['is_favorite'];
+      // Handle both int (1/0) and bool (true/false) just in case
+      bool isFav = false;
+      if (currentStatus is int) {
+        isFav = currentStatus == 1;
+      } else if (currentStatus is bool) {
+        isFav = currentStatus;
+      }
+
+      _products[index]['is_favorite'] = isFav ? 0 : 1;
+      notifyListeners();
+    }
   }
 }
