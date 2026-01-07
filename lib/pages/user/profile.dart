@@ -22,6 +22,7 @@ class _ProfilePageState extends State<ProfilePage> {
   final ImagePicker _picker = ImagePicker();
   final FirebaseStorage _storage = FirebaseStorage.instance;
   String downloadURL = '';
+  final fontButtonSize = 14;
 
   Future<void> _uploadProfileImage() async {
     final appData = Provider.of<Appdata>(context, listen: false);
@@ -163,11 +164,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 elevation: 0,
                               ),
-                              label: const Text(
+                              label: Text(
                                 'แก้ไขข้อมูลส่วนตัว',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: fontButtonSize.toDouble(),
                                   color: Colors.black,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -186,11 +187,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 elevation: 0,
                               ),
-                              label: const Text(
+                              label: Text(
                                 'แก้ไขแพ็กเกจสมาชิกของคุณ',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: fontButtonSize.toDouble(),
                                   color: Colors.black,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -213,10 +214,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 elevation: 0,
                               ),
-                              label: const Text(
+                              label: Text(
                                 'ยอดเงินคงเหลือ',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: fontButtonSize.toDouble(),
                                   color: Colors.black,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -235,11 +236,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 elevation: 0,
                               ),
-                              label: const Text(
+                              label: Text(
                                 'รายการชีต\nทั้งหมดของคุณ',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: fontButtonSize.toDouble(),
                                   color: Colors.black,
                                   fontWeight: FontWeight.w800,
                                 ),
