@@ -87,6 +87,28 @@ class Appdata extends ChangeNotifier {
         userData['profile_image']?.toString() ??
         userData['profileImage']?.toString() ??
         _profileImage;
+
+    if (userData['tokens'] is Map<String, dynamic>) {
+      final tokens = userData['tokens'] as Map<String, dynamic>;
+      final accessToken = tokens['access_token']?.toString();
+      final refreshToken = tokens['refresh_token']?.toString();
+      final accessTokenExpiresAt = tokens['access_token_expires_at'];
+      final refreshTokenExpiresAt = tokens['refresh_token_expires_at'];
+
+      final gs = GetStorage();
+      if (accessToken != null) {
+        gs.write('token', accessToken);
+      }
+      if (refreshToken != null) {
+        gs.write('refresh_token', refreshToken);
+      }
+      if (accessTokenExpiresAt != null) {
+        gs.write('access_token_expires_at', accessTokenExpiresAt);
+      }
+      if (refreshTokenExpiresAt != null) {
+        gs.write('refresh_token_expires_at', refreshTokenExpiresAt);
+      }
+    }
     notifyListeners();
   }
 
@@ -101,6 +123,13 @@ class Appdata extends ChangeNotifier {
     _email = '';
     _profileImage = '';
     _errorMessage = '';
+
+    final gs = GetStorage();
+    gs.remove('token');
+    gs.remove('refresh_token');
+    gs.remove('access_token_expires_at');
+    gs.remove('refresh_token_expires_at');
+
     notifyListeners();
   }
 }

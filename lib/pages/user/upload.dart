@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/config/api_connect.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 class UploadPage extends StatefulWidget {
@@ -10,7 +14,6 @@ class UploadPage extends StatefulWidget {
 }
 
 class _UploadPageState extends State<UploadPage> {
-  // State variables
   String? selectedSubject;
   String? selectedPrice;
   final List<String> subjects = [
@@ -24,21 +27,22 @@ class _UploadPageState extends State<UploadPage> {
   List<String> keywords = [];
 
   int questionCount = 1;
-  // Map to store answer counts for each question index (default 2)
+  bool isQuestionsEnabled = false;
   final Map<int, int> _answerCounts = {0: 2};
-  // Map to store the correct answer index for each question
   final Map<int, int> _correctAnswers = {};
 
-  // List to hold uploaded images
   List<File> uploadedImages = [];
   final ImagePicker _picker = ImagePicker();
 
-  // Controller for adding new keywords
   final TextEditingController _keywordController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
 
   @override
   void dispose() {
     _keywordController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -72,7 +76,11 @@ class _UploadPageState extends State<UploadPage> {
                     const SizedBox(height: 24),
                     _buildSectionTitle('ชื่อหัวเรื่อง'),
                     const SizedBox(height: 12),
-                    _buildTextField(hintText: 'ชื่อหัวเรื่อง'),
+                    _buildTextFieldTitle(),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle('รายละเอียด'),
+                    const SizedBox(height: 12),
+                    _buildTextFieldDescription(),
                     const SizedBox(height: 24),
                     _buildSectionTitle('รายวิชา :'),
                     const SizedBox(height: 12),
@@ -87,6 +95,8 @@ class _UploadPageState extends State<UploadPage> {
                     _buildPriceSelector(),
                     const SizedBox(height: 32),
                     _buildQuestionSection(),
+                    const SizedBox(height: 32),
+                    _buildUploadButton(),
                     const SizedBox(height: 100), // Bottom padding
                   ],
                 ),
@@ -200,7 +210,10 @@ class _UploadPageState extends State<UploadPage> {
     );
   }
 
-  Widget _buildTextField({required String hintText, bool isCorrect = false}) {
+  Widget _buildTextFieldAnswer({
+    required String hintText,
+    bool isCorrect = false,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: isCorrect ? const Color(0xFFF0F5FF) : Colors.grey[100],
@@ -213,6 +226,49 @@ class _UploadPageState extends State<UploadPage> {
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(color: Colors.grey[500], fontSize: 16),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextFieldTitle() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F7),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TextField(
+        controller: _titleController,
+        decoration: InputDecoration(
+          hintText: 'ใส่ชื่อหัวเรื่องที่นี่',
+          hintStyle: TextStyle(color: Color(0xFF7B7B7C), fontSize: 16),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextFieldDescription() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F7),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TextField(
+        controller: _descriptionController,
+        maxLines: 3,
+        decoration: InputDecoration(
+          hintText: 'ใส่รายละเอียดที่นี่',
+          hintStyle: TextStyle(color: Color(0xFF7B7B7C), fontSize: 16),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,
@@ -241,13 +297,13 @@ class _UploadPageState extends State<UploadPage> {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? const Color(0xFF2A5DB9)
-                      : Colors.grey[100],
+                      : const Color(0xFFF5F5F7),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   subject,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.grey[600],
+                    color: isSelected ? Colors.white : Color(0xFF7B7B7C),
                     fontWeight: isSelected
                         ? FontWeight.bold
                         : FontWeight.normal,
@@ -284,7 +340,11 @@ class _UploadPageState extends State<UploadPage> {
               children: [
                 Text(
                   keyword,
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 GestureDetector(
@@ -304,12 +364,12 @@ class _UploadPageState extends State<UploadPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: const Color(0xFFF5F5F7),
               borderRadius: BorderRadius.circular(20),
             ),
             child: const Text(
               'เพิ่มคีย์เวิร์ด',
-              style: TextStyle(fontSize: 16),
+              style: TextStyle(color: Color(0xFF7B7B7C), fontSize: 16),
             ),
           ),
         ),
@@ -347,7 +407,7 @@ class _UploadPageState extends State<UploadPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2A5DB9),
             ),
-            child: const Text('เพิ่ม'),
+            child: const Text('เพิ่ม', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -365,20 +425,22 @@ class _UploadPageState extends State<UploadPage> {
             child: GestureDetector(
               onTap: () => setState(() => selectedPrice = price),
               child: Container(
-                width: 60,
-                height: 40,
+                width: 50,
+                height: 50,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: isSelected
                       ? const Color(0xFF2A5DB9)
-                      : Colors.grey[100],
+                      : const Color(0xFFF5F5F7),
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   price,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : Color(0xFF7B7B7C),
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                     fontSize: 16,
                   ),
                 ),
@@ -405,99 +467,122 @@ class _UploadPageState extends State<UploadPage> {
                 color: Colors.black,
               ),
             ),
-            _buildCounterControl('จำนวน', questionCount, (val) {
-              if (val <= 10) {
+            Switch(
+              value: isQuestionsEnabled,
+              onChanged: (val) {
                 setState(() {
-                  questionCount = val;
-                  // Initialize answer count for new questions if needed
-                  if (!_answerCounts.containsKey(val - 1)) {
-                    _answerCounts[val - 1] =
-                        2; // Default 2 answers for new question
-                  }
+                  isQuestionsEnabled = val;
                 });
-              }
-            }),
+              },
+              activeThumbColor: const Color(0xFF2A5DB9),
+            ),
           ],
         ),
-        const SizedBox(height: 16),
-        ...List.generate(questionCount, (index) {
-          int currentAnswerCount = _answerCounts[index] ?? 2;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        if (isQuestionsEnabled) ...[
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (index > 0)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24.0),
-                  child: Divider(thickness: 1, color: Colors.grey),
+              const Text(
+                'เลือกจำนวนคำถาม',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
-              _buildTextField(hintText: 'คำถามที่ ${index + 1}'),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'เลือกจำนวนคำตอบ',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  _buildCounterControl('จำนวน', currentAnswerCount, (val) {
-                    if (val <= 6) {
-                      setState(() {
-                        _answerCounts[index] = val;
-                      });
-                    }
-                  }),
-                ],
               ),
-              const SizedBox(height: 12),
-              ...List.generate(currentAnswerCount, (answerIndex) {
-                final label = String.fromCharCode(
-                  65 + answerIndex,
-                ); // A, B, C...
-                final isCorrect = _correctAnswers[index] == answerIndex;
+              _buildCounterControl('จำนวน', questionCount, (val) {
+                if (val <= 10) {
+                  setState(() {
+                    questionCount = val;
+                    if (!_answerCounts.containsKey(val - 1)) {
+                      _answerCounts[val - 1] = 2;
+                    }
+                  });
+                }
+              }),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...List.generate(questionCount, (index) {
+            int currentAnswerCount = _answerCounts[index] ?? 2;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (index > 0)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24.0),
+                    child: Divider(thickness: 4, color: Color(0xFFE0E0E0)),
+                  ),
+                _buildTextFieldAnswer(hintText: 'คำถามที่ ${index + 1}'),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'เลือกจำนวนคำตอบ',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    _buildCounterControl('จำนวน', currentAnswerCount, (val) {
+                      if (val <= 6) {
+                        setState(() {
+                          _answerCounts[index] = val;
+                        });
+                      }
+                    }),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...List.generate(currentAnswerCount, (answerIndex) {
+                  final label = String.fromCharCode(
+                    65 + answerIndex,
+                  ); // A, B, C...
+                  final isCorrect = _correctAnswers[index] == answerIndex;
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _correctAnswers[index] = answerIndex;
-                          });
-                        },
-                        child: Container(
-                          width: 40,
-                          alignment: Alignment.center,
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: isCorrect
-                                  ? const Color(0xFF2A5DB9)
-                                  : Colors.grey[500],
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _correctAnswers[index] = answerIndex;
+                            });
+                          },
+                          child: Container(
+                            width: 40,
+                            alignment: Alignment.center,
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: isCorrect
+                                    ? const Color(0xFF2A5DB9)
+                                    : Colors.grey[500],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildTextField(
-                          hintText: 'ใส่คำตอบ',
-                          isCorrect: isCorrect,
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildTextFieldAnswer(
+                            hintText: 'ใส่คำตอบ',
+                            isCorrect: isCorrect,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
-          );
-        }),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            );
+          }),
+        ],
       ],
     );
   }
@@ -550,6 +635,63 @@ class _UploadPageState extends State<UploadPage> {
           ),
         ),
       ],
+    );
+  }
+
+  void uploadSheet() async {
+    print(_titleController.text);
+    print(_descriptionController.text);
+    print(selectedSubject);
+    print(selectedPrice);
+    print(keywords);
+    if (isQuestionsEnabled == false) {
+      print("ไม่มีคำถาม");
+    } else {
+      print(questionCount);
+    }
+
+    final storage = GetStorage();
+    final String? token = storage.read('token');
+
+    final response = await http.post(
+      Uri.parse('$apiEndpoint/sheets/create'),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'title': _titleController.text,
+        'description': _descriptionController.text,
+        'price': selectedPrice,
+        'keywords': keywords,
+      }),
+    );
+    print(response.body);
+  }
+
+  Widget _buildUploadButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: () {
+          uploadSheet();
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF2A5DB9),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: const Text(
+          'อัปโหลดชีต',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
     );
   }
 }
