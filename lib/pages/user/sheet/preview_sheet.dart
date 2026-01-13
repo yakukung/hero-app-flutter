@@ -77,7 +77,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
                       Stack(
                         alignment: Alignment.center,
                         children: [
-                          Container(
+                          SizedBox(
                             height: 300,
                             width: double.infinity,
                             child: Stack(

@@ -3,8 +3,6 @@ import 'dart:developer';
 import 'package:flutter/services.dart'; // For rootBundle
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/config/api_connect.dart';
-import 'package:http/http.dart' as http;
 import 'package:palette_generator/palette_generator.dart';
 
 class ProductData extends ChangeNotifier {
