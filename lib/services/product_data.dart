@@ -17,8 +17,8 @@ class ProductData extends ChangeNotifier {
   String get errorMessage => _errorMessage;
   Map<String, Color> get productColors => _productColors;
 
-  Future<void> fetchProducts() async {
-    if (_products.isNotEmpty && !_isLoading) {
+  Future<void> fetchProducts({bool forceRefresh = false}) async {
+    if (_products.isNotEmpty && !_isLoading && !forceRefresh) {
       return;
     }
 
@@ -80,7 +80,9 @@ class ProductData extends ChangeNotifier {
 
         _isLoading = false;
         notifyListeners();
-        await _updateProductColors();
+
+        // Lazy load colors - don't await, let it run in background
+        _lazyLoadColors();
       } else {
         throw Exception('Failed to load sheets: ${response.statusCode}');
       }
@@ -92,51 +94,122 @@ class ProductData extends ChangeNotifier {
     }
   }
 
-  Future<void> _updateProductColors() async {
-    final Map<String, Color> newColors = {};
-    final List<Future<void>> futures = [];
-
+  /// Load colors progressively without blocking UI
+  void _lazyLoadColors() {
     for (var product in _products) {
+      final productId = product['id'].toString();
+
+      // Skip if already has color
+      if (_productColors.containsKey(productId)) continue;
+
       final imageUrl = product['imageUrl']
           ?.toString()
           .replaceAll('`', '')
           .trim();
-      if (imageUrl != null && imageUrl.isNotEmpty) {
-        futures.add(
-          Future(() async {
-            try {
-              final PaletteGenerator generator =
-                  await PaletteGenerator.fromImageProvider(
-                    NetworkImage(imageUrl),
-                    size: const Size(200, 200),
-                    maximumColorCount: 20,
-                  );
-              Color extractedColor =
-                  generator.dominantColor?.color ?? Colors.white;
-              Color lighterColor = Color.lerp(
-                extractedColor,
-                Colors.white,
-                0.8,
-              )!;
-              newColors[product['id'].toString()] = lighterColor;
-            } catch (e) {
-              log('Error generating palette for ${product['id']}: $e');
-              newColors[product['id'].toString()] = Colors.white;
-            }
-          }),
-        );
-      } else {
-        newColors[product['id'].toString()] = Colors.white;
+
+      if (imageUrl == null || imageUrl.isEmpty) {
+        _productColors[productId] = Colors.grey[100]!;
+        notifyListeners();
+        continue;
       }
+
+      // Load each color asynchronously without waiting
+      _loadSingleColor(productId, imageUrl);
     }
-    await Future.wait(futures);
-    _productColors = newColors;
-    notifyListeners();
   }
 
+  Future<void> _loadSingleColor(String productId, String imageUrl) async {
+    try {
+      final generator = await PaletteGenerator.fromImageProvider(
+        NetworkImage(imageUrl),
+        size: const Size(100, 100), // Smaller size = faster
+        maximumColorCount: 10, // Less colors = faster
+      );
+
+      final extractedColor =
+          generator.dominantColor?.color ?? Colors.grey[100]!;
+      final lighterColor = Color.lerp(extractedColor, Colors.white, 0.8)!;
+
+      _productColors[productId] = lighterColor;
+      notifyListeners(); // Update UI immediately when this color is ready
+    } catch (e) {
+      log('Error generating palette for $productId: $e');
+      _productColors[productId] = Colors.grey[100]!;
+      notifyListeners();
+    }
+  }
+
+  /// Refresh products silently without clearing existing data
+  /// This allows RefreshIndicator to work smoothly
   Future<void> refreshProducts() async {
+    // Don't set isLoading = true, let RefreshIndicator handle the loading state
+    // Don't clear _products, keep showing existing data during refresh
+
+    try {
+      final response = await http.get(Uri.parse('$apiEndpoint/sheets'));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        final List<dynamic> data = jsonResponse['data']['sheets'];
+
+        _products = data.map((item) {
+          // Extract image URL
+          String imageUrl = '';
+          if (item['files'] != null && (item['files'] as List).isNotEmpty) {
+            String path =
+                item['files'][0]['thumbnail_path'] ??
+                item['files'][0]['original_path'];
+            // If path doesn't start with http, prepend apiEndpoint
+            if (!path.startsWith('http')) {
+              final uri = Uri.parse(apiEndpoint);
+              final baseUrl = '${uri.scheme}://${uri.host}:${uri.port}';
+              imageUrl = '$baseUrl/$path';
+            } else {
+              imageUrl = path;
+            }
+          }
+
+          // Extract category
+          String subject = 'Unknown';
+          if (item['categories'] != null &&
+              (item['categories'] as List).isNotEmpty) {
+            subject = item['categories'][0]['name'];
+          }
+
+          return {
+            'id': item['id'],
+            'title': item['title'],
+            'description': item['description'] ?? '',
+            'price': item['price'] ?? 'ฟรี',
+            'rating':
+                double.tryParse(item['rating']?.toString() ?? '0.0') ?? 0.0,
+            'review_count': 0,
+            'author': item['author_name'] ?? 'Unknown',
+            'avatarUrl': 'assets/images/default/avatar.png',
+            'imageUrl': imageUrl,
+            'subject': subject,
+            'is_favorite': false,
+          };
+        }).toList();
+
+        // Keep existing colors, only load colors for new products
+        // _lazyLoadColors() already skips products that have colors
+        notifyListeners();
+
+        // Lazy load colors only for new products (existing ones are skipped)
+        _lazyLoadColors();
+      }
+    } catch (e) {
+      log('Refresh error: $e');
+      // On error, keep existing data - don't show error for pull-to-refresh
+    }
+  }
+
+  /// Force refresh that clears everything (for hard reset scenarios)
+  Future<void> hardRefreshProducts() async {
     _products = [];
-    await fetchProducts();
+    _productColors = {};
+    await fetchProducts(forceRefresh: true);
   }
 
   void toggleFavorite(String productId) {

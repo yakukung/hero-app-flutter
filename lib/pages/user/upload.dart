@@ -217,7 +217,7 @@ class _UploadPageState extends State<UploadPage> {
       height: 200,
       child: ReorderableListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
         onReorder: (int oldIndex, int newIndex) {
           setState(() {
             if (oldIndex < newIndex) {
@@ -246,7 +246,7 @@ class _UploadPageState extends State<UploadPage> {
             width: 140,
             height: 180,
             margin: const EdgeInsets.only(
-              left: 16,
+              left: 10,
             ), // Margin left to separate from list
             decoration: BoxDecoration(
               color: Colors.grey[300],
