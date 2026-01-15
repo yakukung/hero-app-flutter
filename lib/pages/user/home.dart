@@ -36,7 +36,6 @@ class _HomePageState extends State<HomePage> {
         final isLoading = productData.isLoading;
         final errorMessage = productData.errorMessage;
         final products = productData.products;
-        final productColors = productData.productColors;
 
         return Scaffold(
           body: Container(
@@ -49,7 +48,7 @@ class _HomePageState extends State<HomePage> {
                 ? _buildErrorView(productData)
                 : products.isEmpty
                 ? _buildEmptyView()
-                : _buildContent(products, productColors, productData),
+                : _buildContent(products, productData),
           ),
         );
       },
@@ -107,11 +106,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildContent(
-    List<dynamic> products,
-    Map<String, Color> productColors,
-    ProductData productData,
-  ) {
+  Widget _buildContent(List<dynamic> products, ProductData productData) {
     return RefreshIndicator(
       onRefresh: _onRefresh,
       color: const Color(0xFF2A5DB9),
@@ -124,12 +119,12 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 35),
             _buildSectionHeader('ชีตยอดนิยม'),
             const SizedBox(height: 16),
-            _buildProductList(products, productColors, productData),
+            _buildProductList(products, productData),
             const SizedBox(height: 20),
             _buildSectionHeader('ชีตใหม่ล่าสุด'),
             const SizedBox(height: 16),
-            _buildProductList(products, productColors, productData),
-            const SizedBox(height: 20),
+            _buildProductList(products, productData),
+            const SizedBox(height: 140),
           ],
         ),
       ),
@@ -168,11 +163,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildProductList(
-    List<dynamic> products,
-    Map<String, Color> productColors,
-    ProductData productData,
-  ) {
+  Widget _buildProductList(List<dynamic> products, ProductData productData) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       clipBehavior: Clip.none,
@@ -203,8 +194,7 @@ class _HomePageState extends State<HomePage> {
                       : '${products[i]['price']} บาท',
                   isFavorite: (products[i]['is_favorite'] == 1),
                 ),
-                backgroundColor:
-                    productColors[products[i]['id'].toString()] ?? Colors.white,
+                colorIndex: i, // Use index for gradient color
                 onFavoriteTap: () {
                   productData.toggleFavorite(products[i]['id'].toString());
                 },
