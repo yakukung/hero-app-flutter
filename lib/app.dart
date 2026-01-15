@@ -78,6 +78,7 @@ class MainPage extends StatelessWidget {
       () => Scaffold(
         appBar: const NavbarUser(),
         drawer: const SideBar(),
+        extendBody: true,
         body: pages[navService.currentIndex.value],
         bottomNavigationBar: const NavBottom(),
       ),

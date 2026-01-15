@@ -41,6 +41,7 @@ class _CommunityPageState extends State<CommunityPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        bottom: false,
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
@@ -60,7 +61,7 @@ class _CommunityPageState extends State<CommunityPage> {
                     return _buildPostCard(mockPosts[index]);
                   },
                 ),
-                const SizedBox(height: 80), // Bottom padding
+                const SizedBox(height: 140), // Bottom padding
               ],
             ),
           ),

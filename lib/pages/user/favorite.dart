@@ -21,7 +21,6 @@ class _FavoritePageState extends State<FavoritePage> {
       body: Consumer<ProductData>(
         builder: (context, productData, child) {
           final allProducts = productData.products;
-          final productColors = productData.productColors;
 
           // Filter favorite products
           final favoriteProducts = allProducts.where((p) {
@@ -125,9 +124,7 @@ class _FavoritePageState extends State<FavoritePage> {
                                   : '${productMap['price']} บาท',
                               isFavorite: true,
                             ),
-                            backgroundColor:
-                                productColors[productMap['id'].toString()] ??
-                                Colors.white,
+                            colorIndex: index, // Use gradient instead
                             onFavoriteTap: () {
                               productData.toggleFavorite(
                                 productMap['id'].toString(),
