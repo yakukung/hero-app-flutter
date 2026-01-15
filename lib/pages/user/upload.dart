@@ -3,8 +3,38 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:async';
+import 'package:http_parser/http_parser.dart';
+
+class _UploadState {
+  final double progress;
+  final bool isUploading;
+  final bool isSuccess;
+  final String? errorMessage;
+
+  _UploadState({
+    this.progress = 0.0,
+    this.isUploading = false,
+    this.isSuccess = false,
+    this.errorMessage,
+  });
+
+  _UploadState copyWith({
+    double? progress,
+    bool? isUploading,
+    bool? isSuccess,
+    String? errorMessage,
+  }) {
+    return _UploadState(
+      progress: progress ?? this.progress,
+      isUploading: isUploading ?? this.isUploading,
+      isSuccess: isSuccess ?? this.isSuccess,
+      errorMessage: errorMessage ?? this.errorMessage,
+    );
+  }
+}
 
 class UploadPage extends StatefulWidget {
   const UploadPage({super.key});
@@ -16,18 +46,42 @@ class UploadPage extends StatefulWidget {
 class _UploadPageState extends State<UploadPage> {
   String? selectedSubject;
   String? selectedPrice;
-  final List<String> subjects = [
-    'วิทยาศาสตร์',
-    'คณิตศาสตร์',
-    'ภาษาคอมพิวเตอร์',
-    'ภาษาอังกฤษ',
-    'เนื้อหาทั่วไป',
-  ];
-  final List<String> prices = ['ฟรี', '50', '100', '150', '200', '250', '300'];
+  // State for dynamic categories
+  List<dynamic> _categories = [];
+  bool _isLoadingCategories = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final response = await http.get(Uri.parse('$apiEndpoint/categories'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          _categories = data['data']['categories'];
+          _isLoadingCategories = false;
+        });
+      } else {
+        print('Failed to load categories: ${response.statusCode}');
+        setState(() => _isLoadingCategories = false);
+      }
+    } catch (e) {
+      print('Error fetching categories: $e');
+      setState(() => _isLoadingCategories = false);
+    }
+  }
+
+  final List<String> prices = ['0', '50', '100', '150', '200', '250', '300'];
   List<String> keywords = [];
 
   int questionCount = 1;
   bool isQuestionsEnabled = false;
+
+  // Existing state variables (Restored)
   final Map<int, int> _answerCounts = {0: 2};
   final Map<int, int> _correctAnswers = {};
 
@@ -38,11 +92,27 @@ class _UploadPageState extends State<UploadPage> {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
+  // Controllers
+  final Map<int, TextEditingController> _questionControllers = {};
+  final Map<int, TextEditingController> _explanationControllers = {};
+  final Map<int, Map<int, TextEditingController>> _answerControllers = {};
+
   @override
   void dispose() {
     _keywordController.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
+    for (var controller in _questionControllers.values) {
+      controller.dispose();
+    }
+    for (var controller in _explanationControllers.values) {
+      controller.dispose();
+    }
+    for (var questionMap in _answerControllers.values) {
+      for (var controller in questionMap.values) {
+        controller.dispose();
+      }
+    }
     super.dispose();
   }
 
@@ -143,13 +213,72 @@ class _UploadPageState extends State<UploadPage> {
   }
 
   Widget _buildImageSection() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+    return SizedBox(
+      height: 200,
+      child: ReorderableListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        onReorder: (int oldIndex, int newIndex) {
+          setState(() {
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final File item = uploadedImages.removeAt(oldIndex);
+            uploadedImages.insert(newIndex, item);
+          });
+        },
+        proxyDecorator: (child, index, animation) {
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (BuildContext context, Widget? child) {
+              return Material(
+                color: Colors.transparent,
+                elevation: 0,
+                child: child,
+              );
+            },
+            child: child,
+          );
+        },
+        footer: GestureDetector(
+          onTap: _pickImage,
+          child: Container(
+            width: 140,
+            height: 180,
+            margin: const EdgeInsets.only(
+              left: 16,
+            ), // Margin left to separate from list
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(
+              child: Icon(Icons.add, size: 48, color: Colors.black54),
+            ),
+          ),
+        ),
         children: [
-          ...uploadedImages.map(
-            (image) => Padding(
-              padding: const EdgeInsets.only(right: 16),
+          for (int index = 0; index < uploadedImages.length; index++)
+            Container(
+              key: ValueKey(uploadedImages[index].path),
+              margin: const EdgeInsets.only(
+                right: 0,
+              ), // Use padding/gap logic if possible or keep consistent
+              // ReorderableListView doesn't support separators easily.
+              // To ensure consistent spacing, let's put margin on the RIGHT of items,
+              // BUT check if footer margin logic lines up.
+              // Footer is at the end.
+              // Current logic: Items have margin right 16. Footer has margin right 16 (in previous code).
+              // Let's change: Items have margin Right 16. Footer has Margin Left 0 if it directly follows?
+              // The footer follows the last item. Last item has margin Right 16.
+              // So footer will be 16px away from last item.
+              // Footer itself doesn't need left margin if previous item has right margin.
+              // But if list is empty? Footer is first. Then no margin left?
+              // Let's use Padding in ListView for edge insets, and uniform margin.
+              padding: const EdgeInsets.only(
+                right: 16,
+              ), // Padding inside container to create gap?
+              // Or just Container width includes gap? No, we want visual gap.
               child: Stack(
                 children: [
                   Container(
@@ -158,7 +287,7 @@ class _UploadPageState extends State<UploadPage> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       image: DecorationImage(
-                        image: FileImage(image),
+                        image: FileImage(uploadedImages[index]),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -169,7 +298,7 @@ class _UploadPageState extends State<UploadPage> {
                     child: GestureDetector(
                       onTap: () {
                         setState(() {
-                          uploadedImages.remove(image);
+                          uploadedImages.removeAt(index);
                         });
                       },
                       child: Container(
@@ -189,22 +318,6 @@ class _UploadPageState extends State<UploadPage> {
                 ],
               ),
             ),
-          ),
-          // Add Button
-          GestureDetector(
-            onTap: _pickImage,
-            child: Container(
-              width: 140,
-              height: 180,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Center(
-                child: Icon(Icons.add, size: 48, color: Colors.black54),
-              ),
-            ),
-          ),
         ],
       ),
     );
@@ -212,6 +325,7 @@ class _UploadPageState extends State<UploadPage> {
 
   Widget _buildTextFieldAnswer({
     required String hintText,
+    required TextEditingController controller,
     bool isCorrect = false,
   }) {
     return Container(
@@ -223,6 +337,7 @@ class _UploadPageState extends State<UploadPage> {
             : null,
       ),
       child: TextField(
+        controller: controller,
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(color: Colors.grey[500], fontSize: 16),
@@ -280,15 +395,24 @@ class _UploadPageState extends State<UploadPage> {
   }
 
   Widget _buildSubjectSelector() {
+    if (_isLoadingCategories) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_categories.isEmpty) {
+      return const Text('ไม่พบข้อมูลรายวิชา');
+    }
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: subjects.map((subject) {
-          final isSelected = subject == selectedSubject;
+        children: _categories.map((category) {
+          final String name = category['name'];
+          final isSelected = name == selectedSubject;
           return Padding(
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(
-              onTap: () => setState(() => selectedSubject = subject),
+              onTap: () => setState(() => selectedSubject = name),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
@@ -301,9 +425,9 @@ class _UploadPageState extends State<UploadPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  subject,
+                  name,
                   style: TextStyle(
-                    color: isSelected ? Colors.white : Color(0xFF7B7B7C),
+                    color: isSelected ? Colors.white : const Color(0xFF7B7B7C),
                     fontWeight: isSelected
                         ? FontWeight.bold
                         : FontWeight.normal,
@@ -506,6 +630,15 @@ class _UploadPageState extends State<UploadPage> {
           const SizedBox(height: 16),
           ...List.generate(questionCount, (index) {
             int currentAnswerCount = _answerCounts[index] ?? 2;
+
+            // Get controllers
+            if (!_questionControllers.containsKey(index)) {
+              _questionControllers[index] = TextEditingController();
+            }
+            if (!_explanationControllers.containsKey(index)) {
+              _explanationControllers[index] = TextEditingController();
+            }
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -514,7 +647,25 @@ class _UploadPageState extends State<UploadPage> {
                     padding: EdgeInsets.symmetric(vertical: 24.0),
                     child: Divider(thickness: 4, color: Color(0xFFE0E0E0)),
                   ),
-                _buildTextFieldAnswer(hintText: 'คำถามที่ ${index + 1}'),
+                const Text(
+                  'คำถาม',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                _buildTextFieldAnswer(
+                  hintText: 'คำถามที่ ${index + 1}',
+                  controller: _questionControllers[index]!,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'คำอธิบายเฉลย',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                _buildTextFieldAnswer(
+                  hintText: 'ใส่คำอธิบาย (Optional)',
+                  controller: _explanationControllers[index]!,
+                ),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -538,10 +689,16 @@ class _UploadPageState extends State<UploadPage> {
                 ),
                 const SizedBox(height: 12),
                 ...List.generate(currentAnswerCount, (answerIndex) {
-                  final label = String.fromCharCode(
-                    65 + answerIndex,
-                  ); // A, B, C...
+                  final label = String.fromCharCode(65 + answerIndex);
                   final isCorrect = _correctAnswers[index] == answerIndex;
+
+                  if (!_answerControllers.containsKey(index)) {
+                    _answerControllers[index] = {};
+                  }
+                  if (!_answerControllers[index]!.containsKey(answerIndex)) {
+                    _answerControllers[index]![answerIndex] =
+                        TextEditingController();
+                  }
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -572,6 +729,8 @@ class _UploadPageState extends State<UploadPage> {
                         Expanded(
                           child: _buildTextFieldAnswer(
                             hintText: 'ใส่คำตอบ',
+                            controller:
+                                _answerControllers[index]![answerIndex]!,
                             isCorrect: isCorrect,
                           ),
                         ),
@@ -638,35 +797,242 @@ class _UploadPageState extends State<UploadPage> {
     );
   }
 
-  void uploadSheet() async {
-    print(_titleController.text);
-    print(_descriptionController.text);
-    print(selectedSubject);
-    print(selectedPrice);
-    print(keywords);
-    if (isQuestionsEnabled == false) {
-      print("ไม่มีคำถาม");
-    } else {
-      print(questionCount);
-    }
-
+  Future<void> uploadSheet() async {
     final storage = GetStorage();
     final String? token = storage.read('token');
 
-    final response = await http.post(
-      Uri.parse('$apiEndpoint/sheets/create'),
-      headers: {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'title': _titleController.text,
-        'description': _descriptionController.text,
-        'price': selectedPrice,
-        'keywords': keywords,
-      }),
+    var uri = Uri.parse('$apiEndpoint/sheets/create');
+    var request = http.MultipartRequest('POST', uri);
+
+    // Headers
+    request.headers.addAll({
+      'Content-Type': 'multipart/form-data',
+      if (token != null) 'Authorization': 'Bearer $token',
+    });
+
+    // Fields
+    request.fields['title'] = _titleController.text;
+    request.fields['description'] = _descriptionController.text;
+    // Find category ID
+    String categoryId = '';
+    final selectedCategory = _categories.firstWhere(
+      (cat) => cat['name'] == selectedSubject,
+      orElse: () => null,
     );
-    print(response.body);
+    if (selectedCategory != null) {
+      categoryId = selectedCategory['id'];
+    }
+
+    request.fields['category'] = categoryId;
+    request.fields['keywords'] = jsonEncode(keywords);
+    // Convert '0' to 'ฟรี' if needed by backend, or just send selectedPrice
+    // Based on user edit, prices list has '0', logic below assumes backend handles it or we send as is.
+    // If backend expects 'ฟรี' for 0, we might need a mapping.
+    // Assuming sending what is in the list is fine for now.
+    request.fields['price'] = selectedPrice ?? '';
+
+    // Questions
+    if (isQuestionsEnabled) {
+      List<Map<String, dynamic>> questionsList = [];
+      for (int i = 0; i < questionCount; i++) {
+        List<Map<String, dynamic>> answersList = [];
+        int answerCount = _answerCounts[i] ?? 2;
+
+        for (int j = 0; j < answerCount; j++) {
+          answersList.add({
+            'index': j + 1,
+            'answer_text': _answerControllers[i]?[j]?.text ?? '',
+            'is_correct': _correctAnswers[i] == j,
+          });
+        }
+
+        questionsList.add({
+          'index': i + 1,
+          'question_text': _questionControllers[i]?.text ?? '',
+          'explanation': _explanationControllers[i]?.text ?? '',
+          'answers': answersList,
+        });
+      }
+      request.fields['questions'] = jsonEncode(questionsList);
+    } else {
+      request.fields['questions'] = '[]';
+    }
+
+    // Files (Images)
+    for (var file in uploadedImages) {
+      String mimeType = 'image/jpeg'; // Default
+      if (file.path.endsWith('.png')) {
+        mimeType = 'image/png';
+      } else if (file.path.endsWith('.jpg') || file.path.endsWith('.jpeg')) {
+        mimeType = 'image/jpeg';
+      }
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'images',
+          file.path,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+    }
+
+    // Progress Dialog
+    if (!mounted) return;
+    final ValueNotifier<_UploadState> stateNotifier = ValueNotifier(
+      _UploadState(isUploading: true),
+    );
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          content: ValueListenableBuilder<_UploadState>(
+            valueListenable: stateNotifier,
+            builder: (context, state, child) {
+              if (state.isUploading) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'กำลังอัปโหลด...',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    LinearProgressIndicator(
+                      value: state.progress,
+                      backgroundColor: Colors.grey[200],
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFF2A5DB9),
+                      ),
+                      minHeight: 10,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('${(state.progress * 100).toStringAsFixed(0)}%'),
+                  ],
+                );
+              } else if (state.isSuccess) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'อัปโหลดเสร็จสิ้น',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context); // Close dialog
+                          // Optionally navigate to another tab or reset form here
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2A5DB9),
+                        ),
+                        child: const Text(
+                          'ตกลง',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error, color: Colors.red, size: 48),
+                    const SizedBox(height: 16),
+                    Text(
+                      state.errorMessage ?? 'เกิดข้อผิดพลาด',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey,
+                        ),
+                        child: const Text(
+                          'ปิด',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+            },
+          ),
+        );
+      },
+    );
+
+    try {
+      final progressRequest = ProgressMultipartRequest(
+        'POST',
+        uri,
+        onProgress: (int bytes, int total) {
+          final progress = bytes / total;
+          stateNotifier.value = stateNotifier.value.copyWith(
+            progress: progress,
+          );
+        },
+      );
+
+      progressRequest.headers.addAll(request.headers);
+      progressRequest.fields.addAll(request.fields);
+      progressRequest.files.addAll(request.files);
+
+      final streamedResponse = await progressRequest.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      print(response.body);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        stateNotifier.value = stateNotifier.value.copyWith(
+          isUploading: false,
+          isSuccess: true,
+          progress: 1.0,
+        );
+      } else {
+        print('Upload failed: ${response.statusCode}');
+        stateNotifier.value = stateNotifier.value.copyWith(
+          isUploading: false,
+          isSuccess: false,
+          errorMessage: 'อัปโหลดล้มเหลว: ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      print('Error uploading: $e');
+      if (mounted) {
+        stateNotifier.value = stateNotifier.value.copyWith(
+          isUploading: false,
+          isSuccess: false,
+          errorMessage: 'เกิดข้อผิดพลาด: $e',
+        );
+      }
+    }
   }
 
   Widget _buildUploadButton() {
@@ -693,5 +1059,29 @@ class _UploadPageState extends State<UploadPage> {
         ),
       ),
     );
+  }
+}
+
+class ProgressMultipartRequest extends http.MultipartRequest {
+  final void Function(int bytes, int total) onProgress;
+
+  ProgressMultipartRequest(String method, Uri url, {required this.onProgress})
+    : super(method, url);
+
+  @override
+  http.ByteStream finalize() {
+    final byteStream = super.finalize();
+    final total = contentLength;
+    int bytes = 0;
+
+    final t = StreamTransformer.fromHandlers(
+      handleData: (List<int> data, EventSink<List<int>> sink) {
+        bytes += data.length;
+        onProgress(bytes, total);
+        sink.add(data);
+      },
+    );
+    final stream = byteStream.transform(t);
+    return http.ByteStream(stream);
   }
 }
