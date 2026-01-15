@@ -126,12 +126,16 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 16),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
+                          clipBehavior: Clip.none,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 25,
+                            vertical: 10,
+                          ),
                           child: Row(
                             children: [
-                              const SizedBox(width: 25),
                               for (int i = 0; i < products.length; i++)
                                 GestureDetector(
                                   onTap: () {
@@ -172,11 +176,10 @@ class _HomePageState extends State<HomePage> {
                                     },
                                   ),
                                 ),
-                              const SizedBox(width: 25),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 25),
+                        const SizedBox(height: 20),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 35),
                           child: Row(
@@ -206,12 +209,16 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 16),
                         SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
+                          clipBehavior: Clip.none,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 25,
+                            vertical: 10,
+                          ),
                           child: Row(
                             children: [
-                              const SizedBox(width: 25),
                               for (int i = 0; i < products.length; i++)
                                 GestureDetector(
                                   onTap: () {
@@ -251,10 +258,10 @@ class _HomePageState extends State<HomePage> {
                                     },
                                   ),
                                 ),
-                              const SizedBox(width: 25),
                             ],
                           ),
                         ),
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
