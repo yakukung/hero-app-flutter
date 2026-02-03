@@ -17,15 +17,15 @@ class NavBottom extends StatelessWidget {
     final navService = Get.find<NavigationService>();
     return Obx(
       () => Container(
-        margin: const EdgeInsets.only(bottom: 30, left: 10, right: 10),
+        margin: const EdgeInsets.only(bottom: 20, left: 10, right: 10),
         decoration: BoxDecoration(
           // color removed, applied inside
           borderRadius: BorderRadius.circular(40),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 2,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.4),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -34,8 +34,8 @@ class NavBottom extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
             child: Container(
-              color: Colors.white.withOpacity(0.1),
-              padding: const EdgeInsets.all(6.0),
+              color: Colors.white.withOpacity(0.9),
+              padding: const EdgeInsets.all(3.0),
               child: MediaQuery.removePadding(
                 context: context,
                 removeBottom: true,
