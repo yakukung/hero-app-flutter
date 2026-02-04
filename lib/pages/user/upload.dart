@@ -313,6 +313,7 @@ class _UploadPageState extends State<UploadPage> {
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
+          bottom: false,
           child: CustomScrollView(
             slivers: [
               SliverToBoxAdapter(

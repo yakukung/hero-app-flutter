@@ -301,13 +301,13 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     // ตรวจสอบความยาวรหัสผ่าน
-    if (password.length < 8) {
+    if (password.length < 6) {
       setState(() {
         isLoading = false;
       });
       showCustomDialog(
         'รหัสผ่านสั้นเกินไป',
-        'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร',
+        'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',
       );
       return;
     }

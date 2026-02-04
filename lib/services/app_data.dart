@@ -8,6 +8,7 @@ class Appdata extends ChangeNotifier {
   String _username = '';
   String _uid = '';
   String _email = '';
+  String _provider = 'EMAIL';
   String _errorMessage = '';
   String _profileImage = '';
   late UserProfile user;
@@ -17,6 +18,7 @@ class Appdata extends ChangeNotifier {
   String get uid => _uid;
   String get username => _username;
   String get email => _email;
+  String get provider => _provider;
   String get profileImage => _profileImage;
 
   set uid(String value) {
@@ -42,7 +44,6 @@ class Appdata extends ChangeNotifier {
       final cleanPath = url.replaceFirst('file://', '');
       uri = Uri.parse(apiEndpoint).resolve(cleanPath);
     }
-    // เพิ่ม timestamp เพื่อแก้ปัญหา caching ของ Image.network
     final params = Map<String, dynamic>.from(uri.queryParameters);
     params['t'] = DateTime.now().millisecondsSinceEpoch.toString();
     _profileImage = uri.replace(queryParameters: params).toString();
@@ -93,6 +94,10 @@ class Appdata extends ChangeNotifier {
     _username = userData['username']?.toString() ?? _username;
     _uid = userData['uid']?.toString() ?? userData['id']?.toString() ?? _uid;
     _email = userData['email']?.toString() ?? _email;
+    _provider =
+        userData['auth_provider']?.toString() ??
+        userData['provider']?.toString() ??
+        'EMAIL';
 
     String? rawProfileImage =
         userData['profile_image']?.toString() ??
@@ -139,6 +144,7 @@ class Appdata extends ChangeNotifier {
     _username = '';
     _uid = '';
     _email = '';
+    _provider = 'EMAIL';
     _profileImage = '';
     _errorMessage = '';
 
