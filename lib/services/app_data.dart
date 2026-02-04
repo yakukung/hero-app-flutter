@@ -35,7 +35,17 @@ class Appdata extends ChangeNotifier {
   }
 
   void setProfileImage(String url) {
-    _profileImage = url;
+    Uri uri;
+    if (url.startsWith('http')) {
+      uri = Uri.parse(url);
+    } else {
+      final cleanPath = url.replaceFirst('file://', '');
+      uri = Uri.parse(apiEndpoint).resolve(cleanPath);
+    }
+    // เพิ่ม timestamp เพื่อแก้ปัญหา caching ของ Image.network
+    final params = Map<String, dynamic>.from(uri.queryParameters);
+    params['t'] = DateTime.now().millisecondsSinceEpoch.toString();
+    _profileImage = uri.replace(queryParameters: params).toString();
     notifyListeners();
   }
 
@@ -83,10 +93,18 @@ class Appdata extends ChangeNotifier {
     _username = userData['username']?.toString() ?? _username;
     _uid = userData['uid']?.toString() ?? userData['id']?.toString() ?? _uid;
     _email = userData['email']?.toString() ?? _email;
-    _profileImage =
+
+    String? rawProfileImage =
         userData['profile_image']?.toString() ??
-        userData['profileImage']?.toString() ??
-        _profileImage;
+        userData['profileImage']?.toString();
+    if (rawProfileImage != null) {
+      if (rawProfileImage.startsWith('http')) {
+        _profileImage = rawProfileImage;
+      } else {
+        final cleanPath = rawProfileImage.replaceFirst('file://', '');
+        _profileImage = Uri.parse(apiEndpoint).resolve(cleanPath).toString();
+      }
+    }
 
     if (userData['tokens'] is Map<String, dynamic>) {
       final tokens = userData['tokens'] as Map<String, dynamic>;

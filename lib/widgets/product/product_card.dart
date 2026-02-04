@@ -52,24 +52,21 @@ class ProductCard extends StatelessWidget {
           children: [
             if (hasImage)
               Positioned.fill(
-                child: Transform.scale(
-                  scale: 1.15,
-                  child: Image.network(
-                    product.imageUrl!,
-                    fit: BoxFit.cover,
-                    frameBuilder:
-                        (context, child, frame, wasSynchronouslyLoaded) {
-                          if (wasSynchronouslyLoaded) return child;
-                          return AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            child: frame != null
-                                ? child
-                                : _buildGradientBackground(gradientPair),
-                          );
-                        },
-                    errorBuilder: (context, error, stackTrace) =>
-                        _buildGradientBackground(gradientPair),
-                  ),
+                child: Image.network(
+                  product.imageUrl!,
+                  fit: BoxFit.cover,
+                  frameBuilder:
+                      (context, child, frame, wasSynchronouslyLoaded) {
+                        if (wasSynchronouslyLoaded) return child;
+                        return AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: frame != null
+                              ? child
+                              : _buildGradientBackground(gradientPair),
+                        );
+                      },
+                  errorBuilder: (context, error, stackTrace) =>
+                      _buildGradientBackground(gradientPair),
                 ),
               )
             else

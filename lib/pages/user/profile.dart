@@ -4,12 +4,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
+import 'package:flutter_application_1/models/upload_state.dart';
 import 'package:flutter_application_1/services/app_data.dart';
+import 'package:flutter_application_1/services/sheet_upload_service.dart';
+import 'package:flutter_application_1/widgets/upload/upload_progress_dialog.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:path/path.dart' as path;
+import 'package:http_parser/http_parser.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -20,8 +22,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final ImagePicker _picker = ImagePicker();
-  final FirebaseStorage _storage = FirebaseStorage.instance;
-  String downloadURL = '';
+
   final fontButtonSize = 14;
 
   Future<void> _uploadProfileImage() async {
@@ -34,6 +35,14 @@ class _ProfilePageState extends State<ProfilePage> {
     );
 
     if (image != null) {
+      final stateNotifier = ValueNotifier(const UploadState(isUploading: true));
+      if (mounted) {
+        UploadProgressDialog.show(
+          context: context,
+          stateNotifier: stateNotifier,
+        );
+      }
+
       try {
         final file = File(image.path);
         final fileSize = await file.length();
@@ -41,30 +50,71 @@ class _ProfilePageState extends State<ProfilePage> {
           throw Exception('ไฟล์รูปภาพใหญ่เกิน 5MB');
         }
 
-        final String filePath =
-            '${appData.uid}/profile/${DateTime.now().millisecondsSinceEpoch}${path.extension(image.path)}';
-        final Reference storageRef = _storage.ref().child(filePath);
-
-        await storageRef.putFile(File(image.path));
-        final String downloadURL = await storageRef.getDownloadURL();
-        log('อัปโหลดรูปภาพสำเร็จ: $downloadURL');
-        appData.setProfileImage(downloadURL);
-
-        final response = await http.put(
-          Uri.parse('$apiEndpoint/users/update-profile'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'uid': appData.uid, 'profile_image': downloadURL}),
+        final uri = Uri.parse('$apiEndpoint/users/update-profile');
+        final request = ProgressMultipartRequest(
+          'PUT',
+          uri,
+          onProgress: (int bytes, int total) {
+            final progress = bytes / total;
+            stateNotifier.value = stateNotifier.value.copyWith(
+              progress: progress,
+            );
+          },
         );
 
-        if (response.statusCode != 200) {
-          throw Exception('Failed to update profile: ${response.body}');
+        request.fields['uid'] = appData.uid;
+
+        String mimeType = 'image/jpeg';
+        if (file.path.endsWith('.png')) {
+          mimeType = 'image/png';
+        } else if (file.path.endsWith('.jpg') || file.path.endsWith('.jpeg')) {
+          mimeType = 'image/jpeg';
         }
 
-        log('อัปเดตโปรไฟล์สำเร็จที่ backend');
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'profile_image',
+            file.path,
+            contentType: MediaType.parse(mimeType),
+          ),
+        );
+
+        log('กำลังอัปโหลดรูปภาพไปยัง backend...');
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
+
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          log('อัปเดตโปรไฟล์สำเร็จที่ backend: ${response.body}');
+          if (response.body.isNotEmpty) {
+            try {
+              final jsonResponse = jsonDecode(response.body);
+              if (jsonResponse['profile_image'] != null) {
+                appData.setProfileImage(jsonResponse['profile_image']);
+              }
+            } catch (e) {
+              log('Error parsing response: $e');
+            }
+          } else {
+            await appData.fetchUserData();
+            appData.setProfileImage(appData.profileImage);
+          }
+
+          stateNotifier.value = stateNotifier.value.copyWith(
+            isUploading: false,
+            isSuccess: true,
+            progress: 1.0,
+          );
+        } else {
+          throw Exception(
+            'Failed to update profile: ${response.statusCode} ${response.body}',
+          );
+        }
       } catch (e) {
         log('Error uploading image: $e');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('อัปโหลดรูปภาพไม่สำเร็จ: ${e.toString()}')),
+        stateNotifier.value = stateNotifier.value.copyWith(
+          isUploading: false,
+          isSuccess: false,
+          errorMessage: 'อัปโหลดรูปภาพไม่สำเร็จ: ${e.toString()}',
         );
       }
     }

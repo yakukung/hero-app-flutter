@@ -101,8 +101,9 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       final path = file['thumbnail_path'] ?? file['original_path'] ?? '';
       if (path.startsWith('http')) return path;
 
-      final uri = Uri.parse(apiEndpoint);
-      return '${uri.scheme}://${uri.host}:${uri.port}/$path';
+      return Uri.parse(
+        apiEndpoint,
+      ).resolve(path.replaceFirst('file://', '')).toString();
     }).toList();
   }
 

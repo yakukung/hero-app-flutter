@@ -7,6 +7,7 @@ import 'package:flutter_application_1/app.dart';
 import 'package:flutter_application_1/pages/register.dart';
 import 'package:flutter_application_1/services/app_data.dart';
 import 'package:flutter_application_1/services/navigation_service.dart';
+import 'package:flutter_application_1/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
@@ -213,15 +214,18 @@ class _LoginPageState extends State<LoginPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  CircleAvatar(
-                    backgroundColor: Colors.transparent,
-                    radius: 24,
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/logo/google-icon-logo.png',
-                        width: 40,
-                        height: 40,
-                        fit: BoxFit.contain,
+                  GestureDetector(
+                    onTap: _handleGoogleLogin,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.transparent,
+                      radius: 24,
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/logo/google-icon-logo.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                   ),
@@ -373,6 +377,77 @@ class _LoginPageState extends State<LoginPage> {
       return int.tryParse(code) ?? 0;
     }
     return 0;
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = AuthService();
+      final userCredential = await authService.signInWithGoogle();
+
+      if (userCredential != null && userCredential.user != null) {
+        log('Google Sign-In Success: ${userCredential.user!.uid}');
+
+        final response = await authService.loginByGoogle(
+          providerUserId: userCredential.user!.uid,
+          providerName: "GOOGLE",
+          providerUsername: userCredential.user!.displayName ?? "",
+          providerEmail: userCredential.user!.email ?? "",
+          providerAvatar: userCredential.user!.photoURL ?? "",
+        );
+
+        log('Google Login API Response: ${response.body}');
+
+        if (response.statusCode != 200) {
+          _showErrorDialog(
+            'เข้าสู่ระบบไม่สำเร็จ',
+            'เชื่อมต่อกับเซิร์ฟเวอร์ล้มเหลว',
+          );
+          return;
+        }
+
+        final payload = _decodeLoginPayload(response.body);
+        if (payload == null) {
+          _showUnexpectedResponse();
+          return;
+        }
+
+        final int apiCode = _parseApiCode(payload['code']);
+        if (apiCode != 200) {
+          final String message =
+              payload['message']?.toString() ??
+              'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
+          _showErrorDialog('เข้าสู่ระบบไม่สำเร็จ', message);
+          return;
+        }
+
+        final dynamic data = payload['data'];
+        if (data is! Map<String, dynamic>) {
+          log('Error: data field missing or invalid in response');
+          _showUnexpectedResponse();
+          return;
+        }
+
+        final String? uid = _extractUid(data);
+        if (uid == null || uid.isEmpty) {
+          log('Error: uid is null in response');
+          _showUnexpectedResponse();
+          return;
+        }
+
+        await _completeLogin(uid, data);
+      } else {
+        // Cancelled or failed
+        log('Google Sign-In cancelled or failed');
+      }
+    } catch (e) {
+      log('Google Sign-In Error: $e');
+      _showErrorDialog('เกิดข้อผิดพลาด', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   String? _extractUid(Map<String, dynamic> data) {
