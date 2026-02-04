@@ -67,6 +67,8 @@ class DefaultFirebaseOptions {
     projectId: 'web-project-term2',
     databaseURL: 'https://web-project-term2-default-rtdb.firebaseio.com',
     storageBucket: 'web-project-term2.appspot.com',
+    iosClientId:
+        '519278320999-1t150lq7s9ucagedi6k5pflcju0tki80.apps.googleusercontent.com',
     iosBundleId: 'com.example.flutterApplication1',
   );
 

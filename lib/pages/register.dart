@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
+import 'login.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -329,6 +330,7 @@ class _RegisterPageState extends State<RegisterPage> {
           'email': email,
           'password': password,
           'confirmPassword': cfPassword,
+          'base_url': apiEndpoint,
         }),
       );
       log('Register response: ${response.body}');
@@ -348,9 +350,14 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (isSuccessful) {
         setState(() => isLoading = false);
-        final successMessage =
-            payload['message']?.toString() ?? 'สมัครสมาชิกสำเร็จ';
-        showCustomDialog('สำเร็จ', successMessage, isSuccess: true);
+        showCustomDialog(
+          'สำเร็จ',
+          'ตรวจสอบข้อความในอีเมลของคุณ\nเพื่อยืนยันบัญชี',
+          isSuccess: true,
+          onOk: () {
+            Get.offAll(() => const LoginPage());
+          },
+        );
         return;
       }
 

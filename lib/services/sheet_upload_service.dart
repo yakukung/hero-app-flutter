@@ -30,10 +30,7 @@ class SheetUploadData {
   });
 }
 
-/// Service for uploading sheets with progress tracking
 class SheetUploadService {
-  /// Uploads a sheet with the given data
-  /// Shows a progress dialog during upload
   static Future<bool> uploadSheet({
     required BuildContext context,
     required SheetUploadData data,
@@ -44,27 +41,23 @@ class SheetUploadService {
     final uri = Uri.parse('$apiEndpoint/sheets/create');
     final request = http.MultipartRequest('POST', uri);
 
-    // Headers
     request.headers.addAll({
       'Content-Type': 'multipart/form-data',
       if (token != null) 'Authorization': 'Bearer $token',
     });
 
-    // Fields
     request.fields['title'] = data.title;
     request.fields['description'] = data.description;
     request.fields['category'] = data.categoryId;
     request.fields['keywords'] = jsonEncode(data.keywords);
     request.fields['price'] = data.price;
 
-    // Questions
     if (data.questions != null && data.questions!.isNotEmpty) {
       request.fields['questions'] = jsonEncode(data.questions);
     } else {
       request.fields['questions'] = '[]';
     }
 
-    // Files (Images)
     for (var file in data.images) {
       String mimeType = 'image/jpeg';
       if (file.path.endsWith('.png')) {
@@ -82,9 +75,7 @@ class SheetUploadService {
       );
     }
 
-    // Show progress dialog
     final stateNotifier = ValueNotifier(const UploadState(isUploading: true));
-
     // ignore: use_build_context_synchronously
     UploadProgressDialog.show(context: context, stateNotifier: stateNotifier);
 
@@ -133,7 +124,6 @@ class SheetUploadService {
   }
 }
 
-/// HTTP MultipartRequest with progress tracking
 class ProgressMultipartRequest extends http.MultipartRequest {
   final void Function(int bytes, int total) onProgress;
 
