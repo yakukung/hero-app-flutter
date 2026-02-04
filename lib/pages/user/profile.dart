@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
@@ -6,12 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:flutter_application_1/models/upload_state.dart';
 import 'package:flutter_application_1/services/app_data.dart';
-import 'package:flutter_application_1/services/sheet_upload_service.dart';
+import 'package:flutter_application_1/pages/user/edit_profile.dart';
 import 'package:flutter_application_1/widgets/upload/upload_progress_dialog.dart';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -50,7 +51,7 @@ class _ProfilePageState extends State<ProfilePage> {
           throw Exception('ไฟล์รูปภาพใหญ่เกิน 5MB');
         }
 
-        final uri = Uri.parse('$apiEndpoint/users/update-profile');
+        final uri = Uri.parse('$apiEndpoint/users/update-profile-image');
         final request = ProgressMultipartRequest(
           'PUT',
           uri,
@@ -160,7 +161,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           Container(
                             padding: EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: Colors.blue,
+                              color: Color(0xFF2A5DB9),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -223,7 +224,15 @@ class _ProfilePageState extends State<ProfilePage> {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const EditProfilePage(),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                           SizedBox(width: 10),
@@ -310,5 +319,29 @@ class _ProfilePageState extends State<ProfilePage> {
         },
       ),
     );
+  }
+}
+
+class ProgressMultipartRequest extends http.MultipartRequest {
+  final void Function(int bytes, int total) onProgress;
+
+  ProgressMultipartRequest(String method, Uri url, {required this.onProgress})
+    : super(method, url);
+
+  @override
+  http.ByteStream finalize() {
+    final byteStream = super.finalize();
+    final total = contentLength;
+    int bytes = 0;
+
+    final t = StreamTransformer.fromHandlers(
+      handleData: (List<int> data, EventSink<List<int>> sink) {
+        bytes += data.length;
+        onProgress(bytes, total);
+        sink.add(data);
+      },
+    );
+    final stream = byteStream.transform(t);
+    return http.ByteStream(stream);
   }
 }
