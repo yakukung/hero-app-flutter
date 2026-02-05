@@ -1,52 +1,30 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
+import 'package:flutter_application_1/models/user_model.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 
 class Appdata extends ChangeNotifier {
-  String _username = '';
-  String _uid = '';
-  String _email = '';
-  String _provider = 'EMAIL';
+  UserModel? _user;
   String _errorMessage = '';
-  String _profileImage = '';
-  late UserProfile user;
 
   GetStorage gs = GetStorage();
 
-  String get uid => _uid;
-  String get username => _username;
-  String get email => _email;
-  String get provider => _provider;
-  String get profileImage => _profileImage;
-
-  set uid(String value) {
-    _uid = value;
-    notifyListeners();
-  }
-
-  set username(String value) {
-    _username = value;
-    notifyListeners();
-  }
-
-  set email(String value) {
-    _email = value;
-    notifyListeners();
+  UserModel? get user => _user;
+  String get uid => _user?.id ?? '';
+  String get username => _user?.username ?? '';
+  String get email => _user?.email ?? '';
+  String get provider => _user?.authProvider.name ?? 'EMAIL';
+  String get profileImage {
+    if (_user?.profileImage == null || _user!.profileImage!.isEmpty) return '';
+    if (_user!.profileImage!.startsWith('http')) return _user!.profileImage!;
+    return Uri.parse(apiEndpoint).resolve(_user!.profileImage!).toString();
   }
 
   void setProfileImage(String url) {
-    Uri uri;
-    if (url.startsWith('http')) {
-      uri = Uri.parse(url);
-    } else {
-      final cleanPath = url.replaceFirst('file://', '');
-      uri = Uri.parse(apiEndpoint).resolve(cleanPath);
-    }
-    final params = Map<String, dynamic>.from(uri.queryParameters);
-    params['t'] = DateTime.now().millisecondsSinceEpoch.toString();
-    _profileImage = uri.replace(queryParameters: params).toString();
+    if (_user == null) return;
+    _user = _user!.copyWith(profileImage: url);
     notifyListeners();
   }
 
@@ -54,22 +32,31 @@ class Appdata extends ChangeNotifier {
 
   Future<void> fetchUserData() async {
     GetStorage gs = GetStorage();
-    final storedUid = gs.read('uid');
-    _uid = storedUid == null ? '' : storedUid.toString();
+    final String? storedUid = gs.read('uid')?.toString();
 
-    if (_uid.isNotEmpty) {
-      final response = await http.get(Uri.parse('$apiEndpoint/users/$_uid'));
+    if (storedUid != null && storedUid.isNotEmpty) {
+      try {
+        final String? token = gs.read('token')?.toString();
+        final response = await http.get(
+          Uri.parse('$apiEndpoint/users/$storedUid'),
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        );
 
-      if (response.statusCode == 200) {
-        final userData = _extractUserMap(jsonDecode(response.body));
-        if (userData.isNotEmpty) {
-          _applyUserData(userData);
-          _errorMessage = '';
+        if (response.statusCode == 200) {
+          final userData = _extractUserMap(jsonDecode(response.body));
+          if (userData.isNotEmpty) {
+            _applyUserData(userData);
+            _errorMessage = '';
+          } else {
+            _handleUserError('ไม่พบข้อมูลผู้ใช้ในข้อมูลตอบกลับ');
+          }
         } else {
-          _handleUserError('ไม่พบข้อมูลผู้ใช้ในข้อมูลตอบกลับ');
+          _handleUserError(
+            'ไม่สามารถดึงข้อมูลผู้ใช้ได้: ${response.statusCode}',
+          );
         }
-      } else {
-        _handleUserError('ไม่สามารถดึงข้อมูลผู้ใช้ได้: ${response.statusCode}');
+      } catch (e) {
+        _handleUserError('เกิดข้อผิดพลาดในการดึงข้อมูล: $e');
       }
     } else {
       _clearUserData();
@@ -91,48 +78,37 @@ class Appdata extends ChangeNotifier {
   }
 
   void _applyUserData(Map<String, dynamic> userData) {
-    _username = userData['username']?.toString() ?? _username;
-    _uid = userData['uid']?.toString() ?? userData['id']?.toString() ?? _uid;
-    _email = userData['email']?.toString() ?? _email;
-    _provider =
-        userData['auth_provider']?.toString() ??
-        userData['provider']?.toString() ??
-        'EMAIL';
-
-    String? rawProfileImage =
-        userData['profile_image']?.toString() ??
-        userData['profileImage']?.toString();
-    if (rawProfileImage != null) {
-      if (rawProfileImage.startsWith('http')) {
-        _profileImage = rawProfileImage;
-      } else {
-        final cleanPath = rawProfileImage.replaceFirst('file://', '');
-        _profileImage = Uri.parse(apiEndpoint).resolve(cleanPath).toString();
-      }
-    }
-
-    if (userData['tokens'] is Map<String, dynamic>) {
-      final tokens = userData['tokens'] as Map<String, dynamic>;
-      final accessToken = tokens['access_token']?.toString();
-      final refreshToken = tokens['refresh_token']?.toString();
-      final accessTokenExpiresAt = tokens['access_token_expires_at'];
-      final refreshTokenExpiresAt = tokens['refresh_token_expires_at'];
+    try {
+      _user = UserModel.fromJson(userData);
 
       final gs = GetStorage();
-      if (accessToken != null) {
-        gs.write('token', accessToken);
+      gs.write('uid', _user!.id);
+
+      if (userData['tokens'] is Map<String, dynamic>) {
+        final tokens = userData['tokens'] as Map<String, dynamic>;
+        final accessToken = tokens['access_token']?.toString();
+        final refreshToken = tokens['refresh_token']?.toString();
+        final accessTokenExpiresAt = tokens['access_token_expires_at'];
+        final refreshTokenExpiresAt = tokens['refresh_token_expires_at'];
+
+        final gs = GetStorage();
+        if (accessToken != null) {
+          gs.write('token', accessToken);
+        }
+        if (refreshToken != null) {
+          gs.write('refresh_token', refreshToken);
+        }
+        if (accessTokenExpiresAt != null) {
+          gs.write('access_token_expires_at', accessTokenExpiresAt);
+        }
+        if (refreshTokenExpiresAt != null) {
+          gs.write('refresh_token_expires_at', refreshTokenExpiresAt);
+        }
       }
-      if (refreshToken != null) {
-        gs.write('refresh_token', refreshToken);
-      }
-      if (accessTokenExpiresAt != null) {
-        gs.write('access_token_expires_at', accessTokenExpiresAt);
-      }
-      if (refreshTokenExpiresAt != null) {
-        gs.write('refresh_token_expires_at', refreshTokenExpiresAt);
-      }
+      notifyListeners();
+    } catch (e) {
+      _handleUserError('Error parsing user data: $e');
     }
-    notifyListeners();
   }
 
   void _handleUserError(String message) {
@@ -141,11 +117,7 @@ class Appdata extends ChangeNotifier {
   }
 
   void _clearUserData() {
-    _username = '';
-    _uid = '';
-    _email = '';
-    _provider = 'EMAIL';
-    _profileImage = '';
+    _user = null;
     _errorMessage = '';
 
     final gs = GetStorage();
@@ -153,6 +125,7 @@ class Appdata extends ChangeNotifier {
     gs.remove('refresh_token');
     gs.remove('access_token_expires_at');
     gs.remove('refresh_token_expires_at');
+    gs.remove('uid');
 
     notifyListeners();
   }

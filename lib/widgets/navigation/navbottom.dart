@@ -23,7 +23,7 @@ class NavBottom extends StatelessWidget {
           border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 30,
               offset: const Offset(0, 30),
             ),
@@ -32,9 +32,9 @@ class NavBottom extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(40),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
             child: Container(
-              color: Colors.white.withOpacity(0.3),
+              color: Colors.white.withOpacity(0.1),
               child: MediaQuery.removePadding(
                 context: context,
                 removeBottom: true,
@@ -45,7 +45,7 @@ class NavBottom extends StatelessWidget {
                   onTap: _navigateToPage,
                   type: BottomNavigationBarType.fixed,
                   selectedItemColor: const Color(0xFF2A5DB9),
-                  unselectedItemColor: Colors.black.withOpacity(0.3),
+                  unselectedItemColor: Colors.black.withOpacity(0.4),
                   showSelectedLabels: true,
                   showUnselectedLabels: true,
                   selectedLabelStyle: const TextStyle(

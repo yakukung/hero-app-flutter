@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
@@ -8,8 +9,9 @@ import 'package:flutter_application_1/widgets/upload/upload_progress_dialog.dart
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:get/get.dart';
+import 'package:flutter_application_1/services/navigation_service.dart';
 
-/// Data class for sheet upload request
 class SheetUploadData {
   final String title;
   final String description;
@@ -68,7 +70,7 @@ class SheetUploadService {
 
       request.files.add(
         await http.MultipartFile.fromPath(
-          'images',
+          'files',
           file.path,
           contentType: MediaType.parse(mimeType),
         ),
@@ -77,7 +79,18 @@ class SheetUploadService {
 
     final stateNotifier = ValueNotifier(const UploadState(isUploading: true));
     // ignore: use_build_context_synchronously
-    UploadProgressDialog.show(context: context, stateNotifier: stateNotifier);
+    UploadProgressDialog.show(
+      context: context,
+      stateNotifier: stateNotifier,
+      onComplete: () {
+        try {
+          final navService = Get.find<NavigationService>();
+          navService.changeIndex(0);
+        } catch (e) {
+          log('Error navigating back: $e');
+        }
+      },
+    );
 
     try {
       final progressRequest = ProgressMultipartRequest(

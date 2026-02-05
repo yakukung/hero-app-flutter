@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/product_model.dart';
+import 'package:flutter_application_1/models/sheet_model.dart';
 import 'package:flutter_application_1/pages/user/sheet/preview_sheet.dart';
 import 'package:flutter_application_1/widgets/product/product_card.dart';
 import 'package:flutter_application_1/widgets/search/search_sheet_box.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_application_1/services/app_data.dart';
-import 'package:flutter_application_1/services/product_data.dart';
+import 'package:flutter_application_1/services/sheets.service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,21 +22,21 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<Appdata>(context, listen: false).fetchUserData();
-      Provider.of<ProductData>(context, listen: false).fetchProducts();
+      Provider.of<SheetData>(context, listen: false).fetchSheets();
     });
   }
 
   Future<void> _onRefresh() async {
-    await Provider.of<ProductData>(context, listen: false).refreshProducts();
+    await Provider.of<SheetData>(context, listen: false).refreshSheets();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ProductData>(
-      builder: (context, productData, child) {
-        final isLoading = productData.isLoading;
-        final errorMessage = productData.errorMessage;
-        final products = productData.products;
+    return Consumer<SheetData>(
+      builder: (context, sheetData, child) {
+        final isLoading = sheetData.isLoading;
+        final errorMessage = sheetData.errorMessage;
+        final sheets = sheetData.sheets;
 
         return Scaffold(
           body: Container(
@@ -45,23 +46,23 @@ class _HomePageState extends State<HomePage> {
             child: isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : errorMessage.isNotEmpty
-                ? _buildErrorView(productData)
-                : products.isEmpty
+                ? _buildErrorView(sheetData)
+                : sheets.isEmpty
                 ? _buildEmptyView()
-                : _buildContent(products, productData),
+                : _buildContent(sheets, sheetData),
           ),
         );
       },
     );
   }
 
-  Widget _buildErrorView(ProductData productData) {
+  Widget _buildErrorView(SheetData sheetData) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            productData.errorMessage,
+            sheetData.errorMessage,
             style: const TextStyle(
               color: Colors.red,
               fontSize: 16,
@@ -71,7 +72,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: productData.fetchProducts,
+            onPressed: sheetData.fetchSheets,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2A5DB9),
               shape: RoundedRectangleBorder(
@@ -106,7 +107,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildContent(List<dynamic> products, ProductData productData) {
+  Widget _buildContent(List<SheetModel> sheets, SheetData sheetData) {
     return RefreshIndicator(
       onRefresh: _onRefresh,
       color: const Color(0xFF2A5DB9),
@@ -119,11 +120,11 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 35),
             _buildSectionHeader('ชีตยอดนิยม'),
             const SizedBox(height: 16),
-            _buildProductList(products, productData),
+            _buildProductList(sheets, sheetData),
             const SizedBox(height: 20),
             _buildSectionHeader('ชีตใหม่ล่าสุด'),
             const SizedBox(height: 16),
-            _buildProductList(products, productData),
+            _buildProductList(sheets, sheetData),
             const SizedBox(height: 140),
           ],
         ),
@@ -163,40 +164,33 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildProductList(List<dynamic> products, ProductData productData) {
+  Widget _buildProductList(List<SheetModel> sheets, SheetData sheetData) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       clipBehavior: Clip.none,
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
       child: Row(
         children: [
-          for (int i = 0; i < products.length; i++)
+          for (int i = 0; i < sheets.length; i++)
             GestureDetector(
               onTap: () {
-                Get.to(
-                  () =>
-                      PreviewSheetPage(productId: products[i]['id'].toString()),
-                );
+                Get.to(() => PreviewSheetPage(sheetId: sheets[i].id));
               },
               child: ProductCard(
                 product: Product(
-                  imageUrl: (products[i]['imageUrl'] != null)
-                      ? products[i]['imageUrl']
-                            .toString()
-                            .replaceAll('`', '')
-                            .trim()
-                      : null,
-                  title: products[i]['title'] ?? '',
-                  author: products[i]['author'] ?? '',
-                  rating: (products[i]['rating'] ?? 0).toDouble(),
-                  price: products[i]['price'] == 0
+                  id: sheets[i].id,
+                  imageUrl: sheets[i].thumbnail,
+                  title: sheets[i].title,
+                  author: sheets[i].authorName ?? 'Unknown',
+                  rating: sheets[i].rating ?? 0.0,
+                  price: sheets[i].price == 0 || sheets[i].price == null
                       ? 'ฟรี'
-                      : '${products[i]['price']} บาท',
-                  isFavorite: (products[i]['is_favorite'] == 1),
+                      : '${sheets[i].price} บาท',
+                  isFavorite: false, // Will handle this later
                 ),
                 colorIndex: i, // Use index for gradient color
                 onFavoriteTap: () {
-                  productData.toggleFavorite(products[i]['id'].toString());
+                  sheetData.toggleFavorite(sheets[i].id);
                 },
               ),
             ),

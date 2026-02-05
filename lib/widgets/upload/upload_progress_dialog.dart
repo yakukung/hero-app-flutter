@@ -198,6 +198,7 @@ class UploadProgressDialog extends StatelessWidget {
   static void show({
     required BuildContext context,
     required ValueNotifier<UploadState> stateNotifier,
+    VoidCallback? onComplete,
   }) {
     showDialog(
       context: context,
@@ -214,7 +215,12 @@ class UploadProgressDialog extends StatelessWidget {
               builder: (context, state, child) {
                 return UploadProgressDialog(
                   state: state,
-                  onClose: () => Navigator.pop(dialogContext),
+                  onClose: () {
+                    Navigator.pop(dialogContext);
+                    if (state.isSuccess && onComplete != null) {
+                      onComplete();
+                    }
+                  },
                 );
               },
             ),
