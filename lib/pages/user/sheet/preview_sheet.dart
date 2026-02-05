@@ -3,20 +3,21 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_application_1/config/api_connect.dart';
-import 'package:flutter_application_1/models/product_model.dart';
+import 'package:flutter_application_1/models/sheet_model.dart';
+import 'package:get_storage/get_storage.dart';
 import 'sheet_reader.dart';
 
 class PreviewSheetPage extends StatefulWidget {
-  final String productId;
+  final String sheetId;
 
-  const PreviewSheetPage({super.key, required this.productId});
+  const PreviewSheetPage({super.key, required this.sheetId});
 
   @override
   State<PreviewSheetPage> createState() => _PreviewSheetPageState();
 }
 
 class _PreviewSheetPageState extends State<PreviewSheetPage> {
-  Product? product;
+  SheetModel? sheet;
   bool isLoading = true;
   String errorMessage = '';
   List<String> previewImages = [];
@@ -24,87 +25,43 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
   @override
   void initState() {
     super.initState();
-    _fetchProductDetails();
+    _fetchSheetDetails();
   }
 
-  Future<void> _fetchProductDetails() async {
+  Future<void> _fetchSheetDetails() async {
     try {
+      final gs = GetStorage();
+      final String? token = gs.read('token')?.toString();
+
       final response = await http.get(
-        Uri.parse('$apiEndpoint/sheets/${widget.productId}'),
+        Uri.parse('$apiEndpoint/sheets/${widget.sheetId}'),
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
-        final sheetData = _extractSheetData(jsonResponse);
+        final dynamic data =
+            jsonResponse['data']?['sheet'] ?? jsonResponse['data'];
 
-        if (sheetData == null) throw Exception('No data returned');
+        if (data == null) throw Exception('No data returned');
 
-        final images = _extractImages(sheetData);
+        final newSheet = SheetModel.fromJson(data is List ? data.first : data);
+        final images =
+            newSheet.files?.map((f) => f.fullOriginalUrl).toList() ?? [];
         final limitedPreview = images.take(2).toList();
 
         setState(() {
-          product = Product(
-            id: sheetData['id'],
-            title: sheetData['title'],
-            description: sheetData['description'] ?? '',
-            price: sheetData['price'] ?? 'ฟรี',
-            rating:
-                double.tryParse(sheetData['rating']?.toString() ?? '0.0') ??
-                0.0,
-            author: sheetData['author_name'] ?? 'Unknown',
-            imageUrl: images.isNotEmpty ? images.first : '',
-            isFavorite: false,
-          );
+          sheet = newSheet;
           previewImages = limitedPreview;
           isLoading = false;
         });
       } else {
-        _setError('Failed to load product: ${response.statusCode}');
+        _setError('Failed to load sheet: ${response.statusCode}');
       }
     } catch (e) {
-      log('Error fetching product details: $e');
+      log('Error fetching sheet details: $e');
       _setError('Error: $e');
     }
-  }
-
-  dynamic _extractSheetData(Map<String, dynamic> json) {
-    dynamic data;
-    if (json.containsKey('data')) {
-      if (json['data'] is Map && json['data'].containsKey('sheet')) {
-        data = json['data']['sheet'];
-      } else {
-        data = json['data'];
-      }
-    } else {
-      data = json;
-    }
-
-    if (data is List) {
-      return data.isNotEmpty ? data.first : null;
-    }
-    return data;
-  }
-
-  List<String> _extractImages(dynamic sheetData) {
-    if (sheetData['files'] == null) return [];
-
-    final files = List<dynamic>.from(sheetData['files'])
-      ..sort((a, b) {
-        final indexA = int.tryParse(a['index']?.toString() ?? '0') ?? 0;
-        final indexB = int.tryParse(b['index']?.toString() ?? '0') ?? 0;
-        return indexA.compareTo(indexB);
-      });
-
-    log('Sorted files by index: ${files.map((f) => f['index']).toList()}');
-
-    return files.map<String>((file) {
-      final path = file['thumbnail_path'] ?? file['original_path'] ?? '';
-      if (path.startsWith('http')) return path;
-
-      return Uri.parse(
-        apiEndpoint,
-      ).resolve(path.replaceFirst('file://', '')).toString();
-    }).toList();
   }
 
   void _setError(String message) {
@@ -118,40 +75,63 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
   // Navigation
   // ---------------------------------------------------------------------------
 
-  void _openReader() {
+  void _openReader({bool fullVersion = false}) {
     if (previewImages.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('ไม่มีตัวอย่างให้อ่าน')));
+      ).showSnackBar(const SnackBar(content: Text('ไม่มีเนื้อหาให้อ่าน')));
       return;
     }
+
+    // In a real app, fullVersion would fetch all images
+    final imagesToRead = fullVersion
+        ? (sheet?.files?.map((f) => f.fullOriginalUrl).toList() ??
+              previewImages)
+        : previewImages;
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => SheetPreviewReader(
-          images: previewImages,
-          title: product?.title ?? 'Reading',
+          images: imagesToRead,
+          title: fullVersion
+              ? '${sheet?.title ?? 'Reading'} (ฉบับเต็ม)'
+              : sheet?.title ?? 'Reading',
         ),
       ),
     );
   }
 
-  void _toggleFavorite() {
-    if (product == null) return;
+  void _buySheet() {
+    // Show payment dialog or navigate to payment page
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ยืนยันการซื้อ'),
+        content: Text(
+          'คุณต้องการซื้อ "${sheet?.title}" ในราคา ${sheet?.price} บาท?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('ยกเลิก'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('ระบบชำระเงินกำลังจะมาเร็วๆ นี้')),
+              );
+            },
+            child: const Text('ตกลง'),
+          ),
+        ],
+      ),
+    );
+  }
 
-    setState(() {
-      product = Product(
-        id: product!.id,
-        title: product!.title,
-        description: product!.description,
-        price: product!.price,
-        rating: product!.rating,
-        imageUrl: product!.imageUrl,
-        author: product!.author,
-        isFavorite: !product!.isFavorite,
-      );
-    });
+  void _toggleFavorite() {
+    // Implement toggle favorite logic here
   }
 
   @override
@@ -188,10 +168,8 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       ),
       actions: [
         _buildCircleButton(
-          icon: product?.isFavorite == true
-              ? Icons.favorite
-              : Icons.favorite_border,
-          iconColor: product?.isFavorite == true ? Colors.red : Colors.white,
+          icon: Icons.favorite_border,
+          iconColor: Colors.white,
           onPressed: _toggleFavorite,
         ),
         const SizedBox(width: 16),
@@ -223,15 +201,15 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
 
   Widget _buildHeaderBackground() {
     return GestureDetector(
-      onTap: _openReader,
+      onTap: () => _openReader(fullVersion: sheet?.isPurchased ?? false),
       child: Stack(
         fit: StackFit.expand,
         children: [
           Hero(
-            tag: 'sheet_image_${product?.id}',
-            child: product?.imageUrl != null
+            tag: 'sheet_image_${sheet?.id}',
+            child: sheet?.thumbnail != null && sheet!.thumbnail.isNotEmpty
                 ? Image.network(
-                    product!.imageUrl!.replaceAll('`', '').trim(),
+                    sheet!.thumbnail,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => _buildPlaceholder(),
                   )
@@ -292,7 +270,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
   }
 
   Widget _buildContent() {
-    final price = double.tryParse(product?.price ?? '0') ?? 0;
+    final price = sheet?.price ?? 0;
     final isFree = price == 0;
 
     return SliverToBoxAdapter(
@@ -344,7 +322,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       children: [
         Expanded(
           child: Text(
-            product?.title ?? 'No Title',
+            sheet?.title ?? 'No Title',
             style: const TextStyle(
               fontSize: 26,
               fontWeight: FontWeight.bold,
@@ -357,7 +335,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              isFree ? 'ฟรี' : '${product?.price}',
+              isFree ? 'ฟรี' : '${sheet?.price}',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
@@ -385,7 +363,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
         ),
         const SizedBox(width: 8),
         Text(
-          product?.author ?? 'ไม่ระบุ',
+          sheet?.authorName ?? 'ไม่ระบุ',
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const Spacer(),
@@ -404,7 +382,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
               ),
               const SizedBox(width: 4),
               Text(
-                '${product?.rating ?? 0.0}',
+                '${sheet?.rating ?? 0.0}',
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -427,7 +405,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
         ),
         const SizedBox(height: 12),
         Text(
-          product?.description ?? 'ไม่มีรายละเอียด',
+          sheet?.description ?? 'ไม่มีรายละเอียด',
           style: const TextStyle(
             fontSize: 16,
             color: Color(0xFF555555),
@@ -439,6 +417,10 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
   }
 
   Widget _buildBottomButton() {
+    final price = sheet?.price ?? 0;
+    final isFree = price == 0;
+    final isPurchased = sheet?.isPurchased ?? false;
+
     return Positioned(
       bottom: 0,
       left: 0,
@@ -464,33 +446,88 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
             topRight: Radius.circular(24),
           ),
         ),
-        child: ElevatedButton(
-          onPressed: _openReader,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2A5DB9),
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+        child: (isFree || isPurchased)
+            ? _buildReadFullButton()
+            : _buildPreviewAndBuyButtons(),
+      ),
+    );
+  }
+
+  Widget _buildReadFullButton() {
+    return ElevatedButton(
+      onPressed: () => _openReader(fullVersion: true),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF2A5DB9),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.menu_book_rounded, color: Colors.white),
+          SizedBox(width: 8),
+          Text(
+            'อ่านแบบฉบับเต็ม',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
           ),
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.menu_book_rounded, color: Colors.white),
-              SizedBox(width: 8),
-              Text(
-                'เริ่มอ่านตัวอย่าง',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewAndBuyButtons() {
+    return Row(
+      children: [
+        Expanded(
+          flex: 4,
+          child: OutlinedButton(
+            onPressed: () => _openReader(fullVersion: false),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              side: const BorderSide(color: Color(0xFF2A5DB9)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-            ],
+            ),
+            child: const Text(
+              'เริ่มอ่านตัวอย่าง',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2A5DB9),
+              ),
+            ),
           ),
         ),
-      ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 6,
+          child: ElevatedButton(
+            onPressed: _buySheet,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2A5DB9),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: const Text(
+              'ซื้อ',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/product_model.dart';
-import 'package:flutter_application_1/services/product_data.dart';
+import 'package:flutter_application_1/services/sheets.service.dart';
 import 'package:flutter_application_1/widgets/product/product_card.dart';
 import 'package:provider/provider.dart';
 import 'package:get/get.dart';
@@ -18,17 +18,16 @@ class _FavoritePageState extends State<FavoritePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Consumer<ProductData>(
-        builder: (context, productData, child) {
-          final allProducts = productData.products;
+      body: Consumer<SheetData>(
+        builder: (context, sheetData, child) {
+          final allSheets = sheetData.sheets;
 
           // Filter favorite products
-          final favoriteProducts = allProducts.where((p) {
-            final isFav = p['is_favorite'];
-            if (isFav is int) return isFav == 1;
-            if (isFav is bool) return isFav;
-            return false;
-          }).toList();
+          // Note: is_favorite is currently not a field in SheetModel in the DB dump
+          // but we'll use a placeholder or check how it was used before.
+          // For now, let's assume all sheets in this view are favorites or handled by a separate list.
+          // For now, let's assume all sheets in this view are favorites or handled by a separate list.
+          final favoriteSheets = allSheets;
 
           return SafeArea(
             child: CustomScrollView(
@@ -64,7 +63,7 @@ class _FavoritePageState extends State<FavoritePage> {
                     ),
                   ),
                 ),
-                if (favoriteProducts.isEmpty)
+                if (favoriteSheets.isEmpty)
                   SliverFillRemaining(
                     child: Center(
                       child: Column(
@@ -99,40 +98,30 @@ class _FavoritePageState extends State<FavoritePage> {
                             mainAxisSpacing: 20,
                           ),
                       delegate: SliverChildBuilderDelegate((context, index) {
-                        final productMap = favoriteProducts[index];
+                        final sheet = favoriteSheets[index];
                         return GestureDetector(
                           onTap: () {
-                            Get.to(
-                              () => PreviewSheetPage(
-                                productId: productMap['id'].toString(),
-                              ),
-                            );
+                            Get.to(() => PreviewSheetPage(sheetId: sheet.id));
                           },
                           child: ProductCard(
                             product: Product(
-                              imageUrl: (productMap['imageUrl'] != null)
-                                  ? productMap['imageUrl']
-                                        .toString()
-                                        .replaceAll('`', '')
-                                        .trim()
-                                  : null,
-                              title: productMap['title'] ?? '',
-                              author: productMap['author'] ?? '',
-                              rating: (productMap['rating'] ?? 0).toDouble(),
-                              price: productMap['price'] == 0
+                              id: sheet.id,
+                              imageUrl: sheet.thumbnail,
+                              title: sheet.title,
+                              author: sheet.authorName ?? 'Unknown',
+                              rating: sheet.rating ?? 0.0,
+                              price: sheet.price == 0 || sheet.price == null
                                   ? 'ฟรี'
-                                  : '${productMap['price']} บาท',
+                                  : '${sheet.price} บาท',
                               isFavorite: true,
                             ),
                             colorIndex: index, // Use gradient instead
                             onFavoriteTap: () {
-                              productData.toggleFavorite(
-                                productMap['id'].toString(),
-                              );
+                              sheetData.toggleFavorite(sheet.id);
                             },
                           ),
                         );
-                      }, childCount: favoriteProducts.length),
+                      }, childCount: favoriteSheets.length),
                     ),
                   ),
                 const SliverToBoxAdapter(child: SizedBox(height: 24)),

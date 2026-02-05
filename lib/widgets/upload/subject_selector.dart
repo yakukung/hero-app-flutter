@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/models/category_model.dart';
 
 /// Horizontal scrollable subject/category selector
 class SubjectSelector extends StatelessWidget {
-  final List<dynamic> categories;
+  final List<CategoryModel> categories;
   final String? selectedSubject;
   final bool isLoading;
   final Function(String) onSelect;
@@ -29,7 +30,7 @@ class SubjectSelector extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: categories.map((category) {
-          final String name = category['name'];
+          final String name = category.name;
           final isSelected = name == selectedSubject;
           return Padding(
             padding: const EdgeInsets.only(right: 12),

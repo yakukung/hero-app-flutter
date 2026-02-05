@@ -2,12 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
+import 'package:flutter_application_1/models/category_model.dart';
+import 'package:flutter_application_1/models/enums.dart';
 import 'package:flutter_application_1/services/sheet_upload_service.dart';
 import 'package:flutter_application_1/widgets/upload/image_upload_section.dart';
 import 'package:flutter_application_1/widgets/upload/keyword_section.dart';
 import 'package:flutter_application_1/widgets/upload/price_selector.dart';
 import 'package:flutter_application_1/widgets/upload/question_section.dart';
 import 'package:flutter_application_1/widgets/upload/subject_selector.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 
@@ -26,7 +29,7 @@ class _UploadPageState extends State<UploadPage> {
   List<File> uploadedImages = [];
 
   // Categories
-  List<dynamic> _categories = [];
+  List<CategoryModel> _categories = [];
   bool _isLoadingCategories = true;
 
   // Price options
@@ -74,17 +77,29 @@ class _UploadPageState extends State<UploadPage> {
 
   Future<void> _fetchCategories() async {
     try {
-      final response = await http.get(Uri.parse('$apiEndpoint/categories'));
+      final gs = GetStorage();
+      final String? token = gs.read('token')?.toString();
+
+      final response = await http.get(
+        Uri.parse('$apiEndpoint/categories'),
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        final List<dynamic> categoryList = data['data']['categories'];
+        if (!mounted) return;
         setState(() {
-          _categories = data['data']['categories'];
+          _categories = categoryList
+              .map((json) => CategoryModel.fromJson(json))
+              .toList();
           _isLoadingCategories = false;
         });
       } else {
+        if (!mounted) return;
         setState(() => _isLoadingCategories = false);
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoadingCategories = false);
     }
   }
@@ -92,6 +107,7 @@ class _UploadPageState extends State<UploadPage> {
   Future<void> _pickImage() async {
     final List<XFile> images = await _picker.pickMultiImage();
     if (images.isNotEmpty) {
+      if (!mounted) return;
       setState(() {
         uploadedImages.addAll(images.map((xFile) => File(xFile.path)));
       });
@@ -146,7 +162,6 @@ class _UploadPageState extends State<UploadPage> {
     return questionsList;
   }
 
-  /// Validates the form and returns error message if invalid
   String? _validateForm() {
     if (uploadedImages.isEmpty) {
       return 'กรุณาเลือกรูปภาพชีต';
@@ -163,23 +178,17 @@ class _UploadPageState extends State<UploadPage> {
     if (selectedPrice == null) {
       return 'กรุณาเลือกราคา';
     }
-    // Keywords are optional
 
-    // Validate questions when enabled
     if (isQuestionsEnabled) {
       for (int i = 0; i < questionCount; i++) {
-        // Check question text
         final questionText = _questionControllers[i]?.text.trim() ?? '';
         if (questionText.isEmpty) {
           return 'กรุณาใส่คำถามที่ ${i + 1}';
         }
 
-        // Check if correct answer is selected
         if (!_correctAnswers.containsKey(i)) {
           return 'กรุณาเลือกคำตอบที่ถูกต้องสำหรับคำถามที่ ${i + 1}';
         }
-
-        // Check all answers have text
         final answerCount = _answerCounts[i] ?? 2;
         for (int j = 0; j < answerCount; j++) {
           final answerText = _answerControllers[i]?[j]?.text.trim() ?? '';
@@ -194,7 +203,6 @@ class _UploadPageState extends State<UploadPage> {
     return null;
   }
 
-  /// Shows validation error dialog
   void _showValidationError(String message) {
     showDialog(
       context: context,
@@ -205,7 +213,6 @@ class _UploadPageState extends State<UploadPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Icon with background
               Container(
                 width: 72,
                 height: 72,
@@ -220,7 +227,6 @@ class _UploadPageState extends State<UploadPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              // Title
               const Text(
                 'ข้อมูลไม่ครบ',
                 style: TextStyle(
@@ -230,7 +236,6 @@ class _UploadPageState extends State<UploadPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              // Message
               Text(
                 message,
                 textAlign: TextAlign.center,
@@ -241,7 +246,6 @@ class _UploadPageState extends State<UploadPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Button
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -272,7 +276,6 @@ class _UploadPageState extends State<UploadPage> {
   }
 
   Future<void> _uploadSheet() async {
-    // Validate form first
     final validationError = _validateForm();
     if (validationError != null) {
       _showValidationError(validationError);
@@ -281,11 +284,16 @@ class _UploadPageState extends State<UploadPage> {
 
     String categoryId = '';
     final selectedCategory = _categories.firstWhere(
-      (cat) => cat['name'] == selectedSubject,
-      orElse: () => null,
+      (cat) => cat.name == selectedSubject,
+      orElse: () => CategoryModel(
+        id: '',
+        name: '',
+        visibleFlag: false,
+        statusFlag: StatusFlag.fromString('INACTIVE'),
+      ),
     );
-    if (selectedCategory != null) {
-      categoryId = selectedCategory['id'].toString();
+    if (selectedCategory.id.isNotEmpty) {
+      categoryId = selectedCategory.id;
     }
 
     final data = SheetUploadData(
@@ -303,7 +311,6 @@ class _UploadPageState extends State<UploadPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Ensure controllers exist for all questions
     for (int i = 0; i < questionCount; i++) {
       _ensureControllers(i);
     }
@@ -376,6 +383,7 @@ class _UploadPageState extends State<UploadPage> {
                             context,
                           );
                           if (keyword != null) {
+                            if (!mounted) return;
                             setState(() => keywords.add(keyword));
                           }
                         },

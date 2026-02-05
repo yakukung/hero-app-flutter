@@ -10,7 +10,7 @@ import 'pages/user/profile.dart';
 import 'pages/user/upload.dart';
 import 'services/app_data.dart';
 import 'services/navigation_service.dart';
-import 'services/product_data.dart';
+import 'services/sheets.service.dart';
 import 'widgets/layout/main_sidebar.dart';
 import 'widgets/navigation/navbar.dart';
 import 'widgets/navigation/navbottom.dart';
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => Appdata()),
-        ChangeNotifierProvider(create: (_) => ProductData()),
+        ChangeNotifierProvider(create: (_) => SheetData()),
       ],
       child: GetMaterialApp(
         title: 'heroapp Demo',
