@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/widgets/custom_dialog.dart';
 
 /// Keyword input and display widget with add/remove functionality
 class KeywordSection extends StatelessWidget {
@@ -73,35 +74,35 @@ class KeywordSection extends StatelessWidget {
   /// Shows the add keyword dialog
   static Future<String?> showAddDialog(BuildContext context) async {
     final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('เพิ่มคีย์เวิร์ด'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'ใส่คีย์เวิร์ด',
-            border: OutlineInputBorder(),
+    String? result;
+
+    await showCustomDialog(
+      title: 'เพิ่มคีย์เวิร์ด',
+      message: 'กรุณาใส่คีย์เวิร์ดที่ต้องการเพิ่ม',
+      isConfirm: true,
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: 'ใส่คีย์เวิร์ด',
+          filled: true,
+          fillColor: const Color(0xFFF5F5F7),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ยกเลิก', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                Navigator.pop(context, controller.text);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2A5DB9),
-            ),
-            child: const Text('เพิ่ม', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
+      onOk: () {
+        if (controller.text.isNotEmpty) {
+          result = controller.text;
+        }
+      },
     );
+    return result;
   }
 }

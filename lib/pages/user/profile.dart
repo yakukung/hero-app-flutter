@@ -10,6 +10,7 @@ import 'package:flutter_application_1/pages/intro.dart';
 import 'package:flutter_application_1/services/app_data.dart';
 import 'package:flutter_application_1/pages/user/edit_profile.dart';
 import 'package:flutter_application_1/widgets/upload/upload_progress_dialog.dart';
+import 'package:flutter_application_1/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
@@ -349,98 +350,14 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   void _showLogoutConfirmation(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Stack(
-        children: [
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-              child: const SizedBox(),
-            ),
-          ),
-          Container(
-            height: 350,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
-            ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Container(
-                  width: 80,
-                  height: 6,
-                  margin: const EdgeInsets.only(bottom: 60),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                ),
-                const Text(
-                  'ยืนยันออกจากระบบ',
-                  style: TextStyle(
-                    fontFamily: 'SukhumvitSet',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 30,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'คุณต้องการออกจากระบบใช่ไหม?',
-                  style: TextStyle(
-                    fontFamily: 'SukhumvitSet',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Color(0xFF6E6E6E),
-                  ),
-                ),
-                const SizedBox(height: 50),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    TextButton(
-                      onPressed: () => Get.back(),
-                      child: const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text(
-                          'ยกเลิก',
-                          style: TextStyle(
-                            fontFamily: 'SukhumvitSet',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        GetStorage().erase();
-                        Get.offAll(() => IntroPage());
-                      },
-                      child: const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text(
-                          'ออกจากระบบ',
-                          style: TextStyle(
-                            fontFamily: 'SukhumvitSet',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: Color(0xFFF92A47),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    showCustomDialog(
+      title: 'ยืนยันออกจากระบบ',
+      message: 'คุณต้องการออกจากระบบใช่ไหม?',
+      isConfirm: true,
+      onOk: () {
+        GetStorage().erase();
+        Get.offAll(() => const IntroPage());
+      },
     );
   }
 }

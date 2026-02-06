@@ -8,6 +8,7 @@ import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_application_1/services/app_data.dart';
 import 'package:flutter_application_1/services/sheets.service.dart';
+import 'package:flutter_application_1/widgets/custom_dialog.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -186,11 +187,46 @@ class _HomePageState extends State<HomePage> {
                   price: sheets[i].price == 0 || sheets[i].price == null
                       ? 'ฟรี'
                       : '${sheets[i].price} บาท',
-                  isFavorite: false, // Will handle this later
+                  isFavorite: sheets[i].isFavorite,
                 ),
-                colorIndex: i, // Use index for gradient color
+                colorIndex: i,
                 onFavoriteTap: () {
-                  sheetData.toggleFavorite(sheets[i].id);
+                  final isCurrentlyFavorite = sheets[i].isFavorite;
+                  showCustomDialog(
+                    title: isCurrentlyFavorite
+                        ? 'นำออกจากรายการโปรด'
+                        : 'เพิ่มเป็นรายการโปรด',
+                    message: isCurrentlyFavorite
+                        ? 'คุณต้องการลบจากรายการโปรดไหม'
+                        : 'คุณยืนยันที่จะเพิ่มเป็นรายการโปรดไหม',
+                    isConfirm: true,
+                    onOk: () async {
+                      bool success;
+                      if (isCurrentlyFavorite) {
+                        success = await sheetData.removeFavorite(sheets[i].id);
+                      } else {
+                        success = await sheetData.addFavorite(sheets[i].id);
+                      }
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              success
+                                  ? (isCurrentlyFavorite
+                                        ? 'ลบจากรายการโปรดแล้ว'
+                                        : 'เพิ่มเป็นรายการโปรดแล้ว')
+                                  : 'เกิดข้อผิดพลาด กรุณาลองใหม่',
+                            ),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  );
                 },
               ),
             ),

@@ -12,6 +12,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:flutter_application_1/widgets/custom_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -270,7 +271,10 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _handleLogin() async {
     if (!_isFormValid()) {
-      _showErrorDialog('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+      showCustomDialog(
+        title: 'ข้อมูลไม่ครบถ้วน',
+        message: 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน',
+      );
       return;
     }
 
@@ -305,7 +309,7 @@ class _LoginPageState extends State<LoginPage> {
         final String message =
             payload['message']?.toString() ??
             'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
-        _showErrorDialog('เข้าสู่ระบบไม่สำเร็จ', message);
+        showCustomDialog(title: 'เข้าสู่ระบบไม่สำเร็จ', message: message);
         return;
       }
 
@@ -342,22 +346,25 @@ class _LoginPageState extends State<LoginPage> {
 
   void _handleInvalidCredentials() {
     if (!mounted) return;
-    _showErrorDialog(
-      'เข้าสู่ระบบไม่สำเร็จ',
-      'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+    showCustomDialog(
+      title: 'เข้าสู่ระบบไม่สำเร็จ',
+      message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
     );
   }
 
   void _showUnexpectedResponse() {
     if (!mounted) return;
-    _showErrorDialog('เกิดข้อผิดพลาด', 'ไม่สามารถเข้าสู่ระบบได้ในขณะนี้');
+    showCustomDialog(
+      title: 'เกิดข้อผิดพลาด',
+      message: 'ไม่สามารถเข้าสู่ระบบได้ในขณะนี้',
+    );
   }
 
   void _showNetworkError() {
     if (!mounted) return;
-    _showErrorDialog(
-      'เกิดข้อผิดพลาด',
-      'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาลองใหม่ในภายหลัง',
+    showCustomDialog(
+      title: 'เกิดข้อผิดพลาด',
+      message: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาลองใหม่ในภายหลัง',
     );
   }
 
@@ -399,9 +406,9 @@ class _LoginPageState extends State<LoginPage> {
         log('Google Login API Response: ${response.body}');
 
         if (response.statusCode != 200) {
-          _showErrorDialog(
-            'เข้าสู่ระบบไม่สำเร็จ',
-            'เชื่อมต่อกับเซิร์ฟเวอร์ล้มเหลว',
+          showCustomDialog(
+            title: 'เข้าสู่ระบบไม่สำเร็จ',
+            message: 'เชื่อมต่อกับเซิร์ฟเวอร์ล้มเหลว',
           );
           return;
         }
@@ -417,7 +424,7 @@ class _LoginPageState extends State<LoginPage> {
           final String message =
               payload['message']?.toString() ??
               'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
-          _showErrorDialog('เข้าสู่ระบบไม่สำเร็จ', message);
+          showCustomDialog(title: 'เข้าสู่ระบบไม่สำเร็จ', message: message);
           return;
         }
 
@@ -442,7 +449,10 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       log('Google Sign-In Error: $e');
-      _showErrorDialog('เกิดข้อผิดพลาด', 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้');
+      showCustomDialog(
+        title: 'เกิดข้อผิดพลาด',
+        message: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้',
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -469,73 +479,5 @@ class _LoginPageState extends State<LoginPage> {
     navService.currentIndex.value = 0;
 
     Get.offAll(() => const MainPage());
-  }
-
-  void _showErrorDialog(String title, String message) {
-    Get.defaultDialog(
-      title: '',
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFFDEEEF),
-              shape: BoxShape.circle,
-            ),
-            padding: const EdgeInsets.all(18),
-            child: const Icon(
-              Icons.error_outline,
-              color: Color(0xFFF92A47),
-              size: 48,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            title,
-            style: const TextStyle(
-              fontFamily: 'SukhumvitSet',
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              color: Colors.black,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            message,
-            style: const TextStyle(
-              fontFamily: 'SukhumvitSet',
-              fontWeight: FontWeight.normal,
-              fontSize: 16,
-              color: Colors.black87,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFFF92A47),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(45),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                textStyle: const TextStyle(
-                  fontFamily: 'SukhumvitSet',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              onPressed: Get.back,
-              child: const Text('ตกลง'),
-            ),
-          ),
-        ],
-      ),
-      radius: 45,
-      backgroundColor: Colors.white,
-      barrierDismissible: false,
-    );
   }
 }

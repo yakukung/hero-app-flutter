@@ -79,7 +79,16 @@ class Appdata extends ChangeNotifier {
 
   void _applyUserData(Map<String, dynamic> userData) {
     try {
-      _user = UserModel.fromJson(userData);
+      final newUser = UserModel.fromJson(userData);
+      if (_user != null &&
+          (newUser.roleName == null || newUser.roleName == 'USER')) {
+        _user = newUser.copyWith(
+          roleId: _user!.roleId,
+          roleName: _user!.roleName,
+        );
+      } else {
+        _user = newUser;
+      }
 
       final gs = GetStorage();
       gs.write('uid', _user!.id);

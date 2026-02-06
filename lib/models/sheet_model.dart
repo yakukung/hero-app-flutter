@@ -1,4 +1,5 @@
 import 'enums.dart';
+import 'question_model.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
 
 class SheetModel {
@@ -17,9 +18,11 @@ class SheetModel {
   final String? authorName;
   final String? authorAvatar;
   final List<SheetFileModel>? files;
+  final List<QuestionModel>? questions;
   final List<String>? categoryIds;
   final List<String>? keywordIds;
   final bool isPurchased;
+  final bool isFavorite;
 
   SheetModel({
     required this.id,
@@ -37,9 +40,11 @@ class SheetModel {
     this.authorName,
     this.authorAvatar,
     this.files,
+    this.questions,
     this.categoryIds,
     this.keywordIds,
     this.isPurchased = false,
+    this.isFavorite = false,
   });
 
   factory SheetModel.fromJson(Map<String, dynamic> json) {
@@ -85,6 +90,11 @@ class SheetModel {
               ?.map((e) => SheetFileModel.fromJson(e))
               .toList()
             ?..sort((a, b) => a.index.compareTo(b.index)),
+      questions:
+          (json['questions'] as List?)
+              ?.map((e) => QuestionModel.fromJson(e))
+              .toList()
+            ?..sort((a, b) => a.index.compareTo(b.index)),
       categoryIds: (json['category_ids'] as List?)
           ?.map((e) => e.toString())
           .toList(),
@@ -98,6 +108,13 @@ class SheetModel {
           json['owned'] == true ||
           json['is_purchased'] == 1 ||
           json['purchased'] == 1,
+      isFavorite:
+          json['is_favorite'] == true ||
+          json['favorite'] == true ||
+          json['is_favorited'] == true ||
+          json['favorited'] == true ||
+          json['is_favorite'] == 1 ||
+          json['favorite'] == 1,
     );
   }
 
