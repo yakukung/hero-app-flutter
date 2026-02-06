@@ -5,6 +5,7 @@ import 'package:flutter_application_1/widgets/product/product_card.dart';
 import 'package:provider/provider.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/pages/user/sheet/preview_sheet.dart';
+import 'package:flutter_application_1/widgets/custom_dialog.dart';
 
 class FavoritePage extends StatefulWidget {
   const FavoritePage({super.key});
@@ -15,19 +16,20 @@ class FavoritePage extends StatefulWidget {
 
 class _FavoritePageState extends State<FavoritePage> {
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<SheetData>(context, listen: false).fetchFavorites();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Consumer<SheetData>(
         builder: (context, sheetData, child) {
-          final allSheets = sheetData.sheets;
-
-          // Filter favorite products
-          // Note: is_favorite is currently not a field in SheetModel in the DB dump
-          // but we'll use a placeholder or check how it was used before.
-          // For now, let's assume all sheets in this view are favorites or handled by a separate list.
-          // For now, let's assume all sheets in this view are favorites or handled by a separate list.
-          final favoriteSheets = allSheets;
+          final favoriteSheets = sheetData.favoriteSheets;
 
           return SafeArea(
             child: CustomScrollView(
@@ -115,9 +117,32 @@ class _FavoritePageState extends State<FavoritePage> {
                                   : '${sheet.price} บาท',
                               isFavorite: true,
                             ),
-                            colorIndex: index, // Use gradient instead
+                            colorIndex: index,
                             onFavoriteTap: () {
-                              sheetData.toggleFavorite(sheet.id);
+                              showCustomDialog(
+                                title: 'นำออกจากรายการโปรด',
+                                message: 'คุณต้องการลบจากรายการโปรดไหม',
+                                isConfirm: true,
+                                onOk: () async {
+                                  final success = await sheetData
+                                      .removeFavorite(sheet.id);
+                                  if (mounted && success) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text(
+                                          'ลบจากรายการโปรดแล้ว',
+                                        ),
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              );
                             },
                           ),
                         );

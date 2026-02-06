@@ -5,7 +5,12 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:flutter_application_1/models/sheet_model.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:flutter_application_1/services/sheets.service.dart';
+import 'package:flutter_application_1/widgets/custom_dialog.dart';
+import 'package:provider/provider.dart';
+import 'dart:ui';
 import 'sheet_reader.dart';
+import 'quiz_page.dart';
 
 class PreviewSheetPage extends StatefulWidget {
   final String sheetId;
@@ -33,12 +38,18 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       final gs = GetStorage();
       final String? token = gs.read('token')?.toString();
 
+      final sheetData = context.read<SheetData>();
+      if (token != null && sheetData.favoriteSheets.isEmpty) {
+        await sheetData.fetchFavorites();
+      }
+
       final response = await http.get(
         Uri.parse('$apiEndpoint/sheets/${widget.sheetId}'),
         headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
+        log('Sheet details response: ${response.body}');
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
         final dynamic data =
             jsonResponse['data']?['sheet'] ?? jsonResponse['data'];
@@ -50,8 +61,35 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
             newSheet.files?.map((f) => f.fullOriginalUrl).toList() ?? [];
         final limitedPreview = images.take(2).toList();
 
+        // Cross-reference with SheetData to ensure isFavorite is accurate
+        final sheetData = context.read<SheetData>();
+        final isFavorited = sheetData.favoriteSheets.any(
+          (fav) => fav.id == newSheet.id,
+        );
+
         setState(() {
-          sheet = newSheet;
+          sheet = SheetModel(
+            id: newSheet.id,
+            authorId: newSheet.authorId,
+            title: newSheet.title,
+            description: newSheet.description,
+            rating: newSheet.rating,
+            price: newSheet.price,
+            visibleFlag: newSheet.visibleFlag,
+            statusFlag: newSheet.statusFlag,
+            createdAt: newSheet.createdAt,
+            createdBy: newSheet.createdBy,
+            updatedAt: newSheet.updatedAt,
+            updatedBy: newSheet.updatedBy,
+            authorName: newSheet.authorName,
+            authorAvatar: newSheet.authorAvatar,
+            files: newSheet.files,
+            questions: newSheet.questions,
+            categoryIds: newSheet.categoryIds,
+            keywordIds: newSheet.keywordIds,
+            isPurchased: newSheet.isPurchased,
+            isFavorite: isFavorited,
+          );
           previewImages = limitedPreview;
           isLoading = false;
         });
@@ -104,34 +142,108 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
 
   void _buySheet() {
     // Show payment dialog or navigate to payment page
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ยืนยันการซื้อ'),
-        content: Text(
-          'คุณต้องการซื้อ "${sheet?.title}" ในราคา ${sheet?.price} บาท?',
+    showCustomDialog(
+      title: 'ยืนยันการซื้อ',
+      message: 'คุณต้องการซื้อ "${sheet?.title}" ในราคา ${sheet?.price} บาท?',
+      isConfirm: true,
+      onOk: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ระบบชำระเงินกำลังจะมาเร็วๆ นี้')),
+        );
+      },
+    );
+  }
+
+  void _openQuiz() {
+    if (sheet?.questions == null || sheet!.questions!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('หน้านี้ยังไม่มีโจทย์ท้ายบท')),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => QuizPage(
+          id: sheet!.id,
+          title: 'โจทย์ท้ายบท: ${sheet?.title}',
+          questions: sheet!.questions!,
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('ระบบชำระเงินกำลังจะมาเร็วๆ นี้')),
-              );
-            },
-            child: const Text('ตกลง'),
-          ),
-        ],
       ),
     );
   }
 
   void _toggleFavorite() {
-    // Implement toggle favorite logic here
+    if (sheet == null) return;
+
+    final isCurrentlyFavorite = sheet!.isFavorite;
+    final sheetData = context.read<SheetData>();
+
+    showCustomDialog(
+      title: isCurrentlyFavorite ? 'นำออกจากรายการโปรด' : 'เพิ่มเป็นรายการโปรด',
+      message: isCurrentlyFavorite
+          ? 'คุณต้องการลบจากรายการโปรดไหม'
+          : 'คุณยืนยันที่จะเพิ่มเป็นรายการโปรดไหม',
+      isConfirm: true,
+      onOk: () async {
+        bool success;
+        if (isCurrentlyFavorite) {
+          success = await sheetData.removeFavorite(sheet!.id);
+        } else {
+          success = await sheetData.addFavorite(sheet!.id);
+        }
+
+        if (mounted) {
+          if (success) {
+            setState(() {
+              sheet = SheetModel(
+                id: sheet!.id,
+                authorId: sheet!.authorId,
+                title: sheet!.title,
+                description: sheet!.description,
+                rating: sheet!.rating,
+                price: sheet!.price,
+                visibleFlag: sheet!.visibleFlag,
+                statusFlag: sheet!.statusFlag,
+                createdAt: sheet!.createdAt,
+                createdBy: sheet!.createdBy,
+                updatedAt: sheet!.updatedAt,
+                updatedBy: sheet!.updatedBy,
+                authorName: sheet!.authorName,
+                authorAvatar: sheet!.authorAvatar,
+                files: sheet!.files,
+                questions: sheet!.questions,
+                categoryIds: sheet!.categoryIds,
+                keywordIds: sheet!.keywordIds,
+                isPurchased: sheet!.isPurchased,
+                isFavorite: !isCurrentlyFavorite,
+              );
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  isCurrentlyFavorite
+                      ? 'ลบจากรายการโปรดแล้ว'
+                      : 'เพิ่มเป็นรายการโปรดแล้ว',
+                ),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('เกิดข้อผิดพลาด กรุณาลองใหม่'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      },
+    );
   }
 
   @override
@@ -168,8 +280,10 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       ),
       actions: [
         _buildCircleButton(
-          icon: Icons.favorite_border,
-          iconColor: Colors.white,
+          icon: (sheet?.isFavorite ?? false)
+              ? Icons.star_rounded
+              : Icons.star_border_rounded,
+          iconColor: (sheet?.isFavorite ?? false) ? Colors.amber : Colors.white,
           onPressed: _toggleFavorite,
         ),
         const SizedBox(width: 16),
@@ -187,13 +301,22 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
     Color iconColor = Colors.white,
   }) {
     return IconButton(
-      icon: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.3),
-          shape: BoxShape.circle,
+      icon: ClipOval(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.2),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
         ),
-        child: Icon(icon, color: iconColor, size: 20),
       ),
       onPressed: onPressed,
     );
@@ -236,9 +359,9 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Colors.black.withOpacity(0.2),
+            Colors.black.withOpacity(0.35),
             Colors.transparent,
-            Colors.black.withOpacity(0.1),
+            Colors.black.withOpacity(0.15),
           ],
         ),
       ),
@@ -249,21 +372,36 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
     return Positioned(
       bottom: 20,
       right: 20,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.6),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.fullscreen, color: Colors.white, size: 16),
-            SizedBox(width: 4),
-            Text(
-              'แตะเพื่อดูตัวอย่าง',
-              style: TextStyle(color: Colors.white, fontSize: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
             ),
-          ],
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.fullscreen_rounded, color: Colors.white, size: 18),
+                SizedBox(width: 6),
+                Text(
+                  'แตะเพื่อดูตัวอย่าง',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -447,36 +585,79 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
           ),
         ),
         child: (isFree || isPurchased)
-            ? _buildReadFullButton()
+            ? _buildPurchasedButtons()
             : _buildPreviewAndBuyButtons(),
       ),
     );
   }
 
-  Widget _buildReadFullButton() {
-    return ElevatedButton(
-      onPressed: () => _openReader(fullVersion: true),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2A5DB9),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.menu_book_rounded, color: Colors.white),
-          SizedBox(width: 8),
-          Text(
-            'อ่านแบบฉบับเต็ม',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+  Widget _buildPurchasedButtons() {
+    final hasQuestions =
+        sheet?.questions != null && sheet!.questions!.isNotEmpty;
+
+    return Row(
+      children: [
+        Expanded(
+          flex: 5,
+          child: ElevatedButton(
+            onPressed: () => _openReader(fullVersion: true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2A5DB9),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.menu_book_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'อ่านฉบับเต็ม',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (hasQuestions) ...[
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 5,
+            child: OutlinedButton(
+              onPressed: _openQuiz,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                side: const BorderSide(color: Color(0xFF2A5DB9)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.assignment_turned_in_outlined, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'ทำโจทย์บทนี้',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2A5DB9),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'login.dart';
+import 'package:flutter_application_1/widgets/custom_dialog.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -278,7 +279,10 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() {
         isLoading = false;
       });
-      showCustomDialog('ข้อมูลไม่ครบถ้วน', 'กรุณากรอกข้อมูลให้ครบทุกช่อง');
+      showCustomDialog(
+        title: 'ข้อมูลไม่ครบถ้วน',
+        message: 'กรุณากรอกข้อมูลให้ครบทุกช่อง',
+      );
       return;
     }
 
@@ -288,7 +292,10 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() {
         isLoading = false;
       });
-      showCustomDialog('อีเมลไม่ถูกต้อง', 'กรุณากรอกอีเมลให้ถูกต้อง');
+      showCustomDialog(
+        title: 'อีเมลไม่ถูกต้อง',
+        message: 'กรุณากรอกอีเมลให้ถูกต้อง',
+      );
       return;
     }
 
@@ -296,7 +303,10 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() {
         isLoading = false;
       });
-      showCustomDialog('รหัสผ่านไม่ตรงกัน', 'กรุณายืนยันรหัสผ่านให้ถูกต้อง');
+      showCustomDialog(
+        title: 'รหัสผ่านไม่ตรงกัน',
+        message: 'กรุณายืนยันรหัสผ่านให้ถูกต้อง',
+      );
       return;
     }
 
@@ -306,8 +316,8 @@ class _RegisterPageState extends State<RegisterPage> {
         isLoading = false;
       });
       showCustomDialog(
-        'รหัสผ่านสั้นเกินไป',
-        'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',
+        title: 'รหัสผ่านสั้นเกินไป',
+        message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',
       );
       return;
     }
@@ -316,7 +326,10 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() {
         isLoading = false;
       });
-      showCustomDialog('รหัสผ่านไม่ตรงกัน', 'กรุณายืนยันรหัสผ่านให้ถูกต้อง');
+      showCustomDialog(
+        title: 'รหัสผ่านไม่ตรงกัน',
+        message: 'กรุณายืนยันรหัสผ่านให้ถูกต้อง',
+      );
       return;
     }
 
@@ -339,8 +352,8 @@ class _RegisterPageState extends State<RegisterPage> {
       if (payload == null) {
         setState(() => isLoading = false);
         showCustomDialog(
-          'เกิดข้อผิดพลาด',
-          'ไม่สามารถสมัครสมาชิกได้ กรุณาลองใหม่',
+          title: 'เกิดข้อผิดพลาด',
+          message: 'ไม่สามารถสมัครสมาชิกได้ กรุณาลองใหม่',
         );
         return;
       }
@@ -351,8 +364,8 @@ class _RegisterPageState extends State<RegisterPage> {
       if (isSuccessful) {
         setState(() => isLoading = false);
         showCustomDialog(
-          'สำเร็จ',
-          'ตรวจสอบข้อความในอีเมลของคุณ\nเพื่อยืนยันบัญชี',
+          title: 'สำเร็จ',
+          message: 'ตรวจสอบข้อความในอีเมลของคุณ\nเพื่อยืนยันบัญชี',
           isSuccess: true,
           onOk: () {
             Get.offAll(() => const LoginPage());
@@ -364,17 +377,23 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => isLoading = false);
       final String errorMsg = _extractErrorMessage(payload);
       if (errorMsg.contains('username')) {
-        showCustomDialog('ชื่อผู้ใช้ซ้ำ', 'ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว');
+        showCustomDialog(
+          title: 'ชื่อผู้ใช้ซ้ำ',
+          message: 'ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว',
+        );
       } else if (errorMsg.contains('email')) {
-        showCustomDialog('อีเมลซ้ำ', 'อีเมลนี้ถูกใช้ไปแล้ว');
+        showCustomDialog(title: 'อีเมลซ้ำ', message: 'อีเมลนี้ถูกใช้ไปแล้ว');
       } else {
-        showCustomDialog('เกิดข้อผิดพลาด', errorMsg);
+        showCustomDialog(title: 'เกิดข้อผิดพลาด', message: errorMsg);
       }
     } catch (e) {
       setState(() {
         isLoading = false;
       });
-      showCustomDialog('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้');
+      showCustomDialog(
+        title: 'เกิดข้อผิดพลาด',
+        message: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+      );
     }
   }
 
@@ -425,88 +444,4 @@ class _RegisterPageState extends State<RegisterPage> {
     }
     return payload['message']?.toString() ?? 'ไม่สามารถสมัครสมาชิกได้';
   }
-}
-
-void showCustomDialog(
-  String title,
-  String message, {
-  bool isSuccess = false,
-  VoidCallback? onOk,
-}) {
-  Get.defaultDialog(
-    title: '',
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: isSuccess
-                ? const Color(0xFFE7F9EE)
-                : const Color(0xFFFDEEEF),
-            shape: BoxShape.circle,
-          ),
-          padding: const EdgeInsets.all(18),
-          child: Icon(
-            isSuccess ? Icons.check_circle_outline : Icons.error_outline,
-            color: isSuccess
-                ? const Color(0xFF2AB950)
-                : const Color(0xFFF92A47),
-            size: 48,
-          ),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          title,
-          style: const TextStyle(
-            fontFamily: 'SukhumvitSet',
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: Colors.black,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 10),
-        Text(
-          message,
-          style: const TextStyle(
-            fontFamily: 'SukhumvitSet',
-            fontWeight: FontWeight.normal,
-            fontSize: 16,
-            color: Colors.black87,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 28),
-        SizedBox(
-          width: double.infinity,
-          child: TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: isSuccess
-                  ? const Color(0xFF2AB950)
-                  : const Color(0xFFF92A47),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(45),
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              textStyle: const TextStyle(
-                fontFamily: 'SukhumvitSet',
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            onPressed: () {
-              if (Get.isDialogOpen ?? false) {
-                Get.back();
-              }
-              onOk?.call();
-            },
-            child: const Text('ตกลง'),
-          ),
-        ),
-      ],
-    ),
-    radius: 45,
-    backgroundColor: Colors.white,
-    barrierDismissible: false,
-  );
 }

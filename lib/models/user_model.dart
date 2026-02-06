@@ -7,6 +7,7 @@ class UserModel {
   final String? profileImage;
   final AuthProvider authProvider;
   final String roleId;
+  final String? roleName;
   final int point;
   final bool visibleFlag;
   final StatusFlag statusFlag;
@@ -23,6 +24,7 @@ class UserModel {
     this.profileImage,
     required this.authProvider,
     required this.roleId,
+    this.roleName,
     required this.point,
     required this.visibleFlag,
     required this.statusFlag,
@@ -36,9 +38,49 @@ class UserModel {
   factory UserModel.fromJson(Map<String, dynamic> json) {
     // Handle nested flag object if present
     final flagData = json['flag'] is Map<String, dynamic> ? json['flag'] : null;
-    final rolesData = json['roles'] is Map<String, dynamic>
-        ? json['roles']
-        : null;
+
+    // Extremely Robust Role Parsing
+    Map<String, dynamic>? rolesMap;
+    String? nameFromData;
+    String? idFromData;
+
+    if (json['roles'] is Map<String, dynamic>) {
+      rolesMap = json['roles'] as Map<String, dynamic>;
+    } else if (json['role'] is Map<String, dynamic>) {
+      rolesMap = json['role'] as Map<String, dynamic>;
+    } else if (json['roles'] is List && (json['roles'] as List).isNotEmpty) {
+      if ((json['roles'] as List)[0] is Map<String, dynamic>) {
+        rolesMap = (json['roles'] as List)[0] as Map<String, dynamic>;
+      } else if ((json['roles'] as List)[0] is String) {
+        nameFromData = (json['roles'] as List)[0] as String;
+      }
+    } else if (json['roles'] is String) {
+      nameFromData = json['roles'] as String;
+    } else if (json['role'] is String) {
+      nameFromData = json['role'] as String;
+    }
+
+    // Ultimate Fallback: Search ALL keys for any value containing 'PREMIUM'
+    String? ultimateName;
+    json.forEach((key, value) {
+      if (key.toLowerCase().contains('role')) {
+        if (value is String && value.toUpperCase().contains('PREMIUM')) {
+          ultimateName = value;
+        } else if (value is Map && value['name'] != null) {
+          if (value['name'].toString().toUpperCase().contains('PREMIUM')) {
+            ultimateName = value['name'].toString();
+          }
+        }
+      }
+    });
+
+    final roleName =
+        json['role_name'] ??
+        json['roleName'] ??
+        nameFromData ??
+        rolesMap?['name'] ??
+        ultimateName;
+    final roleId = json['role_id'] ?? idFromData ?? rolesMap?['id'] ?? '';
 
     return UserModel(
       id: json['id'] ?? json['uid'] ?? '',
@@ -48,7 +90,8 @@ class UserModel {
       authProvider: AuthProvider.fromString(
         json['auth_provider'] ?? 'EMAIL_PASSWORD',
       ),
-      roleId: json['role_id'] ?? rolesData?['id'] ?? '',
+      roleId: roleId,
+      roleName: roleName,
       point: json['point'] != null ? int.parse(json['point'].toString()) : 0,
       visibleFlag:
           json['visible_flag'] == true ||
@@ -89,6 +132,7 @@ class UserModel {
     String? profileImage,
     AuthProvider? authProvider,
     String? roleId,
+    String? roleName,
     int? point,
     bool? visibleFlag,
     StatusFlag? statusFlag,
@@ -105,6 +149,7 @@ class UserModel {
       profileImage: profileImage ?? this.profileImage,
       authProvider: authProvider ?? this.authProvider,
       roleId: roleId ?? this.roleId,
+      roleName: roleName ?? this.roleName,
       point: point ?? this.point,
       visibleFlag: visibleFlag ?? this.visibleFlag,
       statusFlag: statusFlag ?? this.statusFlag,
@@ -124,6 +169,7 @@ class UserModel {
       'profile_image': profileImage,
       'auth_provider': authProvider.name,
       'role_id': roleId,
+      'role_name': roleName,
       'point': point,
       'visible_flag': visibleFlag,
       'status_flag': statusFlag.name,
