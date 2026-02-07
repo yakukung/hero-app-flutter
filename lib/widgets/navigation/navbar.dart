@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/services/app_data.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
+import 'package:flutter_application_1/services/navigation_service.dart';
 
 class NavbarUser extends StatelessWidget implements PreferredSizeWidget {
   const NavbarUser({super.key});
@@ -53,24 +55,29 @@ class NavbarUser extends StatelessWidget implements PreferredSizeWidget {
               ),
             ],
           ),
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: Colors.grey[200],
-            child: ClipOval(
-              child:
-                  appData.profileImage.isNotEmpty
-                      ? Image.network(
+          GestureDetector(
+            onTap: () {
+              final navService = Get.find<NavigationService>();
+              navService.changeIndex(4);
+            },
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey[200],
+              child: ClipOval(
+                child: appData.profileImage.isNotEmpty
+                    ? Image.network(
                         appData.profileImage,
                         width: 40,
                         height: 40,
                         fit: BoxFit.cover,
                       )
-                      : Image.asset(
+                    : Image.asset(
                         'assets/images/default/avatar.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.cover,
                       ),
+              ),
             ),
           ),
         ],

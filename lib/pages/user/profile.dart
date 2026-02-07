@@ -136,71 +136,76 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Column(
               children: [
                 SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    GestureDetector(
-                      onTap: _uploadProfileImage,
-                      child: Stack(
-                        alignment: Alignment.bottomRight,
-                        children: [
-                          CircleAvatar(
-                            radius: 60,
-                            backgroundColor: Colors.white,
-                            child: ClipOval(
-                              child: appData.profileImage.isNotEmpty
-                                  ? Image.network(
-                                      appData.profileImage,
-                                      width: 120,
-                                      height: 120,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Image.asset(
-                                      'assets/images/default/avatar.png',
-                                      width: 120,
-                                      height: 120,
-                                      fit: BoxFit.cover,
-                                    ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: _uploadProfileImage,
+                        child: Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            CircleAvatar(
+                              radius: 60,
+                              backgroundColor: Colors.white,
+                              child: ClipOval(
+                                child: appData.profileImage.isNotEmpty
+                                    ? Image.network(
+                                        appData.profileImage,
+                                        width: 120,
+                                        height: 120,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.asset(
+                                        'assets/images/default/avatar.png',
+                                        width: 120,
+                                        height: 120,
+                                        fit: BoxFit.cover,
+                                      ),
+                              ),
                             ),
-                          ),
-                          Container(
-                            padding: EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Color(0xFF2A5DB9),
-                              shape: BoxShape.circle,
+                            Container(
+                              padding: EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Color(0xFF2A5DB9),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.edit,
+                                color: Colors.white,
+                                size: 16,
+                              ),
                             ),
-                            child: Icon(
-                              Icons.edit,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Column(
-                      children: [
-                        Text(
-                          appData.username.isNotEmpty
-                              ? appData.username
-                              : 'ชื่อผู้ใช้',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              appData.username.isNotEmpty
+                                  ? appData.username
+                                  : 'ชื่อผู้ใช้',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (appData.email.isNotEmpty)
+                              Text(
+                                appData.email,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                          ],
                         ),
-                        Text(
-                          appData.email.isNotEmpty
-                              ? appData.email
-                              : 'example@email.com',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
 
                 SizedBox(height: 24),
@@ -260,7 +265,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              onPressed: () {},
+                              onPressed: () {
+                                _showSubscriptionPackages(context);
+                              },
                             ),
                           ),
                         ],
@@ -358,6 +365,153 @@ class _ProfilePageState extends State<ProfilePage> {
         GetStorage().erase();
         Get.offAll(() => const IntroPage());
       },
+    );
+  }
+
+  void _showSubscriptionPackages(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              const Text(
+                'แพ็กเกจสมาชิกพรีเมียม',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      _buildPackageCard(
+                        title: 'รายเดือน',
+                        price: '฿79.00/เดือน',
+                        buttonText: 'ชำระเงินในราคา ฿79.00',
+                        onPressed: () {
+                          // TODO: Implement payment logic
+                          Navigator.pop(context);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPackageCard(
+                        title: 'ราย 3 เดือน',
+                        price: '฿229.00/3เดือน',
+                        subtitles: ['ประหยัดลง 8 บาท เมื่อเทียบกับรายเดือน'],
+                        buttonText: 'ชำระเงินในราคา ฿229.00',
+                        onPressed: () {
+                          // TODO: Implement payment logic
+                          Navigator.pop(context);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildPackageCard(
+                        title: 'รายปี',
+                        price: '฿879.00/ปี',
+                        subtitles: [
+                          'ประหยัดลง 69 บาท เมื่อเทียบกับรายเดือน',
+                          'ประหยัดลง 37 บาท เมื่อเทียบกับราย3เดือน',
+                        ],
+                        buttonText: 'ชำระเงินในราคา ฿879.00',
+                        onPressed: () {
+                          // TODO: Implement payment logic
+                          Navigator.pop(context);
+                        },
+                      ),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPackageCard({
+    required String title,
+    required String price,
+    List<String>? subtitles,
+    required String buttonText,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            price,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          if (subtitles != null && subtitles.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...subtitles.map(
+              (text) => Text(
+                text,
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 45,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(
+                  0xFF2A5DB9,
+                ), // Blue color from screenshot
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              onPressed: onPressed,
+              child: Text(
+                buttonText,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

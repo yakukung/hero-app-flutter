@@ -19,7 +19,7 @@ class NavBottom extends StatelessWidget {
       () => Container(
         margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(40),
+          borderRadius: BorderRadius.circular(42),
           border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
           boxShadow: [
             BoxShadow(
@@ -34,7 +34,7 @@ class NavBottom extends StatelessWidget {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
             child: Container(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withOpacity(0.3),
               child: MediaQuery.removePadding(
                 context: context,
                 removeBottom: true,
