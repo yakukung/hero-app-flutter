@@ -294,7 +294,9 @@ class _LoginPageState extends State<LoginPage> {
       log(response.body);
 
       if (response.statusCode != 200) {
-        _handleInvalidCredentials();
+        _handleInvalidCredentials(
+          jsonDecode(response.body)['error']?['message']?['th'],
+        );
         return;
       }
 
@@ -344,12 +346,9 @@ class _LoginPageState extends State<LoginPage> {
     return formState.validate();
   }
 
-  void _handleInvalidCredentials() {
+  void _handleInvalidCredentials(String message) {
     if (!mounted) return;
-    showCustomDialog(
-      title: 'เข้าสู่ระบบไม่สำเร็จ',
-      message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
-    );
+    showCustomDialog(title: 'เข้าสู่ระบบไม่สำเร็จ', message: message);
   }
 
   void _showUnexpectedResponse() {
