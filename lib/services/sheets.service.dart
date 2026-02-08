@@ -81,8 +81,6 @@ class SheetData extends ChangeNotifier {
     final storage = GetStorage();
     final String? token = storage.read('token');
 
-    log('fetchFavorites: token is ${token != null ? 'available' : 'null'}');
-
     if (token == null) {
       _favoriteSheets = [];
       return;
@@ -103,6 +101,9 @@ class SheetData extends ChangeNotifier {
         _favoriteSheets = data
             .map((item) => SheetModel.fromJson(item))
             .toList();
+      } else if (response.statusCode == 404) {
+        log('No favorites found (404)');
+        _favoriteSheets = [];
       } else {
         log('Favorites response error body: ${response.body}');
       }
@@ -345,7 +346,6 @@ class SheetData extends ChangeNotifier {
             isFavorite: false,
           );
 
-          // Also remove from _favoriteSheets list
           _favoriteSheets.removeWhere((s) => s.id == sheetId);
 
           notifyListeners();
@@ -360,11 +360,7 @@ class SheetData extends ChangeNotifier {
   }
 
   void toggleFavorite(String sheetId) {
-    // This method can be kept for simple local toggling if needed,
-    // but the actual logic should be handled by addFavorite/removeFavorite.
     final index = _sheets.indexWhere((element) => element.id == sheetId);
-    if (index != -1) {
-      // notifyListeners();
-    }
+    if (index != -1) {}
   }
 }

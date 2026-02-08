@@ -13,6 +13,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:flutter_application_1/widgets/custom_dialog.dart';
+import 'package:flutter_application_1/pages/admin/home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -477,6 +478,10 @@ class _LoginPageState extends State<LoginPage> {
     final NavigationService navService = Get.find<NavigationService>();
     navService.currentIndex.value = 0;
 
-    Get.offAll(() => const MainPage());
+    if (appData.user?.roleName == 'ADMIN') {
+      Get.offAll(() => const AdminHomePage());
+    } else {
+      Get.offAll(() => const MainPage());
+    }
   }
 }

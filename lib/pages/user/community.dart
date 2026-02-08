@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/models/post_model.dart';
 import 'package:flutter_application_1/pages/user/create_post.dart';
+import 'package:flutter_application_1/pages/user/sheet/preview_sheet.dart';
+import 'package:flutter_application_1/services/posts_service.dart';
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
@@ -9,33 +12,19 @@ class CommunityPage extends StatefulWidget {
 }
 
 class _CommunityPageState extends State<CommunityPage> {
-  final List<Map<String, dynamic>> mockPosts = [
-    {
-      "user_name": "Pom Pom",
-      "user_avatar": "https://i.redd.it/g9z0a0x25a0b1.jpg",
-      "time": "2024-12-24  21:00:00",
-      "content":
-          "สวัสดีชีตเนื้อหาใหม่วิชาแคลคูลัสเราอัพให้แล้วนะ!!\nกดดูชีตที่ปุ่ม ดูสินค้า ได้เลย",
-      "image":
-          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTGJS1Law-9CRpQ0MrMaBPblZdIVt7DFp9NvQ&s",
-      "likes": 12,
-      "comments": 3,
-      "shares": 2,
-      "has_product": true,
-    },
-    {
-      "user_name": "Unknown",
-      "user_avatar": "assets/images/default/avatar.png",
-      "time": "2024-12-24  21:00:00",
-      "content":
-          "หาคนติววิชาภาษาอังกฤษหน่อยครับ พอดีไม่ค่อยเข้าใจเรื่อง Tense เลย",
-      "image": null,
-      "likes": 5,
-      "comments": 8,
-      "shares": 0,
-      "has_product": false,
-    },
-  ];
+  late Future<List<PostModel>> _postsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshPosts();
+  }
+
+  void _refreshPosts() {
+    setState(() {
+      _postsFuture = PostsService.getPosts();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,27 +32,51 @@ class _CommunityPageState extends State<CommunityPage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 24),
-                _buildCreatePostInput(),
-                const SizedBox(height: 32),
-                ListView.builder(
-                  padding: EdgeInsets.zero,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: mockPosts.length,
-                  itemBuilder: (context, index) {
-                    return _buildPostCard(mockPosts[index]);
-                  },
-                ),
-                const SizedBox(height: 140), // Bottom padding
-              ],
+        child: RefreshIndicator(
+          onRefresh: () async {
+            _refreshPosts();
+            await _postsFuture;
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 24),
+                  _buildCreatePostInput(),
+                  const SizedBox(height: 32),
+                  FutureBuilder<List<PostModel>>(
+                    future: _postsFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return Center(child: Text('Error: ${snapshot.error}'));
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(child: Text('ไม่พบโพสต์'));
+                      }
+
+                      final posts = snapshot.data!;
+                      return ListView.builder(
+                        padding: EdgeInsets.zero,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: posts.length,
+                        itemBuilder: (context, index) {
+                          return _buildPostCard(posts[index]);
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 140), // Bottom padding
+                ],
+              ),
             ),
           ),
         ),
@@ -96,11 +109,14 @@ class _CommunityPageState extends State<CommunityPage> {
 
   Widget _buildCreatePostInput() {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const CreatePostPage()),
         );
+        if (result == true) {
+          _refreshPosts();
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -131,7 +147,10 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
-  Widget _buildPostCard(Map<String, dynamic> post) {
+  Widget _buildPostCard(PostModel post) {
+    // Format timestamp
+    final formattedDate = post.createdAt.toString().substring(0, 16);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       padding: const EdgeInsets.all(16),
@@ -149,9 +168,9 @@ class _CommunityPageState extends State<CommunityPage> {
                 radius: 20,
                 backgroundColor: Colors.grey[300],
                 backgroundImage:
-                    post['user_avatar'] != null &&
-                        post['user_avatar'].toString().startsWith('http')
-                    ? NetworkImage(post['user_avatar'])
+                    post.author.profileImage != null &&
+                        post.author.profileImage!.toString().startsWith('http')
+                    ? NetworkImage(post.author.profileImage!)
                     : const NetworkImage(
                             'https://cdn-icons-png.flaticon.com/512/847/847969.png',
                           )
@@ -163,14 +182,14 @@ class _CommunityPageState extends State<CommunityPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      post['user_name'],
+                      post.author.username ?? 'Unknown',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      post['time'],
+                      formattedDate,
                       style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
@@ -200,59 +219,93 @@ class _CommunityPageState extends State<CommunityPage> {
           ),
           const SizedBox(height: 16),
           // Content
-          Text(
-            post['content'],
-            style: const TextStyle(fontSize: 14, height: 1.5),
-          ),
-          if (post['image'] != null) ...[
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.network(
-                post['image'],
-                width: double.infinity,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ],
+          Text(post.content, style: const TextStyle(fontSize: 14, height: 1.5)),
+          // TODO: Display attached sheet or images if any
+          // if (post.image != null) ...[
+          //   const SizedBox(height: 12),
+          //   ClipRRect(
+          //     borderRadius: BorderRadius.circular(16),
+          //     child: Image.network(
+          //       post.image!,
+          //       width: double.infinity,
+          //       fit: BoxFit.cover,
+          //     ),
+          //   ),
+          // ],
           const SizedBox(height: 16),
           // Actions
           Row(
             children: [
-              if (post['has_product'])
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[700],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'ดูสินค้า',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
+              if (post.sheetId != null)
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            PreviewSheetPage(sheetId: post.sheetId!),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[700],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'ดูสินค้า',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
                   ),
                 ),
               const Spacer(),
               _buildActionButton(
-                icon: Icons.favorite,
-                label: '${post['likes']}',
-                color: const Color(0xFF2A5DB9),
-                textColor: Colors.white,
-                isActive: true,
+                icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
+                label: '${post.likeCount}',
+                color: post.isLiked ? const Color(0xFF2A5DB9) : Colors.white,
+                textColor: post.isLiked ? Colors.white : Colors.black54,
+                isActive: post.isLiked,
+                onTap: () async {
+                  final success = post.isLiked
+                      ? await PostsService.unlikePost(post.id)
+                      : await PostsService.likePost(post.id);
+
+                  if (success) {
+                    setState(() {
+                      _postsFuture.then((posts) {
+                        final postIndex = posts.indexWhere(
+                          (p) => p.id == post.id,
+                        );
+                        if (postIndex != -1) {
+                          final currentPost = posts[postIndex];
+                          posts[postIndex] = currentPost.copyWith(
+                            isLiked: !currentPost.isLiked,
+                            likeCount: currentPost.isLiked
+                                ? currentPost.likeCount - 1
+                                : currentPost.likeCount + 1,
+                          );
+                        }
+                        return posts;
+                      });
+                    });
+                  }
+                },
               ),
               const SizedBox(width: 8),
               _buildActionButton(
                 icon: Icons.chat_bubble_outline,
-                label: '${post['comments']}',
+                label: '${post.commentCount}',
                 color: Colors.white,
                 isActive: false,
               ),
               const SizedBox(width: 8),
               _buildActionButton(
                 icon: Icons.share,
-                label: '${post['shares']}',
+                label: '${post.shareCount}',
                 color: Colors.white,
                 isActive: false,
               ),
@@ -269,26 +322,34 @@ class _CommunityPageState extends State<CommunityPage> {
     required Color color,
     bool isActive = false,
     Color? textColor,
+    VoidCallback? onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: isActive ? Colors.white : Colors.black54),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
               color: isActive ? Colors.white : Colors.black54,
             ),
-          ),
-        ],
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isActive ? Colors.white : textColor ?? Colors.black54,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

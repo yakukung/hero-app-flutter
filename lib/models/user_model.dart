@@ -44,30 +44,34 @@ class UserModel {
     String? nameFromData;
     String? idFromData;
 
-    if (json['roles'] is Map<String, dynamic>) {
-      rolesMap = json['roles'] as Map<String, dynamic>;
-    } else if (json['role'] is Map<String, dynamic>) {
-      rolesMap = json['role'] as Map<String, dynamic>;
-    } else if (json['roles'] is List && (json['roles'] as List).isNotEmpty) {
-      if ((json['roles'] as List)[0] is Map<String, dynamic>) {
-        rolesMap = (json['roles'] as List)[0] as Map<String, dynamic>;
-      } else if ((json['roles'] as List)[0] is String) {
-        nameFromData = (json['roles'] as List)[0] as String;
+    final rolesJson = json['roles'];
+    final roleJson = json['role'];
+
+    if (rolesJson is Map) {
+      rolesMap = rolesJson.cast<String, dynamic>();
+    } else if (roleJson is Map) {
+      rolesMap = roleJson.cast<String, dynamic>();
+    } else if (rolesJson is List && rolesJson.isNotEmpty) {
+      if (rolesJson[0] is Map) {
+        rolesMap = (rolesJson[0] as Map).cast<String, dynamic>();
+      } else if (rolesJson[0] is String) {
+        nameFromData = rolesJson[0] as String;
       }
-    } else if (json['roles'] is String) {
-      nameFromData = json['roles'] as String;
-    } else if (json['role'] is String) {
-      nameFromData = json['role'] as String;
+    } else if (rolesJson is String) {
+      nameFromData = rolesJson;
+    } else if (roleJson is String) {
+      nameFromData = roleJson;
     }
 
-    // Ultimate Fallback: Search ALL keys for any value containing 'PREMIUM'
+    // Ultimate Fallback: Search ALL keys for any value containing 'PREMIUM' or 'ADMIN'
     String? ultimateName;
     json.forEach((key, value) {
       if (key.toLowerCase().contains('role')) {
-        if (value is String && value.toUpperCase().contains('PREMIUM')) {
-          ultimateName = value;
-        } else if (value is Map && value['name'] != null) {
-          if (value['name'].toString().toUpperCase().contains('PREMIUM')) {
+        final valStr = value.toString().toUpperCase();
+        if (valStr.contains('PREMIUM') || valStr.contains('ADMIN')) {
+          if (value is String) {
+            ultimateName = value;
+          } else if (value is Map && value['name'] != null) {
             ultimateName = value['name'].toString();
           }
         }

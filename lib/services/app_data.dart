@@ -8,8 +8,11 @@ import 'package:http/http.dart' as http;
 class Appdata extends ChangeNotifier {
   UserModel? _user;
   String _errorMessage = '';
+  bool _isLoading = false;
 
   GetStorage gs = GetStorage();
+
+  bool get isLoading => _isLoading;
 
   UserModel? get user => _user;
   String get uid => _user?.id ?? '';
@@ -31,11 +34,13 @@ class Appdata extends ChangeNotifier {
   String get errorMessage => _errorMessage;
 
   Future<void> fetchUserData() async {
-    GetStorage gs = GetStorage();
     final String? storedUid = gs.read('uid')?.toString();
 
-    if (storedUid != null && storedUid.isNotEmpty) {
-      try {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      if (storedUid != null && storedUid.isNotEmpty) {
         final String? token = gs.read('token')?.toString();
         final response = await http.get(
           Uri.parse('$apiEndpoint/users/$storedUid'),
@@ -55,11 +60,14 @@ class Appdata extends ChangeNotifier {
             'ไม่สามารถดึงข้อมูลผู้ใช้ได้: ${response.statusCode}',
           );
         }
-      } catch (e) {
-        _handleUserError('เกิดข้อผิดพลาดในการดึงข้อมูล: $e');
+      } else {
+        _clearUserData();
       }
-    } else {
-      _clearUserData();
+    } catch (e) {
+      _handleUserError('เกิดข้อผิดพลาดในการดึงข้อมูล: $e');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -80,17 +88,25 @@ class Appdata extends ChangeNotifier {
   void _applyUserData(Map<String, dynamic> userData) {
     try {
       final newUser = UserModel.fromJson(userData);
-      if (_user != null &&
-          (newUser.roleName == null || newUser.roleName == 'USER')) {
-        _user = newUser.copyWith(
-          roleId: _user!.roleId,
-          roleName: _user!.roleName,
-        );
+      final gs = GetStorage();
+
+      String? resolvedRole = newUser.roleName;
+
+      if (resolvedRole == null || resolvedRole.isEmpty) {
+        if (_user?.roleName != null && _user!.roleName!.isNotEmpty) {
+          resolvedRole = _user!.roleName;
+        } else {
+          resolvedRole = gs.read('role_name')?.toString();
+        }
+      }
+
+      if (resolvedRole != null && resolvedRole.isNotEmpty) {
+        _user = newUser.copyWith(roleName: resolvedRole);
+        gs.write('role_name', resolvedRole);
       } else {
         _user = newUser;
       }
 
-      final gs = GetStorage();
       gs.write('uid', _user!.id);
 
       if (userData['tokens'] is Map<String, dynamic>) {
@@ -135,6 +151,7 @@ class Appdata extends ChangeNotifier {
     gs.remove('access_token_expires_at');
     gs.remove('refresh_token_expires_at');
     gs.remove('uid');
+    gs.remove('role_name');
 
     notifyListeners();
   }
