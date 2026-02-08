@@ -19,12 +19,12 @@ class SideBar extends StatelessWidget {
     return Drawer(
       backgroundColor: Color(0xFFF5F6FA),
       child: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            Consumer<Appdata>(
-              builder: (context, appData, child) {
-                return Row(
+        child: Consumer<Appdata>(
+          builder: (context, appData, child) {
+            return Column(
+              children: [
+                const SizedBox(height: 24),
+                Row(
                   children: [
                     Stack(
                       children: [
@@ -117,132 +117,165 @@ class SideBar extends StatelessWidget {
                       ),
                     ),
                   ],
-                );
-              },
-            ),
-            const SizedBox(height: 26),
-            // Search Box
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.85),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.09),
-                      blurRadius: 8,
-                      offset: Offset(0, 2),
+                ),
+                const SizedBox(height: 26),
+                // Search Box
+                if (appData.user?.roleName != 'ADMIN')
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.09),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        style: const TextStyle(
+                          fontFamily: 'SukhumvitSet',
+                          color: Colors.black,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'ค้นหาชีต',
+                          hintStyle: const TextStyle(
+                            fontFamily: 'SukhumvitSet',
+                            color: Color(0xFFB0B0B0),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Color(0xFF2A5DB9),
+                            size: 26,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                          ),
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-                child: TextField(
-                  style: const TextStyle(
-                    fontFamily: 'SukhumvitSet',
-                    color: Colors.black,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 16,
                   ),
-                  decoration: InputDecoration(
-                    hintText: 'ค้นหาชีต',
-                    hintStyle: const TextStyle(
-                      fontFamily: 'SukhumvitSet',
-                      color: Color(0xFFB0B0B0),
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                const SizedBox(height: 24),
+                // Menu List
+                Expanded(
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      if (appData.user?.roleName == 'ADMIN') ...[
+                        SidebarMenuItem(
+                          icon: Icons.people_alt_rounded,
+                          label: 'ชุมชน',
+                          selected: navigationService.currentIndex.value == 0,
+                          onTap: () {
+                            navigationService.changeIndex(0);
+                            Get.back();
+                          },
+                        ),
+                        SidebarMenuItem(
+                          icon: Icons.report_problem_rounded,
+                          label: 'รายงานแจ้งปัญหา',
+                          selected: navigationService.currentIndex.value == 1,
+                          onTap: () {
+                            navigationService.changeIndex(1);
+                            Get.back();
+                          },
+                        ),
+                        SidebarMenuItem(
+                          icon: Icons.supervisor_account_rounded,
+                          label: 'จัดการผู้ใช้',
+                          selected: navigationService.currentIndex.value == 2,
+                          onTap: () {
+                            navigationService.changeIndex(2);
+                            Get.back();
+                          },
+                        ),
+                      ] else ...[
+                        SidebarMenuItem(
+                          icon: Icons.home_rounded,
+                          label: 'หน้าหลัก',
+                          selected: navigationService.currentIndex.value == 0,
+                          onTap: () {
+                            navigationService.changeIndex(0);
+                            Get.back();
+                          },
+                        ),
+                        SidebarMenuItem(
+                          icon: Icons.star_rounded,
+                          label: 'ชีตโปรด',
+                          selected: navigationService.currentIndex.value == 1,
+                          onTap: () {
+                            navigationService.changeIndex(1);
+                            Get.back();
+                          },
+                        ),
+                        SidebarMenuItem(
+                          icon: Icons.upload_rounded,
+                          label: 'อัปโหลดชีต',
+                          selected: navigationService.currentIndex.value == 2,
+                          onTap: () {
+                            navigationService.changeIndex(2);
+                            Get.back();
+                          },
+                        ),
+                        SidebarMenuItem(
+                          icon: Icons.people_alt_rounded,
+                          label: 'คอมมูนิตี้',
+                          selected: navigationService.currentIndex.value == 3,
+                          badge: 6,
+                          onTap: () {
+                            navigationService.changeIndex(3);
+                            Get.back();
+                          },
+                        ),
+                        SidebarMenuItem(
+                          icon: Icons.person_rounded,
+                          label: 'โปรไฟล์ของฉัน',
+                          selected: navigationService.currentIndex.value == 4,
+                          onTap: () {
+                            navigationService.changeIndex(4);
+                            Get.back();
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // Logout
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 16,
+                  ),
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF92A47),
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      color: Color(0xFF2A5DB9),
-                      size: 26,
+                    icon: const Icon(Icons.logout, color: Colors.white),
+                    label: const Text(
+                      'ออกจากระบบ',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    onPressed: () => _showLogoutConfirmation(context),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Menu List
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  SidebarMenuItem(
-                    icon: Icons.home_rounded,
-                    label: 'หน้าหลัก',
-                    selected: navigationService.currentIndex.value == 0,
-                    onTap: () {
-                      navigationService.changeIndex(0);
-                      Get.back();
-                    },
-                  ),
-                  SidebarMenuItem(
-                    icon: Icons.star_rounded,
-                    label: 'ชีตโปรด',
-                    selected: navigationService.currentIndex.value == 1,
-                    onTap: () {
-                      navigationService.changeIndex(1);
-                      Get.back();
-                    },
-                  ),
-                  SidebarMenuItem(
-                    icon: Icons.upload_rounded,
-                    label: 'อัปโหลดชีต',
-                    selected: navigationService.currentIndex.value == 2,
-                    onTap: () {
-                      navigationService.changeIndex(2);
-                      Get.back();
-                    },
-                  ),
-                  SidebarMenuItem(
-                    icon: Icons.people_alt_rounded,
-                    label: 'คอมมูนิตี้',
-                    selected: navigationService.currentIndex.value == 3,
-                    badge: 6,
-                    onTap: () {
-                      navigationService.changeIndex(3);
-                      Get.back();
-                    },
-                  ),
-                  SidebarMenuItem(
-                    icon: Icons.person_rounded,
-                    label: 'โปรไฟล์ของฉัน',
-                    selected: navigationService.currentIndex.value == 4,
-                    onTap: () {
-                      navigationService.changeIndex(4);
-                      Get.back();
-                    },
-                  ),
-                ],
-              ),
-            ),
-            // Logout
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 16,
-              ),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF92A47),
-                  minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                icon: const Icon(Icons.logout, color: Colors.white),
-                label: const Text(
-                  'ออกจากระบบ',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                onPressed: () => _showLogoutConfirmation(context),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );

@@ -6,7 +6,6 @@ import 'package:flutter_application_1/widgets/product/product_card.dart';
 import 'package:flutter_application_1/widgets/search/search_sheet_box.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_application_1/services/app_data.dart';
 import 'package:flutter_application_1/services/sheets.service.dart';
 import 'package:flutter_application_1/widgets/custom_dialog.dart';
 
@@ -22,7 +21,6 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<Appdata>(context, listen: false).fetchUserData();
       Provider.of<SheetData>(context, listen: false).fetchSheets();
     });
   }

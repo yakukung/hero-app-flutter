@@ -11,9 +11,11 @@ import 'pages/user/upload.dart';
 import 'services/app_data.dart';
 import 'services/navigation_service.dart';
 import 'services/sheets.service.dart';
+import 'services/admin_service.dart';
 import 'widgets/layout/main_sidebar.dart';
 import 'widgets/navigation/navbar.dart';
 import 'widgets/navigation/navbottom.dart';
+import 'pages/admin/home.dart';
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -24,6 +26,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => Appdata()),
         ChangeNotifierProvider(create: (_) => SheetData()),
+        ChangeNotifierProvider(create: (_) => AdminService()),
       ],
       child: GetMaterialApp(
         title: 'heroapp Demo',
@@ -56,7 +59,18 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   Widget build(BuildContext context) {
     final appData = Provider.of<Appdata>(context);
-    return appData.uid.isEmpty ? const IntroPage() : const MainPage();
+
+    if (appData.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (appData.uid.isEmpty) {
+      return const IntroPage();
+    }
+    if (appData.user?.roleName == 'ADMIN') {
+      return const AdminHomePage();
+    }
+    return const MainPage();
   }
 }
 

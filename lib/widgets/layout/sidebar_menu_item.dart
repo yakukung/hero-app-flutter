@@ -29,35 +29,32 @@ class SidebarMenuItem extends StatelessWidget {
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            color:
-                highlight
-                    ? const Color(0xFF2A5DB9)
-                    : selected
-                    ? Colors.grey.shade200
-                    : Colors.transparent,
+            color: highlight
+                ? const Color(0xFF2A5DB9)
+                : selected
+                ? Colors.grey.shade200
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(16),
-            boxShadow:
-                highlight
-                    ? [
-                      BoxShadow(
-                        color: const Color(0xFF2A5DB9).withOpacity(0.18),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                    : [],
+            boxShadow: highlight
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF2A5DB9).withOpacity(0.18),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : [],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
               Icon(
                 icon,
-                color:
-                    highlight
-                        ? Colors.white
-                        : selected
-                        ? const Color(0xFF2A5DB9)
-                        : Colors.grey,
+                color: highlight
+                    ? Colors.white
+                    : selected
+                    ? const Color(0xFF2A5DB9)
+                    : Colors.grey,
                 size: 24,
               ),
               const SizedBox(width: 16),
@@ -65,12 +62,11 @@ class SidebarMenuItem extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    color:
-                        highlight
-                            ? Colors.white
-                            : selected
-                            ? const Color(0xFF2A5DB9)
-                            : Colors.black,
+                    color: highlight
+                        ? Colors.white
+                        : selected
+                        ? const Color(0xFF2A5DB9)
+                        : Colors.black,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
