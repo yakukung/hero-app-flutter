@@ -3,6 +3,7 @@ import 'package:flutter_application_1/models/sheet_model.dart';
 import 'package:flutter_application_1/services/sheets.service.dart';
 import 'package:flutter_application_1/services/posts_service.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 import 'package:flutter_application_1/pages/user/sheet/preview_sheet.dart';
 
 class CreatePostPage extends StatefulWidget {
@@ -32,7 +33,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
           setState(() {
             _selectedSheet = sheet;
           });
-          Navigator.pop(context);
+          Get.back();
         },
       ),
     );
@@ -51,7 +52,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Get.back(),
         ),
         actions: [
           TextButton(
@@ -74,7 +75,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('สร้างโพสต์สำเร็จ')),
                 );
-                Navigator.pop(context);
+                Get.back();
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -118,13 +119,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 ),
                 child: InkWell(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            PreviewSheetPage(sheetId: _selectedSheet!.id),
-                      ),
-                    );
+                    Get.to(() => PreviewSheetPage(sheetId: _selectedSheet!.id));
                   },
                   borderRadius: BorderRadius.circular(12),
                   child: Padding(

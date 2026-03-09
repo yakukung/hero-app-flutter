@@ -19,6 +19,9 @@ class Appdata extends ChangeNotifier {
   String get username => _user?.username ?? '';
   String get email => _user?.email ?? '';
   String get provider => _user?.authProvider.name ?? 'EMAIL';
+  double get wallet => _user?.wallet ?? 0.0;
+  int get followersCount => _user?.followersCount ?? 0;
+  int get followingsCount => _user?.followingsCount ?? 0;
   String get profileImage {
     if (_user?.profileImage == null || _user!.profileImage!.isEmpty) return '';
     if (_user!.profileImage!.startsWith('http')) return _user!.profileImage!;
@@ -64,6 +67,7 @@ class Appdata extends ChangeNotifier {
         _clearUserData();
       }
     } catch (e) {
+      debugPrint('Error fetching user data: $e');
       _handleUserError('เกิดข้อผิดพลาดในการดึงข้อมูล: $e');
     } finally {
       _isLoading = false;
@@ -132,6 +136,7 @@ class Appdata extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
+      debugPrint('Error parsing user data: $e');
       _handleUserError('Error parsing user data: $e');
     }
   }

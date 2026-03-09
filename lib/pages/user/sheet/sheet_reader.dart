@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'dart:io';
+import 'package:flutter_windowmanager/flutter_windowmanager.dart';
 import 'widgets/zoomable_image.dart';
 
 /// Full screen image viewer with zoom controls and page navigation.
@@ -32,6 +35,7 @@ class _SheetPreviewReaderState extends State<SheetPreviewReader> {
   @override
   void initState() {
     super.initState();
+    _secureScreen();
     _pageController = PageController();
     for (int i = 0; i < widget.images.length; i++) {
       _scaleMap[i] = 1.0;
@@ -40,8 +44,21 @@ class _SheetPreviewReaderState extends State<SheetPreviewReader> {
 
   @override
   void dispose() {
+    _clearSecureScreen();
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _secureScreen() async {
+    if (Platform.isAndroid) {
+      await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
+    }
+  }
+
+  Future<void> _clearSecureScreen() async {
+    if (Platform.isAndroid) {
+      await FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -157,7 +174,7 @@ class _SheetPreviewReaderState extends State<SheetPreviewReader> {
           children: [
             IconButton(
               icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Get.back(),
             ),
             Expanded(
               child: Text(

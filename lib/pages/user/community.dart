@@ -3,6 +3,7 @@ import 'package:flutter_application_1/models/post_model.dart';
 import 'package:flutter_application_1/pages/user/create_post.dart';
 import 'package:flutter_application_1/pages/user/sheet/preview_sheet.dart';
 import 'package:flutter_application_1/services/posts_service.dart';
+import 'package:get/get.dart';
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});
@@ -110,10 +111,7 @@ class _CommunityPageState extends State<CommunityPage> {
   Widget _buildCreatePostInput() {
     return GestureDetector(
       onTap: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const CreatePostPage()),
-        );
+        final result = await Get.to(() => const CreatePostPage());
         if (result == true) {
           _refreshPosts();
         }
@@ -239,13 +237,7 @@ class _CommunityPageState extends State<CommunityPage> {
               if (post.sheetId != null)
                 GestureDetector(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            PreviewSheetPage(sheetId: post.sheetId!),
-                      ),
-                    );
+                    Get.to(() => PreviewSheetPage(sheetId: post.sheetId!));
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(

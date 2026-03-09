@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
@@ -150,7 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
-                    onTap: () => log('Forgot password tapped'),
+                    onTap: () {},
                     child: const Text(
                       'ลืมรหัสผ่าน?',
                       style: TextStyle(
@@ -292,7 +291,6 @@ class _LoginPageState extends State<LoginPage> {
           'password': _passwordCtl.text.trim(),
         }),
       );
-      log(response.body);
 
       if (response.statusCode != 200) {
         _handleInvalidCredentials(
@@ -318,21 +316,19 @@ class _LoginPageState extends State<LoginPage> {
 
       final dynamic data = payload['data'];
       if (data is! Map<String, dynamic>) {
-        log('Error: data field missing or invalid in response');
         _showUnexpectedResponse();
         return;
       }
 
       final String? uid = _extractUid(data);
       if (uid == null || uid.isEmpty) {
-        log('Error: uid is null in response');
         _showUnexpectedResponse();
         return;
       }
 
       await _completeLogin(uid, data);
     } catch (error) {
-      log('Login error: $error');
+      debugPrint('Login error: $error');
       _showNetworkError();
     } finally {
       if (mounted) {
@@ -373,7 +369,7 @@ class _LoginPageState extends State<LoginPage> {
       final dynamic decoded = jsonDecode(responseBody);
       return decoded is Map<String, dynamic> ? decoded : null;
     } catch (error) {
-      log('Error decoding login response: $error');
+      debugPrint('Error decoding login response: $error');
       return null;
     }
   }
@@ -393,8 +389,6 @@ class _LoginPageState extends State<LoginPage> {
       final userCredential = await authService.signInWithGoogle();
 
       if (userCredential != null && userCredential.user != null) {
-        log('Google Sign-In Success: ${userCredential.user!.uid}');
-
         final response = await authService.loginByGoogle(
           providerUserId: userCredential.user!.uid,
           providerName: "GOOGLE",
@@ -402,8 +396,6 @@ class _LoginPageState extends State<LoginPage> {
           providerEmail: userCredential.user!.email ?? "",
           providerAvatar: userCredential.user!.photoURL ?? "",
         );
-
-        log('Google Login API Response: ${response.body}');
 
         if (response.statusCode != 200) {
           showCustomDialog(
@@ -430,25 +422,20 @@ class _LoginPageState extends State<LoginPage> {
 
         final dynamic data = payload['data'];
         if (data is! Map<String, dynamic>) {
-          log('Error: data field missing or invalid in response');
           _showUnexpectedResponse();
           return;
         }
 
         final String? uid = _extractUid(data);
         if (uid == null || uid.isEmpty) {
-          log('Error: uid is null in response');
           _showUnexpectedResponse();
           return;
         }
 
         await _completeLogin(uid, data);
-      } else {
-        // Cancelled or failed
-        log('Google Sign-In cancelled or failed');
       }
     } catch (e) {
-      log('Google Sign-In Error: $e');
+      debugPrint('Google Sign-In error: $e');
       showCustomDialog(
         title: 'เกิดข้อผิดพลาด',
         message: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้',
@@ -468,12 +455,11 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _completeLogin(String uid, Map<String, dynamic> userData) async {
     final storage = GetStorage();
     storage.write('uid', uid);
-    log('GetStorage: uid=$uid saved');
 
     if (!mounted) return;
     final appData = Provider.of<Appdata>(context, listen: false);
     appData.updateFromMap(userData);
-    await appData.fetchUserData();
+    // await appData.fetchUserData();
 
     final NavigationService navService = Get.find<NavigationService>();
     navService.currentIndex.value = 0;

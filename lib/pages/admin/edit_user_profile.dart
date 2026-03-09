@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
+import 'package:flutter_application_1/models/user_model.dart'; // Ensure UserModel is imported
 import 'package:flutter_application_1/models/upload_state.dart';
-import 'package:flutter_application_1/pages/user/change_email.dart';
-import 'package:flutter_application_1/pages/user/change_password.dart';
-import 'package:flutter_application_1/pages/user/change_username.dart';
-import 'package:flutter_application_1/services/app_data.dart';
+import 'package:flutter_application_1/pages/admin/change_username.dart';
+import 'package:flutter_application_1/services/admin_service.dart';
+import 'package:flutter_application_1/widgets/custom_dialog.dart'; // Needed for showCustomDialog if used, or standard dialogs
 import 'package:flutter_application_1/widgets/upload/upload_progress_dialog.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -14,17 +14,26 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:get/get.dart';
 
-class EditProfilePage extends StatefulWidget {
-  const EditProfilePage({super.key});
+class AdminEditUserProfilePage extends StatefulWidget {
+  final UserModel user;
+
+  const AdminEditUserProfilePage({super.key, required this.user});
 
   @override
-  State<EditProfilePage> createState() => _EditProfilePageState();
+  State<AdminEditUserProfilePage> createState() =>
+      _AdminEditUserProfilePageState();
 }
 
-class _EditProfilePageState extends State<EditProfilePage> {
+class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
   final ImagePicker _picker = ImagePicker();
-
   File? _pickedImage;
+  late UserModel _currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUser = widget.user;
+  }
 
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(
@@ -39,7 +48,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _uploadProfileImage(File imageFile) async {
-    final appData = Provider.of<Appdata>(context, listen: false);
+    // Determine mime type
+    final mimeType = imageFile.path.endsWith('.png')
+        ? 'image/png'
+        : 'image/jpeg';
+    final mediaType = MediaType.parse(mimeType);
 
     final stateNotifier = ValueNotifier(const UploadState(isUploading: true));
     if (mounted) {
@@ -50,11 +63,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final uri = Uri.parse('$apiEndpoint/users/update-profile-image');
       final request = http.MultipartRequest('PUT', uri);
 
-      request.fields['uid'] = appData.uid;
-
-      final mediaType = imageFile.path.endsWith('.png')
-          ? MediaType('image', 'png')
-          : MediaType('image', 'jpeg');
+      // Use the target user's UID
+      request.fields['uid'] = _currentUser.id;
 
       request.files.add(
         await http.MultipartFile.fromPath(
@@ -68,20 +78,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        await appData.fetchUserData();
+        // Refresh local user data if possible, or just update UI image
+        // We might want to call AdminService.fetchUserById again to ensure sync
+        final adminService = Provider.of<AdminService>(context, listen: false);
+        final updatedUser = await adminService.fetchUserById(_currentUser.id);
+
+        if (updatedUser != null) {
+          setState(() {
+            _currentUser = updatedUser;
+            _pickedImage =
+                null; // Reset picked image as we now have the updated network image
+          });
+        }
+
         stateNotifier.value = stateNotifier.value.copyWith(
           isUploading: false,
           isSuccess: true,
           progress: 1.0,
         );
-        setState(() {
-          _pickedImage = imageFile;
-        });
       } else {
         throw Exception('Failed to update profile image: ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error updating profile image: $e');
+      debugPrint('Error updating user profile image (admin): $e');
       stateNotifier.value = stateNotifier.value.copyWith(
         isUploading: false,
         isSuccess: false,
@@ -153,14 +172,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final appData = Provider.of<Appdata>(context);
-    final isGoogle = appData.provider == 'GOOGLE';
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'แก้ไขข้อมูลส่วนตัว',
+          'แก้ไขข้อมูลผู้ใช้ (Admin)',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
         ),
         centerTitle: true,
@@ -168,7 +184,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Get.back(),
+          onPressed: () =>
+              Get.back(result: _currentUser), // Return updated user
         ),
       ),
       body: SingleChildScrollView(
@@ -197,8 +214,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       backgroundColor: Colors.grey[200],
                       backgroundImage: _pickedImage != null
                           ? FileImage(_pickedImage!)
-                          : (appData.profileImage.isNotEmpty
-                                    ? NetworkImage(appData.profileImage)
+                          : (_currentUser.profileImage != null &&
+                                        _currentUser.profileImage!.isNotEmpty
+                                    ? NetworkImage(
+                                        _currentUser.profileImage!.startsWith(
+                                              'http',
+                                            )
+                                            ? _currentUser.profileImage!
+                                            : '$apiEndpoint/${_currentUser.profileImage}',
+                                      )
                                     : const AssetImage(
                                         'assets/images/default/avatar.png',
                                       ))
@@ -208,7 +232,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Color(0xFF2A5DB9),
+                      color: const Color(0xFF2A5DB9),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 3),
                     ),
@@ -234,88 +258,58 @@ class _EditProfilePageState extends State<EditProfilePage> {
             _buildMenuButton(
               title: 'เปลี่ยนชื่อผู้ใช้',
               icon: Icons.person_outline_rounded,
-              onPressed: () {
-                Get.to(() => const ChangeUsernamePage());
+              onPressed: () async {
+                final result = await Get.to(
+                  () => AdminChangeUsernamePage(
+                    userId: _currentUser.id,
+                    currentUsername: _currentUser.username ?? '',
+                  ),
+                );
+
+                if (result == true) {
+                  // Refresh user data if username changed
+                  final adminService = Provider.of<AdminService>(
+                    context,
+                    listen: false,
+                  );
+                  final updatedUser = await adminService.fetchUserById(
+                    _currentUser.id,
+                  );
+                  if (updatedUser != null && mounted) {
+                    setState(() {
+                      _currentUser = updatedUser;
+                    });
+                  }
+                }
               },
             ),
-            if (isGoogle) ...[
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        shape: BoxShape.circle,
-                      ),
-                      child: Image.asset(
-                        'assets/images/logo/google-icon-logo.png',
-                        width: 24,
-                        height: 24,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.g_mobiledata, size: 24),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'เชื่อมต่อผ่าน Google',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                              fontSize: 16,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'บัญชีนี้เชื่อมต่อกับ Google แล้ว',
-                            style: TextStyle(
-                              color: Colors.black54,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.check_circle_rounded,
-                      color: Color(0xFF2AB950),
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              _buildMenuButton(
-                title: 'เปลี่ยนอีเมล',
+            // Placeholder for other actons or "Not Implemented"
+            Opacity(
+              opacity: 0.5,
+              child: _buildMenuButton(
+                title: 'เปลี่ยนอีเมล (ยังไม่เปิดใช้งาน)',
                 icon: Icons.email_outlined,
                 onPressed: () {
-                  Get.to(() => const ChangeEmailPage());
+                  showCustomDialog(
+                    title: 'แจ้งเตือน',
+                    message: 'ฟีเจอร์นี้ยังไม่เปิดใช้งานสำหรับ Admin',
+                  );
                 },
               ),
-              _buildMenuButton(
-                title: 'เปลี่ยนรหัสผ่าน',
+            ),
+            Opacity(
+              opacity: 0.5,
+              child: _buildMenuButton(
+                title: 'เปลี่ยนรหัสผ่าน (ยังไม่เปิดใช้งาน)',
                 icon: Icons.lock_outline_rounded,
                 onPressed: () {
-                  Get.to(() => const ChangePasswordPage());
+                  showCustomDialog(
+                    title: 'แจ้งเตือน',
+                    message: 'ฟีเจอร์นี้ยังไม่เปิดใช้งานสำหรับ Admin',
+                  );
                 },
               ),
-            ],
+            ),
           ],
         ),
       ),

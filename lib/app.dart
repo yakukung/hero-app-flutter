@@ -60,7 +60,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Widget build(BuildContext context) {
     final appData = Provider.of<Appdata>(context);
 
-    if (appData.isLoading) {
+    if (appData.isLoading && appData.user == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 

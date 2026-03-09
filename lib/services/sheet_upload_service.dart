@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
@@ -80,14 +79,14 @@ class SheetUploadService {
     final stateNotifier = ValueNotifier(const UploadState(isUploading: true));
     // ignore: use_build_context_synchronously
     UploadProgressDialog.show(
-      context: context,
       stateNotifier: stateNotifier,
       onComplete: () {
         try {
           final navService = Get.find<NavigationService>();
           navService.changeIndex(0);
         } catch (e) {
-          log('Error navigating back: $e');
+          debugPrint('Error changing navigation index after upload: $e');
+          return;
         }
       },
     );
@@ -127,6 +126,7 @@ class SheetUploadService {
         return false;
       }
     } catch (e) {
+      debugPrint('Error uploading sheet: $e');
       stateNotifier.value = stateNotifier.value.copyWith(
         isUploading: false,
         isSuccess: false,

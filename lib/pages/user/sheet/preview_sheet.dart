@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_application_1/config/api_connect.dart';
@@ -11,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'dart:ui';
 import 'sheet_reader.dart';
 import 'quiz_page.dart';
+import 'package:get/get.dart';
 
 class PreviewSheetPage extends StatefulWidget {
   final String sheetId;
@@ -26,6 +26,15 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
   bool isLoading = true;
   String errorMessage = '';
   List<String> previewImages = [];
+  String _currentUserId = '';
+
+  bool get _isOwner => sheet != null && sheet!.authorId == _currentUserId;
+
+  bool get _canReadFull {
+    final isFree = (sheet?.price ?? 0) == 0;
+    final isPurchased = sheet?.isPurchased ?? false;
+    return _isOwner || isFree || isPurchased;
+  }
 
   @override
   void initState() {
@@ -37,6 +46,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
     try {
       final gs = GetStorage();
       final String? token = gs.read('token')?.toString();
+      final String currentUserId = gs.read('uid')?.toString() ?? '';
 
       final sheetData = context.read<SheetData>();
       if (token != null && sheetData.favoriteSheets.isEmpty) {
@@ -49,7 +59,6 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       );
 
       if (response.statusCode == 200) {
-        log('Sheet details response: ${response.body}');
         final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
         final dynamic data =
             jsonResponse['data']?['sheet'] ?? jsonResponse['data'];
@@ -87,9 +96,11 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
             questions: newSheet.questions,
             categoryIds: newSheet.categoryIds,
             keywordIds: newSheet.keywordIds,
+            buyerCount: newSheet.buyerCount,
             isPurchased: newSheet.isPurchased,
             isFavorite: isFavorited,
           );
+          _currentUserId = currentUserId;
           previewImages = limitedPreview;
           isLoading = false;
         });
@@ -97,7 +108,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
         _setError('Failed to load sheet: ${response.statusCode}');
       }
     } catch (e) {
-      log('Error fetching sheet details: $e');
+      debugPrint('Error fetching sheet details: $e');
       _setError('Error: $e');
     }
   }
@@ -127,15 +138,12 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
               previewImages)
         : previewImages;
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SheetPreviewReader(
-          images: imagesToRead,
-          title: fullVersion
-              ? '${sheet?.title ?? 'Reading'} (ฉบับเต็ม)'
-              : sheet?.title ?? 'Reading',
-        ),
+    Get.to(
+      () => SheetPreviewReader(
+        images: imagesToRead,
+        title: fullVersion
+            ? '${sheet?.title ?? 'Reading'} (ฉบับเต็ม)'
+            : sheet?.title ?? 'Reading',
       ),
     );
   }
@@ -162,14 +170,11 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       return;
     }
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => QuizPage(
-          id: sheet!.id,
-          title: 'โจทย์ท้ายบท: ${sheet?.title}',
-          questions: sheet!.questions!,
-        ),
+    Get.to(
+      () => QuizPage(
+        id: sheet!.id,
+        title: 'โจทย์ท้ายบท: ${sheet?.title}',
+        questions: sheet!.questions!,
       ),
     );
   }
@@ -216,6 +221,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
                 questions: sheet!.questions,
                 categoryIds: sheet!.categoryIds,
                 keywordIds: sheet!.keywordIds,
+                buyerCount: sheet!.buyerCount,
                 isPurchased: sheet!.isPurchased,
                 isFavorite: !isCurrentlyFavorite,
               );
@@ -276,7 +282,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       elevation: 0,
       leading: _buildCircleButton(
         icon: Icons.arrow_back,
-        onPressed: () => Navigator.pop(context),
+        onPressed: () => Get.back(),
       ),
       actions: [
         _buildCircleButton(
@@ -324,7 +330,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
 
   Widget _buildHeaderBackground() {
     return GestureDetector(
-      onTap: () => _openReader(fullVersion: sheet?.isPurchased ?? false),
+      onTap: () => _openReader(fullVersion: _canReadFull),
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -386,14 +392,18 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
                 width: 1,
               ),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.fullscreen_rounded, color: Colors.white, size: 18),
-                SizedBox(width: 6),
+                const Icon(
+                  Icons.fullscreen_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
                 Text(
-                  'แตะเพื่อดูตัวอย่าง',
-                  style: TextStyle(
+                  _canReadFull ? 'แตะเพื่ออ่านฉบับเต็ม' : 'แตะเพื่อดูตัวอย่าง',
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -555,10 +565,6 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
   }
 
   Widget _buildBottomButton() {
-    final price = sheet?.price ?? 0;
-    final isFree = price == 0;
-    final isPurchased = sheet?.isPurchased ?? false;
-
     return Positioned(
       bottom: 0,
       left: 0,
@@ -584,7 +590,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
             topRight: Radius.circular(24),
           ),
         ),
-        child: (isFree || isPurchased)
+        child: _canReadFull
             ? _buildPurchasedButtons()
             : _buildPreviewAndBuyButtons(),
       ),

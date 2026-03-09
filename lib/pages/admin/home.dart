@@ -78,8 +78,6 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
   @override
   Widget build(BuildContext context) {
     final adminService = Provider.of<AdminService>(context);
-
-    // Filter users locally based on search query
     final filteredUsers = adminService.users.where((user) {
       final query = _searchQuery.toLowerCase();
       final username = (user.username ?? '').toLowerCase();
@@ -88,76 +86,79 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
     }).toList();
 
     return SafeArea(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 16.0,
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF7F8FA),
-                borderRadius: BorderRadius.circular(30),
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value;
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'ค้นหาชื่อผู้ใช้ หรือ UID',
-                        hintStyle: TextStyle(color: Colors.grey[500]),
-                        border: InputBorder.none,
+              child: Container(
+                padding: const EdgeInsets.only(left: 25),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F8FA),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'ค้นหาชื่อผู้ใช้ หรือ UID',
+                          hintStyle: TextStyle(color: Colors.grey[700]),
+                          border: InputBorder.none,
+                        ),
                       ),
                     ),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    padding: const EdgeInsets.all(8.0),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF2A5DB9),
-                      shape: BoxShape.circle,
+                    Container(
+                      padding: const EdgeInsets.all(15),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2A5DB9),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.search,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.search,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-
-          const SizedBox(height: 24),
-
-          // User List
-          Expanded(
-            child: adminService.isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : adminService.errorMessage.isNotEmpty
-                ? Center(child: Text(adminService.errorMessage))
-                : filteredUsers.isEmpty
-                ? const Center(child: Text('ไม่พบข้อมูลผู้ใช้'))
-                : ListView.builder(
-                    padding: const EdgeInsets.only(
-                      left: 24.0,
-                      right: 24.0,
-                      bottom: 140.0,
-                    ),
-                    itemCount: filteredUsers.length,
-                    itemBuilder: (context, index) {
-                      return _buildUserCard(filteredUsers[index]);
-                    },
-                  ),
-          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+          if (adminService.isLoading)
+            const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (adminService.errorMessage.isNotEmpty)
+            SliverFillRemaining(
+              child: Center(child: Text(adminService.errorMessage)),
+            )
+          else if (filteredUsers.isEmpty)
+            const SliverFillRemaining(
+              child: Center(child: Text('ไม่พบข้อมูลผู้ใช้')),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.only(bottom: 140),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: _buildUserCard(filteredUsers[index]),
+                  );
+                }, childCount: filteredUsers.length),
+              ),
+            ),
         ],
       ),
     );
@@ -168,12 +169,11 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF2FF), // Matches the light blue in screenshot
-        borderRadius: BorderRadius.circular(50), // Fully rounded pill shape
+        color: const Color(0xFFEEF2FF),
+        borderRadius: BorderRadius.circular(50),
       ),
       child: Row(
         children: [
-          // Avatar
           Container(
             width: 55,
             height: 55,
@@ -228,12 +228,7 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
 
           GestureDetector(
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AdminUserProfilePage(userId: user.id),
-                ),
-              );
+              Get.to(() => AdminUserProfilePage(userId: user.id));
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
