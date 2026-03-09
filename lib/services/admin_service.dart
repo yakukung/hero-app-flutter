@@ -47,6 +47,7 @@ class AdminService extends ChangeNotifier {
         _errorMessage = 'Failed to fetch users: ${response.statusCode}';
       }
     } catch (e) {
+      debugPrint('Error fetching users: $e');
       _errorMessage = 'Error fetching users: $e';
     } finally {
       _isLoading = false;
@@ -68,12 +69,58 @@ class AdminService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        // Based on previous patterns, the user data is likely in 'data'
         return UserModel.fromJson(jsonResponse['data']);
       }
     } catch (e) {
       debugPrint('Error fetching user by id: $e');
+      return null;
     }
     return null;
+  }
+
+  Future<bool> updateUserStatus(String userId, String statusFlag) async {
+    final String? token = _storage.read('token');
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$apiEndpoint/users/update-status-flag/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'status_flag': statusFlag}),
+      );
+
+      if (response.statusCode == 204) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error updating user status: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateUserUsername(String userId, String newUsername) async {
+    final String? token = _storage.read('token');
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$apiEndpoint/users/update-username'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'uid': userId, 'username': newUsername}),
+      );
+
+      if (response.statusCode == 204) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error updating username by admin: $e');
+      return false;
+    }
   }
 }

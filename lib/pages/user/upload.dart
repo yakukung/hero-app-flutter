@@ -100,6 +100,7 @@ class _UploadPageState extends State<UploadPage> {
         setState(() => _isLoadingCategories = false);
       }
     } catch (e) {
+      debugPrint('Error fetching categories: $e');
       if (!mounted) return;
       setState(() => _isLoadingCategories = false);
     }

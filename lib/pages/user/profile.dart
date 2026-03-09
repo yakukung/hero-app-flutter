@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -9,6 +8,7 @@ import 'package:flutter_application_1/models/upload_state.dart';
 import 'package:flutter_application_1/pages/intro.dart';
 import 'package:flutter_application_1/services/app_data.dart';
 import 'package:flutter_application_1/pages/user/edit_profile.dart';
+import 'package:flutter_application_1/pages/user/user_sheets.dart';
 import 'package:flutter_application_1/widgets/upload/upload_progress_dialog.dart';
 import 'package:flutter_application_1/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
@@ -17,7 +17,6 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'dart:ui';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -43,10 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (image != null) {
       final stateNotifier = ValueNotifier(const UploadState(isUploading: true));
       if (mounted) {
-        UploadProgressDialog.show(
-          context: context,
-          stateNotifier: stateNotifier,
-        );
+        UploadProgressDialog.show(stateNotifier: stateNotifier);
       }
 
       try {
@@ -85,20 +81,15 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         );
 
-        log('กำลังอัปโหลดรูปภาพไปยัง backend...');
         final streamedResponse = await request.send();
         final response = await http.Response.fromStream(streamedResponse);
 
         if (response.statusCode == 200 || response.statusCode == 204) {
-          log('อัปเดตโปรไฟล์สำเร็จที่ backend: ${response.body}');
           if (response.body.isNotEmpty) {
-            try {
-              final jsonResponse = jsonDecode(response.body);
-              if (jsonResponse['profile_image'] != null) {
-                appData.setProfileImage(jsonResponse['profile_image']);
-              }
-            } catch (e) {
-              log('Error parsing response: $e');
+            final jsonResponse = _tryParseJsonMap(response.body);
+            final profileImage = jsonResponse?['profile_image'];
+            if (profileImage is String && profileImage.isNotEmpty) {
+              appData.setProfileImage(profileImage);
             }
           } else {
             await appData.fetchUserData();
@@ -116,7 +107,7 @@ class _ProfilePageState extends State<ProfilePage> {
           );
         }
       } catch (e) {
-        log('Error uploading image: $e');
+        debugPrint('Error uploading profile image: $e');
         stateNotifier.value = stateNotifier.value.copyWith(
           isUploading: false,
           isSuccess: false,
@@ -132,8 +123,11 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: Colors.white,
       body: Consumer<Appdata>(
         builder: (context, appData, child) {
-          return SingleChildScrollView(
-            child: Column(
+          return RefreshIndicator(
+            onRefresh: () async {
+              await appData.fetchUserData();
+            },
+            child: ListView(
               children: [
                 SizedBox(height: 32),
                 Padding(
@@ -201,6 +195,30 @@ class _ProfilePageState extends State<ProfilePage> {
                                   color: Colors.grey[600],
                                 ),
                               ),
+
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                _buildStatItem(
+                                  context,
+                                  'ผู้ติดตาม',
+                                  appData.followersCount,
+                                ),
+                                Container(
+                                  height: 12,
+                                  width: 1,
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                  ),
+                                  color: Colors.grey[300],
+                                ),
+                                _buildStatItem(
+                                  context,
+                                  'กำลังติดตาม',
+                                  appData.followingsCount,
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -235,13 +253,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ),
                               onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const EditProfilePage(),
-                                  ),
-                                );
+                                Get.to(() => const EditProfilePage());
                               },
                             ),
                           ),
@@ -286,7 +298,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                 elevation: 0,
                               ),
                               label: Text(
-                                'ยอดเงินคงเหลือ',
+                                'ยอดเงินคงเหลือ\n${appData.wallet} บาท',
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: fontButtonSize.toDouble(),
                                   color: Colors.black,
@@ -316,7 +329,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              onPressed: () {},
+                              onPressed: () => _openUserSheets(appData.uid),
                             ),
                           ),
                         ],
@@ -368,6 +381,31 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  void _openUserSheets(String userId) {
+    if (userId.isEmpty) {
+      showCustomDialog(
+        title: 'ไม่พบข้อมูลผู้ใช้',
+        message: 'กรุณาเข้าสู่ระบบใหม่แล้วลองอีกครั้ง',
+      );
+      return;
+    }
+
+    Get.to(() => UserSheetsPage(userId: userId));
+  }
+
+  Map<String, dynamic>? _tryParseJsonMap(String source) {
+    try {
+      final dynamic decoded = jsonDecode(source);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (e) {
+      debugPrint('Error parsing profile image response JSON: $e');
+      return null;
+    }
+    return null;
+  }
+
   void _showSubscriptionPackages(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -402,7 +440,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         buttonText: 'ชำระเงินในราคา ฿79.00',
                         onPressed: () {
                           // TODO: Implement payment logic
-                          Navigator.pop(context);
+                          Get.back();
                         },
                       ),
                       const SizedBox(height: 16),
@@ -413,7 +451,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         buttonText: 'ชำระเงินในราคา ฿229.00',
                         onPressed: () {
                           // TODO: Implement payment logic
-                          Navigator.pop(context);
+                          Get.back();
                         },
                       ),
                       const SizedBox(height: 16),
@@ -427,7 +465,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         buttonText: 'ชำระเงินในราคา ฿879.00',
                         onPressed: () {
                           // TODO: Implement payment logic
-                          Navigator.pop(context);
+                          Get.back();
                         },
                       ),
                       const SizedBox(height: 40),
@@ -514,13 +552,29 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+
+  Widget _buildStatItem(BuildContext context, String label, int count) {
+    return Row(
+      children: [
+        Text(
+          '$count',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+      ],
+    );
+  }
 }
 
 class ProgressMultipartRequest extends http.MultipartRequest {
   final void Function(int bytes, int total) onProgress;
 
-  ProgressMultipartRequest(String method, Uri url, {required this.onProgress})
-    : super(method, url);
+  ProgressMultipartRequest(super.method, super.url, {required this.onProgress});
 
   @override
   http.ByteStream finalize() {

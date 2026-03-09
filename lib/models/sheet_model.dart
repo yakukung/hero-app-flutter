@@ -21,6 +21,7 @@ class SheetModel {
   final List<QuestionModel>? questions;
   final List<String>? categoryIds;
   final List<String>? keywordIds;
+  final int buyerCount;
   final bool isPurchased;
   final bool isFavorite;
 
@@ -43,6 +44,7 @@ class SheetModel {
     this.questions,
     this.categoryIds,
     this.keywordIds,
+    this.buyerCount = 0,
     this.isPurchased = false,
     this.isFavorite = false,
   });
@@ -53,6 +55,20 @@ class SheetModel {
     final operationData = json['operation'] is Map<String, dynamic>
         ? json['operation']
         : null;
+    final dynamic buyers = json['buyers'];
+    final dynamic buyersCount = json['buyers_count'] ?? json['buyer_count'];
+    final int resolvedBuyerCount = buyers is List
+        ? buyers.length
+        : buyers is Map<String, dynamic>
+        ? int.tryParse(
+                (buyers['count'] ??
+                        buyers['total'] ??
+                        buyers['total_items'] ??
+                        0)
+                    .toString(),
+              ) ??
+              0
+        : int.tryParse((buyersCount ?? 0).toString()) ?? 0;
 
     return SheetModel(
       id: json['id'] ?? '',
@@ -101,6 +117,7 @@ class SheetModel {
       keywordIds: (json['keyword_ids'] as List?)
           ?.map((e) => e.toString())
           .toList(),
+      buyerCount: resolvedBuyerCount,
       isPurchased:
           json['is_purchased'] == true ||
           json['purchased'] == true ||
@@ -133,6 +150,7 @@ class SheetModel {
       'updated_at': updatedAt?.toIso8601String(),
       'updated_by': updatedBy,
       'author_name': authorName,
+      'buyer_count': buyerCount,
     };
   }
 

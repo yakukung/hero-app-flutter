@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -7,6 +6,7 @@ import 'package:flutter_application_1/services/app_data.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:flutter_application_1/widgets/custom_dialog.dart';
+import 'package:get/get.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -82,7 +82,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
             title: 'สำเร็จ',
             message: 'เปลี่ยนรหัสผ่านสำเร็จ',
             isSuccess: true,
-            onOk: () => Navigator.pop(context),
+            onOk: () => Get.back(),
           );
           break;
         default:
@@ -93,7 +93,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           break;
       }
     } catch (e) {
-      log('Error changing password: $e');
+      debugPrint('Error changing password: $e');
       showCustomDialog(
         title: 'เกิดข้อผิดพลาด',
         message: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
@@ -140,7 +140,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Get.back(),
         ),
       ),
       body: SingleChildScrollView(

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
@@ -7,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'login.dart';
 import 'package:flutter_application_1/widgets/custom_dialog.dart';
+import 'package:flutter_application_1/utils/api_utils.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -171,9 +171,7 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
-                  onTap: () {
-                    print('ลืมรหัสผ่าน tapped!');
-                  },
+                  onTap: () {},
                   child: Text(
                     'ลืมรหัสผ่าน?',
                     style: TextStyle(
@@ -271,7 +269,6 @@ class _RegisterPageState extends State<RegisterPage> {
     final password = passwordCtl.text;
     final cfPassword = cfPasswordCtl.text;
 
-    // ตรวจสอบข้อมูลเบื้องต้น
     if (username.isEmpty ||
         email.isEmpty ||
         password.isEmpty ||
@@ -286,7 +283,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // ตรวจสอบรูปแบบอีเมล
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(email)) {
       setState(() {
@@ -310,7 +306,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    // ตรวจสอบความยาวรหัสผ่าน
     if (password.length < 6) {
       setState(() {
         isLoading = false;
@@ -333,7 +328,6 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    log('Register API at $apiEndpoint/auth/register');
     try {
       final response = await http.post(
         Uri.parse('$apiEndpoint/auth/register'),
@@ -346,22 +340,8 @@ class _RegisterPageState extends State<RegisterPage> {
           'base_url': apiEndpoint,
         }),
       );
-      log('Register response: ${response.body}');
 
-      final payload = _decodeRegisterPayload(response.body);
-      if (payload == null) {
-        setState(() => isLoading = false);
-        showCustomDialog(
-          title: 'เกิดข้อผิดพลาด',
-          message: 'ไม่สามารถสมัครสมาชิกได้ กรุณาลองใหม่',
-        );
-        return;
-      }
-
-      final bool isSuccessful =
-          response.statusCode == 200 && _parseApiCode(payload['code']) == 200;
-
-      if (isSuccessful) {
+      if (response.statusCode == 201) {
         setState(() => isLoading = false);
         showCustomDialog(
           title: 'สำเร็จ',
@@ -373,20 +353,11 @@ class _RegisterPageState extends State<RegisterPage> {
         );
         return;
       }
-
       setState(() => isLoading = false);
-      final String errorMsg = _extractErrorMessage(payload);
-      if (errorMsg.contains('username')) {
-        showCustomDialog(
-          title: 'ชื่อผู้ใช้ซ้ำ',
-          message: 'ชื่อผู้ใช้นี้ถูกใช้ไปแล้ว',
-        );
-      } else if (errorMsg.contains('email')) {
-        showCustomDialog(title: 'อีเมลซ้ำ', message: 'อีเมลนี้ถูกใช้ไปแล้ว');
-      } else {
-        showCustomDialog(title: 'เกิดข้อผิดพลาด', message: errorMsg);
-      }
+      final String errorMsg = getErrorMessage(response);
+      showCustomDialog(title: 'เกิดข้อผิดพลาด', message: errorMsg);
     } catch (e) {
+      debugPrint('Error registering user: $e');
       setState(() {
         isLoading = false;
       });
@@ -395,53 +366,5 @@ class _RegisterPageState extends State<RegisterPage> {
         message: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
       );
     }
-  }
-
-  Map<String, dynamic>? _decodeRegisterPayload(String responseBody) {
-    try {
-      final dynamic decoded = jsonDecode(responseBody);
-      return decoded is Map<String, dynamic> ? decoded : null;
-    } catch (error) {
-      log('Error decoding register response: $error');
-      return null;
-    }
-  }
-
-  int _parseApiCode(dynamic code) {
-    if (code is int) return code;
-    if (code is String) {
-      return int.tryParse(code) ?? 0;
-    }
-    return 0;
-  }
-
-  String _extractErrorMessage(Map<String, dynamic> payload) {
-    final dynamic errorField = payload['error'];
-    if (errorField is Map<String, dynamic>) {
-      final dynamic messageField = errorField['message'];
-      if (messageField is Map<String, dynamic>) {
-        return messageField['th']?.toString() ??
-            messageField['en']?.toString() ??
-            messageField.values
-                .firstWhere(
-                  (value) => value != null,
-                  orElse: () => 'ไม่สามารถสมัครสมาชิกได้',
-                )
-                .toString();
-      }
-      if (messageField != null) {
-        return messageField.toString();
-      }
-      return errorField.values
-          .firstWhere(
-            (value) => value != null,
-            orElse: () => 'ไม่สามารถสมัครสมาชิกได้',
-          )
-          .toString();
-    }
-    if (errorField != null) {
-      return errorField.toString();
-    }
-    return payload['message']?.toString() ?? 'ไม่สามารถสมัครสมาชิกได้';
   }
 }

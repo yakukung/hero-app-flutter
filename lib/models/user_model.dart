@@ -9,6 +9,7 @@ class UserModel {
   final String roleId;
   final String? roleName;
   final int point;
+  final double wallet;
   final bool visibleFlag;
   final StatusFlag statusFlag;
   final DateTime createdAt;
@@ -16,6 +17,10 @@ class UserModel {
   final DateTime? updatedAt;
   final String? updatedBy;
   final DateTime? statusModifiedAt;
+  final int followersCount;
+  final List<String> followersUid;
+  final int followingsCount;
+  final List<String> followingsUid;
 
   UserModel({
     required this.id,
@@ -26,6 +31,7 @@ class UserModel {
     required this.roleId,
     this.roleName,
     required this.point,
+    this.wallet = 0.0,
     required this.visibleFlag,
     required this.statusFlag,
     required this.createdAt,
@@ -33,6 +39,10 @@ class UserModel {
     this.updatedAt,
     this.updatedBy,
     this.statusModifiedAt,
+    this.followersCount = 0,
+    this.followersUid = const [],
+    this.followingsCount = 0,
+    this.followingsUid = const [],
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -97,6 +107,9 @@ class UserModel {
       roleId: roleId,
       roleName: roleName,
       point: json['point'] != null ? int.parse(json['point'].toString()) : 0,
+      wallet: json['wallet'] != null
+          ? double.tryParse(json['wallet'].toString()) ?? 0.0
+          : 0.0,
       visibleFlag:
           json['visible_flag'] == true ||
           json['visible_flag'] == 1 ||
@@ -126,6 +139,24 @@ class UserModel {
               json['status_modified_at'] ?? flagData?['status_modified_at'],
             )
           : null,
+      followersCount: json['followers'] != null
+          ? (json['followers'] is Map && json['followers']['count'] != null
+                ? int.tryParse(json['followers']['count'].toString()) ?? 0
+                : 0)
+          : 0,
+      followersUid:
+          json['followers'] != null && json['followers']['uid'] != null
+          ? List<String>.from(json['followers']['uid'])
+          : [],
+      followingsCount: json['followings'] != null
+          ? (json['followings'] is Map && json['followings']['count'] != null
+                ? int.tryParse(json['followings']['count'].toString()) ?? 0
+                : 0)
+          : 0,
+      followingsUid:
+          json['followings'] != null && json['followings']['uid'] != null
+          ? List<String>.from(json['followings']['uid'])
+          : [],
     );
   }
 
@@ -138,6 +169,7 @@ class UserModel {
     String? roleId,
     String? roleName,
     int? point,
+    double? wallet,
     bool? visibleFlag,
     StatusFlag? statusFlag,
     DateTime? createdAt,
@@ -145,6 +177,10 @@ class UserModel {
     DateTime? updatedAt,
     String? updatedBy,
     DateTime? statusModifiedAt,
+    int? followersCount,
+    List<String>? followersUid,
+    int? followingsCount,
+    List<String>? followingsUid,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -155,6 +191,7 @@ class UserModel {
       roleId: roleId ?? this.roleId,
       roleName: roleName ?? this.roleName,
       point: point ?? this.point,
+      wallet: wallet ?? this.wallet,
       visibleFlag: visibleFlag ?? this.visibleFlag,
       statusFlag: statusFlag ?? this.statusFlag,
       createdAt: createdAt ?? this.createdAt,
@@ -162,6 +199,10 @@ class UserModel {
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
       statusModifiedAt: statusModifiedAt ?? this.statusModifiedAt,
+      followersCount: followersCount ?? this.followersCount,
+      followersUid: followersUid ?? this.followersUid,
+      followingsCount: followingsCount ?? this.followingsCount,
+      followingsUid: followingsUid ?? this.followingsUid,
     );
   }
 
@@ -175,6 +216,7 @@ class UserModel {
       'role_id': roleId,
       'role_name': roleName,
       'point': point,
+      'wallet': wallet,
       'visible_flag': visibleFlag,
       'status_flag': statusFlag.name,
       'created_at': createdAt.toIso8601String(),
@@ -182,6 +224,8 @@ class UserModel {
       'updated_at': updatedAt?.toIso8601String(),
       'updated_by': updatedBy,
       'status_modified_at': statusModifiedAt?.toIso8601String(),
+      'followers': {'count': followersCount, 'uid': followersUid},
+      'followings': {'count': followingsCount, 'uid': followingsUid},
     };
   }
 }

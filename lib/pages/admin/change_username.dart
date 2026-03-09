@@ -1,29 +1,32 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/config/api_connect.dart';
-import 'package:flutter_application_1/services/app_data.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_application_1/services/admin_service.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_application_1/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 
-class ChangeUsernamePage extends StatefulWidget {
-  const ChangeUsernamePage({super.key});
+class AdminChangeUsernamePage extends StatefulWidget {
+  final String userId;
+  final String currentUsername;
+
+  const AdminChangeUsernamePage({
+    super.key,
+    required this.userId,
+    required this.currentUsername,
+  });
 
   @override
-  State<ChangeUsernamePage> createState() => _ChangeUsernamePageState();
+  State<AdminChangeUsernamePage> createState() =>
+      _AdminChangeUsernamePageState();
 }
 
-class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
-  final _usernameCtl = TextEditingController();
+class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
+  late TextEditingController _usernameCtl;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    final appData = Provider.of<Appdata>(context, listen: false);
-    _usernameCtl.text = appData.username;
+    _usernameCtl = TextEditingController(text: widget.currentUsername);
   }
 
   @override
@@ -33,7 +36,6 @@ class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
   }
 
   Future<void> _changeUsername() async {
-    final appData = Provider.of<Appdata>(context, listen: false);
     final newUsername = _usernameCtl.text.trim();
 
     if (newUsername.isEmpty) {
@@ -44,7 +46,7 @@ class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
       return;
     }
 
-    if (newUsername == appData.username) {
+    if (newUsername == widget.currentUsername) {
       Get.back();
       return;
     }
@@ -52,56 +54,41 @@ class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
     setState(() => _isLoading = true);
 
     try {
-      // final uri = Uri.parse('$apiEndpoint/users/update-username');
-      // final response = await http.patch(
-      //   uri,
-      //   headers: {'Content-Type': 'application/json'},
-      //   body: jsonEncode({'uid': appData.uid, 'username': newUsername}),
-      // );
-      // final errorMessage = jsonDecode(response.body)['error']['message']['th'];
-      // switch (response.statusCode) {
-      //   case 204:
-      //     await appData.fetchUserData();
-      //     _showDialog(
-      //       'สำเร็จ',
-      //       'เปลี่ยนชื่อผู้ใช้สำเร็จ',
-      //       isSuccess: true,
-      //       onOk: () => Navigator.pop(context),
-      //     );
-      //     break;
-      //   default:
-      //     _showDialog('เกิดข้อผิดพลาด', errorMessage);
-      //     break;
-      // }
-      final uri = Uri.parse('$apiEndpoint/users/update-username');
-      final response = await http.patch(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'uid': appData.uid, 'username': newUsername}),
+      final adminService = Provider.of<AdminService>(context, listen: false);
+      final success = await adminService.updateUserUsername(
+        widget.userId,
+        newUsername,
       );
-      switch (response.statusCode) {
-        case 204:
-          await appData.fetchUserData();
+
+      if (success) {
+        // Refresh admin user list if needed, or just return success
+        // Ideally, we should refresh the specific user details in the previous page
+        if (mounted) {
           showCustomDialog(
             title: 'สำเร็จ',
             message: 'เปลี่ยนชื่อผู้ใช้สำเร็จ',
             isSuccess: true,
-            onOk: () => Get.back(),
+            onOk: () {
+              Get.back(result: true); // Return true to indicate success
+            },
           );
-          break;
-        default:
+        }
+      } else {
+        if (mounted) {
           showCustomDialog(
             title: 'เกิดข้อผิดพลาด',
-            message: jsonDecode(response.body)['error']?['message']?['th'],
+            message: 'ไม่สามารถเปลี่ยนชื่อผู้ใช้ได้ (อาจมีชื่อซ้ำ)',
           );
-          break;
+        }
       }
     } catch (e) {
-      debugPrint('Error changing username: $e');
-      showCustomDialog(
-        title: 'เกิดข้อผิดพลาด',
-        message: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
-      );
+      debugPrint('Error changing username (admin): $e');
+      if (mounted) {
+        showCustomDialog(
+          title: 'เกิดข้อผิดพลาด',
+          message: 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้',
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -113,7 +100,7 @@ class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text(
-          'เปลี่ยนชื่อผู้ใช้',
+          'เปลี่ยนชื่อผู้ใช้ (Admin)',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
         ),
         backgroundColor: Colors.white,

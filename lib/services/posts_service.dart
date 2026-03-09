@@ -1,6 +1,6 @@
 import 'dart:convert';
-import 'dart:developer';
 import 'package:flutter_application_1/config/api_connect.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_application_1/models/post_model.dart';
 import 'package:http/http.dart' as http;
@@ -22,16 +22,10 @@ class PostsService {
         },
       );
 
-      log('Get posts response status: ${response.statusCode}');
-      // log('Get posts response body: ${response.body}');
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         if (data['code'] == 200) {
           final List<dynamic> postsJson = data['data']['posts'];
-          if (postsJson.isNotEmpty) {
-            log('First post JSON: ${postsJson.first}');
-          }
 
           try {
             final posts = postsJson
@@ -40,17 +34,16 @@ class PostsService {
                       PostModel.fromJson(json, currentUserId: currentUserId),
                 )
                 .toList();
-            log('Successfully mapped ${posts.length} posts');
             return posts;
           } catch (e) {
-            log('Error mapping posts: $e');
+            debugPrint('Error mapping posts: $e');
             return [];
           }
         }
       }
       return [];
     } catch (e) {
-      log('Error getting posts: $e');
+      debugPrint('Error getting posts: $e');
       return [];
     }
   }
@@ -69,14 +62,12 @@ class PostsService {
         },
       );
 
-      log('Like post response: ${response.statusCode}');
-
       if (response.statusCode == 204 || response.statusCode == 409) {
         return true;
       }
       return false;
     } catch (e) {
-      log('Error liking post: $e');
+      debugPrint('Error liking post: $e');
       return false;
     }
   }
@@ -95,14 +86,12 @@ class PostsService {
         },
       );
 
-      log('Unlike post response: ${response.statusCode}');
-
       if (response.statusCode == 204) {
         return true;
       }
       return false;
     } catch (e) {
-      log('Error unliking post: $e');
+      debugPrint('Error unliking post: $e');
       return false;
     }
   }
@@ -115,7 +104,6 @@ class PostsService {
     final String? token = storage.read('token');
 
     if (token == null) {
-      log('Error: No token found');
       return false;
     }
 
@@ -135,16 +123,13 @@ class PostsService {
         body: jsonEncode(body),
       );
 
-      log('Create post response status: ${response.statusCode}');
-      log('Create post response body: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         return true;
       } else {
         return false;
       }
     } catch (e) {
-      log('Error creating post: $e');
+      debugPrint('Error creating post: $e');
       return false;
     }
   }

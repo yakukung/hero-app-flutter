@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:flutter_application_1/models/sheet_model.dart';
+import 'package:flutter_application_1/models/category_model.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 
@@ -22,6 +22,13 @@ class SheetPaymentData {
     required this.currency,
     required this.slipImage,
   });
+}
+
+class SheetActionResult {
+  final bool success;
+  final String message;
+
+  const SheetActionResult({required this.success, required this.message});
 }
 
 class SheetsService {
@@ -61,18 +68,253 @@ class SheetsService {
         return false;
       }
     } catch (e) {
+      debugPrint('Error processing sheet payment: $e');
       return false;
     }
   }
+
+  static Future<List<SheetModel>> fetchSheetsByUserId(String userId) async {
+    if (userId.isEmpty) {
+      return [];
+    }
+
+    final storage = GetStorage();
+    final String? token = storage.read('token')?.toString();
+
+    try {
+      final response = await http.get(
+        Uri.parse('$apiEndpoint/sheets/user/$userId'),
+        headers: {
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic jsonResponse = jsonDecode(response.body);
+        final List<dynamic> rawSheets = _extractSheetsList(jsonResponse);
+
+        return rawSheets
+            .whereType<Map>()
+            .map((item) => SheetModel.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+      }
+
+      if (response.statusCode == 404) {
+        return [];
+      }
+
+      throw Exception('Failed to load user sheets: ${response.statusCode}');
+    } catch (e) {
+      debugPrint('Error fetching sheets by user id: $e');
+      throw Exception('Failed to load user sheets: $e');
+    }
+  }
+
+  static Future<SheetActionResult> updateSheet({
+    required String sheetId,
+    required String title,
+    required String description,
+    required double price,
+  }) async {
+    final storage = GetStorage();
+    final String? token = storage.read('token')?.toString();
+
+    if (token == null || token.isEmpty) {
+      return const SheetActionResult(
+        success: false,
+        message: 'ไม่พบ token สำหรับยืนยันตัวตน',
+      );
+    }
+
+    try {
+      final headers = {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      };
+      final payload = jsonEncode({
+        'title': title,
+        'description': description,
+        'price': price,
+      });
+
+      var response = await http.patch(
+        Uri.parse('$apiEndpoint/sheets/$sheetId'),
+        headers: headers,
+        body: payload,
+      );
+
+      if (response.statusCode == 404 || response.statusCode == 405) {
+        response = await http.patch(
+          Uri.parse('$apiEndpoint/sheets/update/$sheetId'),
+          headers: headers,
+          body: payload,
+        );
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return const SheetActionResult(
+          success: true,
+          message: 'แก้ไขชีตสำเร็จ',
+        );
+      }
+
+      return SheetActionResult(
+        success: false,
+        message: _extractApiErrorMessage(
+          response,
+          fallbackMessage: 'ไม่สามารถแก้ไขชีตได้',
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error updating sheet: $e');
+      return const SheetActionResult(
+        success: false,
+        message: 'เกิดข้อผิดพลาดระหว่างแก้ไขชีต',
+      );
+    }
+  }
+
+  static Future<SheetActionResult> deleteSheet({
+    required String sheetId,
+    int buyerCount = 0,
+  }) async {
+    if (buyerCount > 0) {
+      return const SheetActionResult(
+        success: false,
+        message: 'ไม่สามารถลบชีตนี้ได้ เพราะมีผู้ซื้อแล้ว',
+      );
+    }
+
+    final storage = GetStorage();
+    final String? token = storage.read('token')?.toString();
+
+    if (token == null || token.isEmpty) {
+      return const SheetActionResult(
+        success: false,
+        message: 'ไม่พบ token สำหรับยืนยันตัวตน',
+      );
+    }
+
+    try {
+      final headers = {'Authorization': 'Bearer $token'};
+
+      final response = await http.delete(
+        Uri.parse('$apiEndpoint/sheets/$sheetId'),
+        headers: headers,
+      );
+
+      if (response.statusCode == 204) {
+        return const SheetActionResult(
+          success: true,
+          message: 'ลบชีตสำเร็จ (response 204)',
+        );
+      }
+
+      if (response.statusCode == 404) {
+        return const SheetActionResult(
+          success: false,
+          message: 'ไม่พบชีตนี้ (response 404)',
+        );
+      }
+
+      if (response.statusCode == 409) {
+        return const SheetActionResult(
+          success: false,
+          message: 'ไม่สามารถลบชีตนี้ได้ เพราะมีผู้ซื้อแล้ว',
+        );
+      }
+
+      return SheetActionResult(
+        success: false,
+        message: _extractApiErrorMessage(
+          response,
+          fallbackMessage: 'ไม่สามารถลบชีตได้',
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error deleting sheet: $e');
+      return const SheetActionResult(
+        success: false,
+        message: 'เกิดข้อผิดพลาดระหว่างลบชีต',
+      );
+    }
+  }
+}
+
+String _extractApiErrorMessage(
+  http.Response response, {
+  required String fallbackMessage,
+}) {
+  try {
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is Map<String, dynamic>) {
+      final dynamic error = decoded['error'];
+      if (error is Map<String, dynamic>) {
+        final dynamic message = error['message'];
+        if (message is Map<String, dynamic>) {
+          final String? th = message['th']?.toString();
+          if (th != null && th.isNotEmpty) return th;
+          final String? en = message['en']?.toString();
+          if (en != null && en.isNotEmpty) return en;
+        }
+        if (message != null && message.toString().isNotEmpty) {
+          return message.toString();
+        }
+      }
+
+      final dynamic message = decoded['message'];
+      if (message != null && message.toString().isNotEmpty) {
+        return message.toString();
+      }
+    }
+  } catch (_) {}
+
+  return fallbackMessage;
+}
+
+List<dynamic> _extractSheetsList(dynamic responseBody) {
+  if (responseBody is List) {
+    return responseBody;
+  }
+
+  if (responseBody is! Map<String, dynamic>) {
+    return [];
+  }
+
+  final dynamic data = responseBody['data'];
+  if (data is Map<String, dynamic>) {
+    if (data['sheets'] is List) {
+      return data['sheets'] as List<dynamic>;
+    }
+    if (data['sheet'] is List) {
+      return data['sheet'] as List<dynamic>;
+    }
+  }
+
+  if (data is List) {
+    return data;
+  }
+
+  if (responseBody['sheets'] is List) {
+    return responseBody['sheets'] as List<dynamic>;
+  }
+  if (responseBody['sheet'] is List) {
+    return responseBody['sheet'] as List<dynamic>;
+  }
+
+  return [];
 }
 
 class SheetData extends ChangeNotifier {
   List<SheetModel> _sheets = [];
   List<SheetModel> _favoriteSheets = [];
+  List<CategoryModel> _categories = [];
   bool _isLoading = false;
   String _errorMessage = '';
 
   List<SheetModel> get sheets => _sheets;
+  List<CategoryModel> get categories => _categories;
   List<SheetModel> get favoriteSheets => _favoriteSheets;
   bool get isLoading => _isLoading;
   String get errorMessage => _errorMessage;
@@ -92,23 +334,18 @@ class SheetData extends ChangeNotifier {
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      log('Favorites response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
-        log('Favorites response body: ${response.body}');
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
         final List<dynamic> data = jsonResponse['data']['sheets'];
         _favoriteSheets = data
             .map((item) => SheetModel.fromJson(item))
             .toList();
       } else if (response.statusCode == 404) {
-        log('No favorites found (404)');
         _favoriteSheets = [];
-      } else {
-        log('Favorites response error body: ${response.body}');
       }
     } catch (e) {
-      log('Fetch favorites error: $e');
+      debugPrint('Error fetching favorites: $e');
+      _favoriteSheets = [];
     }
   }
 
@@ -136,7 +373,6 @@ class SheetData extends ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        log('Sheets response: ${response.body}');
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
         final List<dynamic> data = jsonResponse['data']['sheets'];
 
@@ -166,6 +402,7 @@ class SheetData extends ChangeNotifier {
               files: sheet.files,
               categoryIds: sheet.categoryIds,
               keywordIds: sheet.keywordIds,
+              buyerCount: sheet.buyerCount,
               isPurchased: sheet.isPurchased,
               isFavorite: isFavorited,
             );
@@ -179,7 +416,7 @@ class SheetData extends ChangeNotifier {
         throw Exception('Failed to load sheets: ${response.statusCode}');
       }
     } catch (e) {
-      log('Sheet API error: $e');
+      debugPrint('Error fetching sheets: $e');
       _errorMessage = 'เกิดข้อผิดพลาด: ${e.toString()}';
       _isLoading = false;
       notifyListeners();
@@ -201,7 +438,6 @@ class SheetData extends ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        log('Sheets (refresh) response: ${response.body}');
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
         final List<dynamic> data = jsonResponse['data']['sheets'];
 
@@ -231,6 +467,7 @@ class SheetData extends ChangeNotifier {
               files: sheet.files,
               categoryIds: sheet.categoryIds,
               keywordIds: sheet.keywordIds,
+              buyerCount: sheet.buyerCount,
               isPurchased: sheet.isPurchased,
               isFavorite: isFavorited,
             );
@@ -241,7 +478,8 @@ class SheetData extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      log('Refresh error: $e');
+      debugPrint('Error refreshing sheets: $e');
+      return;
     }
   }
 
@@ -283,6 +521,7 @@ class SheetData extends ChangeNotifier {
             files: oldSheet.files,
             categoryIds: oldSheet.categoryIds,
             keywordIds: oldSheet.keywordIds,
+            buyerCount: oldSheet.buyerCount,
             isPurchased: oldSheet.isPurchased,
             isFavorite: true,
           );
@@ -299,7 +538,7 @@ class SheetData extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      log('Add favorite error: $e');
+      debugPrint('Error adding favorite: $e');
       return false;
     }
   }
@@ -342,6 +581,7 @@ class SheetData extends ChangeNotifier {
             files: oldSheet.files,
             categoryIds: oldSheet.categoryIds,
             keywordIds: oldSheet.keywordIds,
+            buyerCount: oldSheet.buyerCount,
             isPurchased: oldSheet.isPurchased,
             isFavorite: false,
           );
@@ -354,7 +594,7 @@ class SheetData extends ChangeNotifier {
       }
       return false;
     } catch (e) {
-      log('Remove favorite error: $e');
+      debugPrint('Error removing favorite: $e');
       return false;
     }
   }
@@ -362,5 +602,46 @@ class SheetData extends ChangeNotifier {
   void toggleFavorite(String sheetId) {
     final index = _sheets.indexWhere((element) => element.id == sheetId);
     if (index != -1) {}
+  }
+
+  Future<void> fetchCategories() async {
+    try {
+      final storage = GetStorage();
+      final String? token = storage.read('token');
+
+      final response = await http.get(
+        Uri.parse('$apiEndpoint/categories'),
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        final List<dynamic> data = jsonResponse['data']['categories'];
+        _categories = data.map((item) => CategoryModel.fromJson(item)).toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error fetching categories: $e');
+      return;
+    }
+  }
+
+  List<SheetModel> searchSheets(String query) {
+    if (query.isEmpty) return _sheets;
+    final lowerQuery = query.toLowerCase();
+
+    // Find matching category IDs
+    final matchingCategoryIds = _categories
+        .where((cat) => cat.name.toLowerCase().contains(lowerQuery))
+        .map((cat) => cat.id)
+        .toSet();
+
+    return _sheets.where((sheet) {
+      final titleMatches = sheet.title.toLowerCase().contains(lowerQuery);
+      final categoryMatches =
+          sheet.categoryIds?.any((id) => matchingCategoryIds.contains(id)) ??
+          false;
+      return titleMatches || categoryMatches;
+    }).toList();
   }
 }

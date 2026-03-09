@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/upload_state.dart';
+import 'package:get/get.dart';
 
 /// Upload progress dialog widget with premium design
 class UploadProgressDialog extends StatelessWidget {
@@ -196,37 +197,31 @@ class UploadProgressDialog extends StatelessWidget {
 
   /// Shows the upload progress dialog
   static void show({
-    required BuildContext context,
     required ValueNotifier<UploadState> stateNotifier,
     VoidCallback? onComplete,
   }) {
-    showDialog(
-      context: context,
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: ValueListenableBuilder<UploadState>(
+            valueListenable: stateNotifier,
+            builder: (context, state, child) {
+              return UploadProgressDialog(
+                state: state,
+                onClose: () {
+                  Get.back();
+                  if (state.isSuccess && onComplete != null) {
+                    onComplete();
+                  }
+                },
+              );
+            },
+          ),
+        ),
+      ),
       barrierDismissible: false,
-      builder: (dialogContext) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: ValueListenableBuilder<UploadState>(
-              valueListenable: stateNotifier,
-              builder: (context, state, child) {
-                return UploadProgressDialog(
-                  state: state,
-                  onClose: () {
-                    Navigator.pop(dialogContext);
-                    if (state.isSuccess && onComplete != null) {
-                      onComplete();
-                    }
-                  },
-                );
-              },
-            ),
-          ),
-        );
-      },
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_application_1/services/app_data.dart';
 import 'package:flutter_application_1/widgets/custom_dialog.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 class QuizPage extends StatefulWidget {
   final String id;
@@ -80,8 +81,9 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _onAnswerSelected(int answerIndex) {
-    if (_showScore || _revealedAll || _selectedAnswers[_currentIndex] != null)
+    if (_showScore || _revealedAll || _selectedAnswers[_currentIndex] != null) {
       return;
+    }
 
     showCustomDialog(
       title: 'ยืนยันคำตอบ',
@@ -127,7 +129,7 @@ class _QuizPageState extends State<QuizPage> {
     final rName = user?.roleName?.toUpperCase() ?? '';
     final rId = user?.roleId ?? '';
     final isPremium =
-        rName.contains('PREMIUM') ||
+        rName.contains('PREMIUM_MEMBER') ||
         rId == '019affa1-0872-78cb-b4ff-5376279dba2d';
 
     return Scaffold(
@@ -382,7 +384,7 @@ class _QuizPageState extends State<QuizPage> {
       return Container(
         padding: const EdgeInsets.all(24.0),
         child: ElevatedButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Get.back(),
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFFF0F0F0),
             minimumSize: const Size(double.infinity, 56),
@@ -413,7 +415,7 @@ class _QuizPageState extends State<QuizPage> {
               Expanded(
                 flex: 4,
                 child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Get.back(),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 56),
                     backgroundColor: const Color(0xFFF0F0F0),

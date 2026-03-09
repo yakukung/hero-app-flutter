@@ -1,7 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:flutter_application_1/pages/user/search/search_results_page.dart';
 
-class SearchSheetBox extends StatelessWidget {
+class SearchSheetBox extends StatefulWidget {
   const SearchSheetBox({super.key});
+
+  @override
+  State<SearchSheetBox> createState() => _SearchSheetBoxState();
+}
+
+class _SearchSheetBoxState extends State<SearchSheetBox> {
+  final TextEditingController _searchController = TextEditingController();
+
+  void _onSearch() {
+    final query = _searchController.text.trim();
+    if (query.isNotEmpty) {
+      Get.to(() => SearchResultsPage(searchQuery: query));
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,9 +61,11 @@ class SearchSheetBox extends StatelessWidget {
                 child: Row(
                   children: [
                     const SizedBox(width: 18),
-                    const Expanded(
+                    Expanded(
                       child: TextField(
-                        decoration: InputDecoration(
+                        controller: _searchController,
+                        onSubmitted: (_) => _onSearch(),
+                        decoration: const InputDecoration(
                           hintText: 'ค้นหาชื่อชีต',
                           border: InputBorder.none,
                           hintStyle: TextStyle(
@@ -50,7 +74,7 @@ class SearchSheetBox extends StatelessWidget {
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                         ),
@@ -67,7 +91,7 @@ class SearchSheetBox extends StatelessWidget {
                           color: Colors.white,
                           size: 28,
                         ),
-                        onPressed: () {},
+                        onPressed: _onSearch,
                       ),
                     ),
                   ],
