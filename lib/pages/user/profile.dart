@@ -439,7 +439,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         price: '฿79.00/เดือน',
                         buttonText: 'ชำระเงินในราคา ฿79.00',
                         onPressed: () {
-                          // TODO: Implement payment logic
                           Get.back();
                         },
                       ),
@@ -450,7 +449,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         subtitles: ['ประหยัดลง 8 บาท เมื่อเทียบกับรายเดือน'],
                         buttonText: 'ชำระเงินในราคา ฿229.00',
                         onPressed: () {
-                          // TODO: Implement payment logic
                           Get.back();
                         },
                       ),
@@ -464,7 +462,6 @@ class _ProfilePageState extends State<ProfilePage> {
                         ],
                         buttonText: 'ชำระเงินในราคา ฿879.00',
                         onPressed: () {
-                          // TODO: Implement payment logic
                           Get.back();
                         },
                       ),

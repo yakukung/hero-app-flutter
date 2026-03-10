@@ -21,6 +21,7 @@ class UserModel {
   final List<String> followersUid;
   final int followingsCount;
   final List<String> followingsUid;
+  final bool isFollowing;
 
   UserModel({
     required this.id,
@@ -43,6 +44,7 @@ class UserModel {
     this.followersUid = const [],
     this.followingsCount = 0,
     this.followingsUid = const [],
+    this.isFollowing = false,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -157,6 +159,10 @@ class UserModel {
           json['followings'] != null && json['followings']['uid'] != null
           ? List<String>.from(json['followings']['uid'])
           : [],
+      isFollowing:
+          json['is_following'] == true ||
+          json['is_followed'] == true ||
+          json['is_followed_by_me'] == true,
     );
   }
 
@@ -181,6 +187,7 @@ class UserModel {
     List<String>? followersUid,
     int? followingsCount,
     List<String>? followingsUid,
+    bool? isFollowing,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -203,6 +210,7 @@ class UserModel {
       followersUid: followersUid ?? this.followersUid,
       followingsCount: followingsCount ?? this.followingsCount,
       followingsUid: followingsUid ?? this.followingsUid,
+      isFollowing: isFollowing ?? this.isFollowing,
     );
   }
 
@@ -226,6 +234,7 @@ class UserModel {
       'status_modified_at': statusModifiedAt?.toIso8601String(),
       'followers': {'count': followersCount, 'uid': followersUid},
       'followings': {'count': followingsCount, 'uid': followingsUid},
+      'is_following': isFollowing,
     };
   }
 }

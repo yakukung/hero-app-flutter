@@ -258,9 +258,7 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            sheet.buyerCount > 0
-                                ? 'ลบชีต (มีผู้ซื้อแล้ว)'
-                                : 'ลบชีต',
+                            sheet.buyerCount > 0 ? 'ลบ (มีผู้ซื้อแล้ว)' : 'ลบ',
                             style: const TextStyle(color: Colors.redAccent),
                           ),
                         ),
