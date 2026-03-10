@@ -44,15 +44,53 @@ class PostModel {
   }) {
     final flag = json['flag'] ?? {};
     final operation = json['operation'] ?? {};
+    int safeCount(dynamic value) =>
+        value is num ? value.toInt() : int.tryParse(value.toString()) ?? 0;
+
+    int extractCount(dynamic raw, dynamic totalItems, List<dynamic>? dataList) {
+      if (totalItems != null) return safeCount(totalItems);
+      if (dataList != null) return dataList.length;
+      if (raw != null) return safeCount(raw);
+      return 0;
+    }
+
+    final likesNode = json['likes'];
+    final commentsNode = json['comments'];
+    final sharesNode = json['shares'];
+    final likesData = (likesNode is Map && likesNode['data'] is List)
+        ? likesNode['data'] as List
+        : null;
+    final commentsData = (commentsNode is Map && commentsNode['data'] is List)
+        ? commentsNode['data'] as List
+        : null;
+    final sharesData = (sharesNode is Map && sharesNode['data'] is List)
+        ? sharesNode['data'] as List
+        : null;
+    final likesTotal =
+        (likesNode is Map && likesNode['total_items'] != null)
+            ? likesNode['total_items']
+            : null;
+    final commentsTotal =
+        (commentsNode is Map && commentsNode['total_items'] != null)
+            ? commentsNode['total_items']
+            : null;
+    final sharesTotal =
+        (sharesNode is Map && sharesNode['total_items'] != null)
+            ? sharesNode['total_items']
+            : null;
 
     return PostModel(
       id: json['id'],
       sheetId: json['sheet_id'],
       userId: json['user_id'],
       content: json['content'],
-      likeCount: json['like_count'] ?? 0,
-      commentCount: json['comment_count'] ?? 0,
-      shareCount: json['share_count'] ?? 0,
+      likeCount: extractCount(json['like_count'], likesTotal, likesData),
+      commentCount: extractCount(
+        json['comment_count'],
+        commentsTotal,
+        commentsData,
+      ),
+      shareCount: extractCount(json['share_count'], sharesTotal, sharesData),
       author: UserModel.fromJson(json['author'] ?? {}),
       visibleFlag: flag['visible_flag'] == true || flag['visible_flag'] == 1,
       statusFlag: StatusFlag.fromString(flag['status_flag']),
@@ -137,6 +175,7 @@ class PostCommentModel {
   final String id;
   final String postId;
   final String userId;
+  final UserModel? user;
   final String content;
   final DateTime createdAt;
 
@@ -144,17 +183,34 @@ class PostCommentModel {
     required this.id,
     required this.postId,
     required this.userId,
+    this.user,
     required this.content,
     required this.createdAt,
   });
 
   factory PostCommentModel.fromJson(Map<String, dynamic> json) {
+    final createdAtRaw =
+        json['created_at'] ?? json['operation']?['created_at'] ?? '';
+    final parsedDate = DateTime.tryParse(createdAtRaw.toString());
+    final postId =
+        json['post_id']?.toString() ?? json['postId']?.toString() ?? '';
+    final userId =
+        json['user_id']?.toString() ?? json['userId']?.toString() ?? '';
+    final rawId = json['id'] ?? json['comment_id'] ?? json['commentId'];
+    final synthesizedId =
+        'gen-$postId-$userId-${createdAtRaw.toString()}-${json['content']?.hashCode ?? ''}';
+
     return PostCommentModel(
-      id: json['id'],
-      postId: json['post_id'],
-      userId: json['user_id'],
-      content: json['content'],
-      createdAt: DateTime.parse(json['created_at']),
+      id: (rawId?.toString().isNotEmpty ?? false)
+          ? rawId.toString()
+          : synthesizedId,
+      postId: postId,
+      userId: userId,
+      user: json['user'] is Map
+          ? UserModel.fromJson(Map<String, dynamic>.from(json['user'] as Map))
+          : null,
+      content: json['content']?.toString() ?? '',
+      createdAt: parsedDate ?? DateTime.now(),
     );
   }
 }
