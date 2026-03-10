@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'dart:io';
-import 'package:flutter_windowmanager/flutter_windowmanager.dart';
+import 'package:flutter_windowmanager_v2/flutter_windowmanager_v2.dart';
 import 'widgets/zoomable_image.dart';
 
 /// Full screen image viewer with zoom controls and page navigation.
@@ -51,13 +51,13 @@ class _SheetPreviewReaderState extends State<SheetPreviewReader> {
 
   Future<void> _secureScreen() async {
     if (Platform.isAndroid) {
-      await FlutterWindowManager.addFlags(FlutterWindowManager.FLAG_SECURE);
+      await FlutterWindowManagerV2.addFlags(FlutterWindowManagerV2.FLAG_SECURE);
     }
   }
 
   Future<void> _clearSecureScreen() async {
     if (Platform.isAndroid) {
-      await FlutterWindowManager.clearFlags(FlutterWindowManager.FLAG_SECURE);
+      await FlutterWindowManagerV2.clearFlags(FlutterWindowManagerV2.FLAG_SECURE);
     }
   }
 
