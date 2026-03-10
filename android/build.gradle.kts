@@ -19,6 +19,21 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+fun Project.setNamespaceIfMissing() {
+    if (extensions.findByName("android") == null) return
+    val android = extensions.getByName("android") as com.android.build.gradle.BaseExtension
+    if (android.namespace == null) {
+        android.namespace =
+            if (group.toString().isNotEmpty()) group.toString()
+            else "com.example.${name.replace("-", "_")}"
+    }
+}
+
+subprojects {
+    plugins.withId("com.android.application") { setNamespaceIfMissing() }
+    plugins.withId("com.android.library") { setNamespaceIfMissing() }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
