@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_application_1/models/user_model.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 
@@ -50,5 +53,28 @@ class UsersService {
       debugPrint('Error unfollowing user: $e');
       return false;
     }
+  }
+
+  static Future<UserModel?> fetchUserById(String userId) async {
+    final storage = GetStorage();
+    final String? token = storage.read('token');
+
+    try {
+      final response = await http.get(
+        Uri.parse('$apiEndpoint/users/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        return UserModel.fromJson(jsonResponse['data']);
+      }
+    } catch (e) {
+      debugPrint('Error fetching user by id: $e');
+    }
+    return null;
   }
 }
