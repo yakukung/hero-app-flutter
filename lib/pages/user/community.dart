@@ -7,6 +7,7 @@ import 'package:flutter_application_1/pages/user/create_post.dart';
 import 'package:flutter_application_1/pages/user/profile.dart';
 import 'package:flutter_application_1/pages/user/sheet/preview_sheet.dart';
 import 'package:flutter_application_1/pages/user/user_profile_view.dart';
+import 'package:flutter_application_1/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:flutter_application_1/services/posts_service.dart';
 import 'package:flutter_application_1/services/users_service.dart';
@@ -253,6 +254,42 @@ class _CommunityPageState extends State<CommunityPage> {
     }
 
     final currentlyFollowing = _isFollowing(author);
+    if (currentlyFollowing) {
+      _showUnfollowConfirmDialog(post);
+      return;
+    }
+
+    await _performFollowAction(post: post, currentlyFollowing: false);
+  }
+
+  void _showUnfollowConfirmDialog(PostModel post) {
+    final author = post.author;
+    showCustomDialog(
+      title: 'เลิกติดตาม',
+      message:
+          'คุณแน่ใจหรือไม่ว่าต้องการเลิกติดตาม ${author.username ?? 'ผู้ใช้นี้'}?',
+      isConfirm: true,
+      onOk: () async {
+        await _performFollowAction(post: post, currentlyFollowing: true);
+      },
+    );
+  }
+
+  Future<void> _performFollowAction({
+    required PostModel post,
+    required bool currentlyFollowing,
+  }) async {
+    final author = post.author;
+    final currentUserId = _currentUserId;
+    if (author.id.isEmpty ||
+        currentUserId == null ||
+        currentUserId.isEmpty ||
+        author.id == currentUserId) {
+      return;
+    }
+
+    if (_followBusyUserIds.contains(author.id)) return;
+
     setState(() => _followBusyUserIds.add(author.id));
 
     try {
