@@ -1,8 +1,12 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/models/post_model.dart';
+import 'package:flutter_application_1/models/user_model.dart';
+import 'package:flutter_application_1/pages/user/community/comment_sheet.dart';
+import 'package:flutter_application_1/pages/user/community/community_post_card.dart';
 import 'package:flutter_application_1/pages/user/create_post.dart';
+import 'package:flutter_application_1/pages/user/profile.dart';
 import 'package:flutter_application_1/pages/user/sheet/preview_sheet.dart';
+import 'package:flutter_application_1/pages/user/user_profile_view.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:flutter_application_1/services/posts_service.dart';
 import 'package:flutter_application_1/services/users_service.dart';
@@ -18,23 +22,17 @@ class CommunityPage extends StatefulWidget {
 }
 
 class _CommunityPageState extends State<CommunityPage> {
-  final Set<String> _followLoading = {};
-  final Set<String> _followingOverride = {};
   List<PostModel> _posts = [];
   bool _isLoading = true;
   String? _error;
   String? _currentUserId;
-  final String _followingCacheKey = 'community_following_cache';
+  final Set<String> _followBusyUserIds = {};
 
   @override
   void initState() {
     super.initState();
     final storage = GetStorage();
     _currentUserId = storage.read('uid')?.toString();
-    final cached = storage.read<List>(_followingCacheKey);
-    if (cached != null) {
-      _followingOverride.addAll(cached.map((e) => e.toString()));
-    }
     _refreshPosts();
   }
 
@@ -49,15 +47,6 @@ class _CommunityPageState extends State<CommunityPage> {
       if (!mounted) return;
       setState(() {
         _posts = posts;
-        final derivedFollowing = posts
-            .where((p) {
-              if (p.author.isFollowing) return true;
-              final uidList = p.author.followersUid.map((e) => e.toString());
-              return uidList.contains(_currentUserId);
-            })
-            .map((p) => p.author.id);
-        _followingOverride.addAll(derivedFollowing);
-        _persistFollowingOverride();
       });
     } catch (e) {
       if (!mounted) return;
@@ -184,206 +173,129 @@ class _CommunityPageState extends State<CommunityPage> {
 
   Widget _buildPostCard(PostModel post) {
     final formattedDate = post.createdAt.toString().substring(0, 16);
+    final avatarProvider = _resolveAvatar(post.author.profileImage);
+    final isSelf =
+        _currentUserId != null && _currentUserId == post.author.id;
+    final canFollow = post.author.id.isNotEmpty && !isSelf;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F8FA),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.grey[300],
-                backgroundImage:
-                    post.author.profileImage != null &&
-                        post.author.profileImage!.toString().startsWith('http')
-                    ? NetworkImage(post.author.profileImage!)
-                    : const NetworkImage(
-                            'https://cdn-icons-png.flaticon.com/512/847/847969.png',
-                          )
-                          as ImageProvider,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      post.author.username ?? 'Unknown',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      formattedDate,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                    ),
-                  ],
-                ),
-              ),
-              Builder(
-                builder: (context) {
-                  final currentUserId = _currentUserId;
-                  if (currentUserId == null ||
-                      currentUserId == post.author.id) {
-                    return const SizedBox.shrink();
-                  }
+    return CommunityPostCard(
+      post: post,
+      formattedDate: formattedDate,
+      avatarProvider: avatarProvider,
+      onUserTap: () => _openUserProfile(post.author),
+      onReportTap: () => _showReportOptions(post),
+      onSheetTap: post.sheetId == null
+          ? null
+          : () => Get.to(() => PreviewSheetPage(sheetId: post.sheetId!)),
+      onLikeTap: () async {
+        final success = post.isLiked
+            ? await PostsService.unlikePost(post.id)
+            : await PostsService.likePost(post.id);
 
-                  final isFollowing =
-                      _followingOverride.contains(post.author.id) ||
-                      post.author.isFollowing == true ||
-                      post.author.followersUid
-                          .map((e) => e.toString())
-                          .contains(currentUserId);
-                  final isBusy = _followLoading.contains(post.author.id);
-
-                  return GestureDetector(
-                    onTap: isBusy
-                        ? null
-                        : () {
-                            Get.defaultDialog(
-                              title: isFollowing ? 'เลิกติดตาม' : 'ติดตาม',
-                              middleText: isFollowing
-                                  ? 'คุณแน่ใจหรือไม่ว่าต้องการเลิกติดตาม ${post.author.username}?'
-                                  : 'คุณต้องการติดตาม ${post.author.username} ใช่หรือไม่?',
-                              textConfirm: 'ยืนยัน',
-                              textCancel: 'ยกเลิก',
-                              confirmTextColor: Colors.white,
-                              buttonColor: const Color(0xFF2A5DB9),
-                              onConfirm: () async {
-                                Get.back();
-                                await _handleFollowToggle(post, context);
-                              },
-                              cancel: TextButton(
-                                onPressed: () => Get.back(),
-                                child: Text(
-                                  'ยกเลิก',
-                                  style: TextStyle(color: Colors.grey[600]),
-                                ),
-                              ),
-                            );
-                          },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isFollowing ? Colors.grey[200] : Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: isFollowing
-                            ? null
-                            : Border.all(color: Colors.blueAccent),
-                      ),
-                      child: Text(
-                        isBusy
-                            ? 'กำลังดำเนินการ'
-                            : isFollowing
-                            ? 'เลิกติดตาม'
-                            : 'ติดตาม',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isFollowing
-                              ? Colors.grey[700]
-                              : Colors.blueAccent,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 8),
-              GestureDetector(
-                onTap: () => _showReportOptions(post),
-                child: const Icon(Icons.more_vert, color: Colors.black54),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Content
-          Text(post.content, style: const TextStyle(fontSize: 14, height: 1.5)),
-          const SizedBox(height: 16),
-          // Actions
-          Row(
-            children: [
-              if (post.sheetId != null)
-                GestureDetector(
-                  onTap: () {
-                    Get.to(() => PreviewSheetPage(sheetId: post.sheetId!));
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[700],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'ดูสินค้า',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                ),
-              const Spacer(),
-              _buildActionButton(
-                icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
-                label: '${post.likeCount}',
-                color: post.isLiked ? const Color(0xFF2A5DB9) : Colors.white,
-                textColor: post.isLiked ? Colors.white : Colors.black54,
-                isActive: post.isLiked,
-                onTap: () async {
-                  final success = post.isLiked
-                      ? await PostsService.unlikePost(post.id)
-                      : await PostsService.likePost(post.id);
-
-                  if (success && mounted) {
-                    setState(() {
-                      _posts = _posts.map((p) {
-                        if (p.id == post.id) {
-                          final increment = p.isLiked ? -1 : 1;
-                          return p.copyWith(
-                            isLiked: !p.isLiked,
-                            likeCount: p.likeCount + increment,
-                          );
-                        }
-                        return p;
-                      }).toList();
-                    });
-                  }
-                },
-              ),
-              const SizedBox(width: 8),
-              _buildActionButton(
-                icon: Icons.chat_bubble_outline,
-                label: '${post.commentCount}',
-                color: Colors.white,
-                isActive: false,
-                onTap: () => _openComments(post),
-              ),
-              const SizedBox(width: 8),
-              _buildActionButton(
-                icon: Icons.share,
-                label: '${post.shareCount}',
-                color: Colors.white,
-                isActive: false,
-                onTap: () => _sharePost(post),
-              ),
-            ],
-          ),
-        ],
-      ),
+        if (success && mounted) {
+          setState(() {
+            _posts = _posts.map((p) {
+              if (p.id == post.id) {
+                final increment = p.isLiked ? -1 : 1;
+                return p.copyWith(
+                  isLiked: !p.isLiked,
+                  likeCount: p.likeCount + increment,
+                );
+              }
+              return p;
+            }).toList();
+          });
+        }
+      },
+      onCommentTap: () => _openComments(post),
+      onShareTap: () => _sharePost(post),
+      showFollowButton: canFollow,
+      isFollowing: _isFollowing(post.author),
+      isFollowBusy: _followBusyUserIds.contains(post.author.id),
+      onFollowTap: canFollow ? () => _toggleFollow(post) : null,
     );
+  }
+
+  void _openUserProfile(UserModel author) {
+    final currentUserId = _currentUserId;
+    if (currentUserId != null && currentUserId == author.id) {
+      Get.to(() => const ProfilePage());
+      return;
+    }
+    Get.to(() => UserProfileViewPage(userId: author.id, initialUser: author));
+  }
+
+  bool _isFollowing(UserModel user) {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null || currentUserId.isEmpty) return false;
+    final followers = user.followersUid.map((e) => e.toString());
+    return user.isFollowing || followers.contains(currentUserId);
+  }
+
+  Future<void> _toggleFollow(PostModel post) async {
+    final author = post.author;
+    final currentUserId = _currentUserId;
+    if (author.id.isEmpty ||
+        currentUserId == null ||
+        currentUserId.isEmpty ||
+        author.id == currentUserId) {
+      return;
+    }
+
+    if (_followBusyUserIds.contains(author.id)) return;
+
+    final token = GetStorage().read('token')?.toString();
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณาเข้าสู่ระบบเพื่อทำการติดตาม')),
+      );
+      return;
+    }
+
+    final currentlyFollowing = _isFollowing(author);
+    setState(() => _followBusyUserIds.add(author.id));
+
+    try {
+      final success = currentlyFollowing
+          ? await UsersService.unfollowUser(author.id)
+          : await UsersService.followUser(author.id);
+
+      if (!mounted) return;
+
+      if (success) {
+        final updatedFollowers = List<String>.from(author.followersUid);
+        if (currentlyFollowing) {
+          updatedFollowers.remove(currentUserId);
+        } else {
+          if (!updatedFollowers.contains(currentUserId)) {
+            updatedFollowers.add(currentUserId);
+          }
+        }
+        final delta = currentlyFollowing ? -1 : 1;
+        final updatedCount = author.followersCount + delta;
+
+        setState(() {
+          _posts = _posts.map((p) {
+            if (p.author.id != author.id) return p;
+            return p.copyWith(
+              author: p.author.copyWith(
+                followersUid: List<String>.from(updatedFollowers),
+                followersCount: updatedCount < 0 ? 0 : updatedCount,
+                isFollowing: !currentlyFollowing,
+              ),
+            );
+          }).toList();
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ดำเนินการไม่สำเร็จ ลองใหม่อีกครั้ง')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _followBusyUserIds.remove(author.id));
+      }
+    }
   }
 
   Future<void> _openComments(PostModel post) async {
@@ -451,17 +363,16 @@ class _CommunityPageState extends State<CommunityPage> {
       setState(() {
         _posts = _posts.map((p) {
           if (p.id == post.id) {
-            final newCount =
-                result.shareCount ?? (p.shareCount + 1);
+            final newCount = result.shareCount ?? (p.shareCount + 1);
             return p.copyWith(shareCount: newCount);
           }
           return p;
         }).toList();
       });
     } else if (result.alreadyShared) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('คุณแชร์โพสต์นี้ไปแล้ว')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('คุณแชร์โพสต์นี้ไปแล้ว')));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('แชร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')),
@@ -489,89 +400,6 @@ class _CommunityPageState extends State<CommunityPage> {
     }
 
     return const Rect.fromLTWH(0, 0, 1, 1);
-  }
-
-  Future<void> _handleFollowToggle(PostModel post, BuildContext context) async {
-    final currentUserId = _currentUserId;
-    if (currentUserId == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('กรุณาเข้าสู่ระบบก่อน')));
-      return;
-    }
-
-    if (_followLoading.contains(post.author.id)) return;
-
-    final isFollowing =
-        _followingOverride.contains(post.author.id) ||
-        post.author.isFollowing == true ||
-        post.author.followersUid.contains(currentUserId);
-
-    _applyFollowLocal(post.author.id, isFollowing ? -1 : 1);
-
-    setState(() {
-      _followLoading.add(post.author.id);
-    });
-
-    final success = isFollowing
-        ? await UsersService.unfollowUser(post.author.id)
-        : await UsersService.followUser(post.author.id);
-
-    if (!success && mounted) {
-      _applyFollowLocal(post.author.id, isFollowing ? 1 : -1);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ดำเนินการไม่สำเร็จ ลองใหม่อีกครั้ง')),
-      );
-    }
-
-    if (mounted) {
-      setState(() {
-        _followLoading.remove(post.author.id);
-      });
-    }
-  }
-
-  void _applyFollowLocal(String authorId, int delta) {
-    final currentUserId = _currentUserId;
-    if (currentUserId == null) return;
-
-    setState(() {
-      _posts = _posts.map((p) {
-        if (p.author.id == authorId) {
-          final updatedFollowersUid = p.author.followersUid
-              .map((e) => e.toString())
-              .toList();
-          if (delta > 0 && !updatedFollowersUid.contains(currentUserId)) {
-            updatedFollowersUid.add(currentUserId);
-            _followingOverride.add(authorId);
-          } else if (delta < 0) {
-            updatedFollowersUid.remove(currentUserId);
-            _followingOverride.remove(authorId);
-          }
-
-          final updatedCount = p.author.followersCount + delta;
-          final safeCount = updatedCount < 0 ? 0 : updatedCount;
-
-          return p.copyWith(
-            author: p.author.copyWith(
-              followersUid: updatedFollowersUid,
-              followersCount: safeCount,
-              isFollowing: delta > 0
-                  ? true
-                  : delta < 0
-                  ? false
-                  : p.author.isFollowing,
-            ),
-          );
-        }
-        return p;
-      }).toList();
-      _persistFollowingOverride();
-    });
-  }
-
-  void _persistFollowingOverride() {
-    GetStorage().write(_followingCacheKey, _followingOverride.toList());
   }
 
   void _showReportOptions(PostModel post) {
@@ -626,8 +454,7 @@ class _CommunityPageState extends State<CommunityPage> {
     return ListTile(
       title: Text(reason),
       onTap: () async {
-        Get.back(); // Close bottom sheet
-        // Mocking report action
+        Get.back();
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -642,472 +469,10 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    bool isActive = false,
-    Color? textColor,
-    VoidCallback? onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isActive ? Colors.white : Colors.black54,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isActive ? Colors.white : textColor ?? Colors.black54,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class CommentSheet extends StatefulWidget {
-  final PostModel post;
-  final ValueChanged<int>? onCommentCountChanged;
-
-  const CommentSheet({
-    super.key,
-    required this.post,
-    this.onCommentCountChanged,
-  });
-
-  @override
-  State<CommentSheet> createState() => _CommentSheetState();
-}
-
-class _CommentSheetState extends State<CommentSheet> {
-  final TextEditingController _controller = TextEditingController();
-  List<PostCommentModel> _comments = [];
-  bool _isLoading = true;
-  bool _isSubmitting = false;
-  String? _error;
-  late final String? _currentUserId;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentUserId = GetStorage().read('uid')?.toString();
-    _comments = widget.post.comments;
-    _loadComments();
-  }
-
-  Future<void> _loadComments({bool showLoading = true}) async {
-    if (showLoading) {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
-    }
-
-    try {
-      final comments = await PostsService.getComments(widget.post.id);
-      if (!mounted) return;
-
-      if (comments.isNotEmpty) {
-        setState(() {
-          _comments = comments;
-        });
-      }
-      widget.onCommentCountChanged?.call(_comments.length);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'ไม่สามารถโหลดคอมเมนต์ได้';
-      });
-    } finally {
-      if (mounted && showLoading) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _submitComment() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty || _isSubmitting) return;
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    final newCommentFromApi = await PostsService.commentOnPost(
-      postId: widget.post.id,
-      content: text,
-    );
-
-    if (!mounted) return;
-
-    if (newCommentFromApi != null) {
-      final newComment = newCommentFromApi;
-
-      setState(() {
-        _controller.clear();
-        _comments = [newComment, ..._comments];
-      });
-
-      widget.onCommentCountChanged?.call(_comments.length);
-      unawaited(_loadComments(showLoading: false));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ส่งคอมเมนต์ไม่สำเร็จ ลองใหม่อีกครั้ง')),
-      );
-    }
-
-    if (mounted) {
-      setState(() {
-        _isSubmitting = false;
-      });
-    }
-  }
-
-  Future<void> _deleteComment(PostCommentModel comment) async {
-    final currentUserId = _currentUserId;
-    final isCommentOwner = currentUserId != null &&
-        (comment.userId == currentUserId || comment.user?.id == currentUserId);
-    final isPostOwner = currentUserId != null &&
-        widget.post.userId.toString() == currentUserId;
-
-    if (!isCommentOwner && !isPostOwner) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('คุณไม่มีสิทธิ์ลบความคิดเห็นนี้')),
-      );
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ลบความคิดเห็น'),
-        content: const Text('คุณต้องการลบความคิดเห็นนี้หรือไม่?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('ลบ'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    // If the id is synthetic (no real id yet), refresh comments to get the real id
-    String commentId = comment.id;
-    if (_isSyntheticId(commentId)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กำลังดึงข้อมูลคอมเมนต์ล่าสุด...')),
-      );
-      final refreshed = await PostsService.getComments(widget.post.id);
-      if (!mounted) return;
-
-      setState(() {
-        _comments = refreshed;
-      });
-      widget.onCommentCountChanged?.call(_comments.length);
-
-      final matched = _matchComment(refreshed, comment);
-      if (matched != null && !_isSyntheticId(matched.id)) {
-        commentId = matched.id;
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('ยังไม่พบรหัสคอมเมนต์ที่แท้จริง กรุณาลองใหม่'),
-          ),
-        );
-        return;
-      }
-    }
-
-    final ok = await PostsService.deleteComment(
-      postId: widget.post.id,
-      commentId: commentId,
-    );
-
-    if (ok && mounted) {
-      setState(() {
-        _comments = _comments.where((c) => c.id != comment.id).toList();
-      });
-      widget.onCommentCountChanged?.call(_comments.length);
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ลบความคิดเห็นไม่สำเร็จ')),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.only(bottom: bottomInset),
-        child: SizedBox(
-          height: MediaQuery.of(context).size.height * 0.75,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'ความคิดเห็น',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _error != null
-                          ? Center(child: Text(_error!))
-                          : _comments.isEmpty
-                              ? const Center(child: Text('ยังไม่มีความคิดเห็น'))
-                              : ListView.separated(
-                                  itemCount: _comments.length,
-                                  separatorBuilder: (_, __) =>
-                                      const SizedBox(height: 12),
-                                  itemBuilder: (context, index) {
-                                    final comment = _comments[index];
-                                    return _buildCommentTile(comment);
-                                  },
-                                ),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: _buildInput(),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInput() {
-    return Material(
-      color: Colors.white,
-      elevation: 4,
-      shadowColor: Colors.black12,
-      borderRadius: BorderRadius.circular(18),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _controller,
-                maxLines: 4,
-                minLines: 1,
-                decoration: const InputDecoration(
-                  hintText: 'พิมพ์ความคิดเห็น...',
-                  border: InputBorder.none,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            _isSubmitting
-                ? const SizedBox(
-                    width: 26,
-                    height: 26,
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
-                  )
-                : InkWell(
-                    onTap: _submitComment,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF2A5DB9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.send_rounded,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCommentTile(PostCommentModel comment) {
-    final displayName =
-        comment.user?.username ?? 'ผู้ใช้ ${comment.userId}'.trim();
-    final profileImage = comment.user?.profileImage;
-    final initial = (displayName.isNotEmpty ? displayName : 'ผู้ใช้').trim();
-    final displayInitial = initial.length >= 2
-        ? initial.substring(0, 2).toUpperCase()
-        : initial.toUpperCase();
-    final rawDate = comment.createdAt.toString();
-    final formattedDate =
-        rawDate.length >= 16 ? rawDate.substring(0, 16) : rawDate;
-    final avatarProvider = _resolveAvatar(profileImage);
-    final currentUserId = _currentUserId;
-    final isCommentOwner = currentUserId != null &&
-        (comment.userId == currentUserId || comment.user?.id == currentUserId);
-    final isPostOwner = currentUserId != null &&
-        widget.post.userId.toString() == currentUserId;
-    final canDelete = isCommentOwner || isPostOwner;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: const Color(0xFFE6EBF5),
-            backgroundImage: avatarProvider,
-            child: avatarProvider == null
-                ? Text(
-                    displayInitial,
-                    style: const TextStyle(
-                      color: Color(0xFF2A5DB9),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        displayName,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      formattedDate,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    if (canDelete) ...[
-                      const SizedBox(width: 8),
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints:
-                            const BoxConstraints.tightFor(width: 32, height: 32),
-                        visualDensity: VisualDensity.compact,
-                        icon: Icon(Icons.delete_outline,
-                            size: 18, color: Colors.grey[600]),
-                        onPressed: () => _deleteComment(comment),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  comment.content,
-                  style: const TextStyle(fontSize: 14, height: 1.4),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   ImageProvider? _resolveAvatar(String? profileImage) {
     if (profileImage == null || profileImage.isEmpty) return null;
     final isFullUrl = profileImage.startsWith('http');
     final url = isFullUrl ? profileImage : '$apiEndpoint/$profileImage';
     return NetworkImage(url);
-  }
-
-  bool _isSyntheticId(String id) =>
-      id.startsWith('local-') || id.startsWith('gen-') || id.isEmpty;
-
-  PostCommentModel? _matchComment(
-    List<PostCommentModel> source,
-    PostCommentModel target,
-  ) {
-    return source.firstWhereOrNull((c) {
-      final sameUser = c.userId == target.userId || c.user?.id == target.userId;
-      final sameContent = c.content.trim() == target.content.trim();
-      return sameUser && sameContent;
-    });
   }
 }

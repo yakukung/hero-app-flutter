@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
 import 'package:flutter_application_1/app.dart';
 import 'package:flutter_application_1/pages/register.dart';
+import 'package:flutter_application_1/pages/reset_password.dart';
 import 'package:flutter_application_1/services/app_data.dart';
 import 'package:flutter_application_1/services/navigation_service.dart';
 import 'package:flutter_application_1/services/auth_service.dart';
@@ -149,7 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
-                    onTap: () {},
+                    onTap: () => Get.to(() => const ResetPasswordPage()),
                     child: const Text(
                       'ลืมรหัสผ่าน?',
                       style: TextStyle(

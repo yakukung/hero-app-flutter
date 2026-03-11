@@ -1,10 +1,18 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/app.dart';
 import 'package:flutter_application_1/config/api_connect.dart';
+import 'package:flutter_application_1/pages/admin/home.dart';
+import 'package:flutter_application_1/services/app_data.dart';
+import 'package:flutter_application_1/services/auth_service.dart';
+import 'package:flutter_application_1/services/navigation_service.dart';
+import 'package:flutter_application_1/pages/reset_password.dart';
 import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'login.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_application_1/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/utils/api_utils.dart';
 
@@ -25,6 +33,15 @@ class _RegisterPageState extends State<RegisterPage> {
   TextEditingController emailCtl = TextEditingController();
   TextEditingController passwordCtl = TextEditingController();
   TextEditingController cfPasswordCtl = TextEditingController();
+
+  @override
+  void dispose() {
+    usernameCtl.dispose();
+    emailCtl.dispose();
+    passwordCtl.dispose();
+    cfPasswordCtl.dispose();
+    super.dispose();
+  }
 
   void _togglePasswordVisibility() {
     setState(() {
@@ -171,7 +188,7 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Align(
                 alignment: Alignment.centerRight,
                 child: GestureDetector(
-                  onTap: () {},
+                  onTap: () => Get.to(() => const ResetPasswordPage()),
                   child: Text(
                     'ลืมรหัสผ่าน?',
                     style: TextStyle(
@@ -238,15 +255,18 @@ class _RegisterPageState extends State<RegisterPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                CircleAvatar(
-                  backgroundColor: Colors.transparent,
-                  radius: 24,
-                  child: ClipOval(
-                    child: Image.asset(
-                      'assets/images/logo/google-icon-logo.png',
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.contain,
+                GestureDetector(
+                  onTap: _handleGoogleLogin,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.transparent,
+                    radius: 24,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/images/logo/google-icon-logo.png',
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ),
@@ -256,6 +276,120 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    setState(() => isLoading = true);
+    try {
+      final authService = AuthService();
+      final userCredential = await authService.signInWithGoogle();
+
+      if (userCredential != null && userCredential.user != null) {
+        final response = await authService.loginByGoogle(
+          providerUserId: userCredential.user!.uid,
+          providerName: "GOOGLE",
+          providerUsername: userCredential.user!.displayName ?? "",
+          providerEmail: userCredential.user!.email ?? "",
+          providerAvatar: userCredential.user!.photoURL ?? "",
+        );
+
+        if (response.statusCode != 200) {
+          showCustomDialog(
+            title: 'เข้าสู่ระบบไม่สำเร็จ',
+            message: 'เชื่อมต่อกับเซิร์ฟเวอร์ล้มเหลว',
+          );
+          return;
+        }
+
+        final payload = _decodeLoginPayload(response.body);
+        if (payload == null) {
+          _showUnexpectedResponse();
+          return;
+        }
+
+        final int apiCode = _parseApiCode(payload['code']);
+        if (apiCode != 200) {
+          final String message =
+              payload['message']?.toString() ??
+              'เกิดข้อผิดพลาดในการเข้าสู่ระบบ';
+          showCustomDialog(title: 'เข้าสู่ระบบไม่สำเร็จ', message: message);
+          return;
+        }
+
+        final dynamic data = payload['data'];
+        if (data is! Map<String, dynamic>) {
+          _showUnexpectedResponse();
+          return;
+        }
+
+        final String? uid = _extractUid(data);
+        if (uid == null || uid.isEmpty) {
+          _showUnexpectedResponse();
+          return;
+        }
+
+        await _completeLogin(uid, data);
+      }
+    } catch (e) {
+      debugPrint('Google Sign-In error: $e');
+      showCustomDialog(
+        title: 'เกิดข้อผิดพลาด',
+        message: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
+  }
+
+  Map<String, dynamic>? _decodeLoginPayload(String responseBody) {
+    try {
+      final dynamic decoded = jsonDecode(responseBody);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (error) {
+      debugPrint('Error decoding login response: $error');
+      return null;
+    }
+  }
+
+  int _parseApiCode(dynamic code) {
+    if (code is int) return code;
+    if (code is String) {
+      return int.tryParse(code) ?? 0;
+    }
+    return 0;
+  }
+
+  void _showUnexpectedResponse() {
+    if (!mounted) return;
+    showCustomDialog(
+      title: 'เกิดข้อผิดพลาด',
+      message: 'ไม่สามารถเข้าสู่ระบบได้ในขณะนี้',
+    );
+  }
+
+  String? _extractUid(Map<String, dynamic> data) {
+    final dynamic uidValue = data['uid'] ?? data['id'];
+    return uidValue?.toString();
+  }
+
+  Future<void> _completeLogin(String uid, Map<String, dynamic> userData) async {
+    final storage = GetStorage();
+    storage.write('uid', uid);
+
+    if (!mounted) return;
+    final appData = Provider.of<Appdata>(context, listen: false);
+    appData.updateFromMap(userData);
+
+    final NavigationService navService = Get.find<NavigationService>();
+    navService.currentIndex.value = 0;
+
+    if (appData.user?.roleName == 'ADMIN') {
+      Get.offAll(() => const AdminHomePage());
+    } else {
+      Get.offAll(() => const MainPage());
+    }
   }
 
   void register() async {
