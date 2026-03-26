@@ -4,9 +4,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:flutter_application_1/core/models/upload_state.dart';
 import 'package:flutter_application_1/features/auth/intro.dart';
-import 'package:flutter_application_1/core/services/app_data.dart';
 import 'package:flutter_application_1/features/user/edit_profile.dart';
 import 'package:flutter_application_1/features/user/user_sheets.dart';
 import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
@@ -16,7 +16,6 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_assets.dart';
 
@@ -28,12 +27,12 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final AppController _appController = Get.find<AppController>();
   final ImagePicker _picker = ImagePicker();
 
   final fontButtonSize = 14;
 
   Future<void> _uploadProfileImage() async {
-    final appData = Provider.of<Appdata>(context, listen: false);
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 1024,
@@ -66,7 +65,7 @@ class _ProfilePageState extends State<ProfilePage> {
           },
         );
 
-        request.fields['uid'] = appData.uid;
+        request.fields['uid'] = _appController.uid;
 
         String mimeType = 'image/jpeg';
         if (file.path.endsWith('.png')) {
@@ -91,11 +90,11 @@ class _ProfilePageState extends State<ProfilePage> {
             final jsonResponse = _tryParseJsonMap(response.body);
             final profileImage = jsonResponse?['profile_image'];
             if (profileImage is String && profileImage.isNotEmpty) {
-              appData.setProfileImage(profileImage);
+              _appController.setProfileImage(profileImage);
             }
           } else {
-            await appData.fetchUserData();
-            appData.setProfileImage(appData.profileImage);
+            await _appController.fetchUserData();
+            _appController.setProfileImage(_appController.profileImage);
           }
 
           stateNotifier.value = stateNotifier.value.copyWith(
@@ -123,250 +122,249 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Consumer<Appdata>(
-        builder: (context, appData, child) {
-          return RefreshIndicator(
-            onRefresh: () async {
-              await appData.fetchUserData();
-            },
-            child: ListView(
-              children: [
-                SizedBox(height: 32),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: _uploadProfileImage,
-                        child: Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            CircleAvatar(
-                              radius: 60,
-                              backgroundColor: Colors.white,
-                              child: ClipOval(
-                                child: appData.profileImage.isNotEmpty
-                                    ? Image.network(
-                                        appData.profileImage,
-                                        width: 120,
-                                        height: 120,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.asset(
-                                        AppAssets.defaultAvatar,
-                                        width: 120,
-                                        height: 120,
-                                        fit: BoxFit.cover,
-                                      ),
-                              ),
-                            ),
-                            Container(
-                              padding: EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.edit,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              appData.username.isNotEmpty
-                                  ? appData.username
-                                  : 'ชื่อผู้ใช้',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (appData.email.isNotEmpty)
-                              Text(
-                                appData.email,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                _buildStatItem(
-                                  context,
-                                  'ผู้ติดตาม',
-                                  appData.followersCount,
-                                ),
-                                Container(
-                                  height: 12,
-                                  width: 1,
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                  ),
-                                  color: Colors.grey[300],
-                                ),
-                                _buildStatItem(
-                                  context,
-                                  'กำลังติดตาม',
-                                  appData.followingsCount,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Column(
-                    children: [
-                      Row(
+      body: Obx(
+        () => RefreshIndicator(
+          onRefresh: () async {
+            await _appController.fetchUserData();
+          },
+          child: ListView(
+            children: [
+              SizedBox(height: 32),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: _uploadProfileImage,
+                      child: Stack(
+                        alignment: Alignment.bottomRight,
                         children: [
-                          Expanded(
-                            child: FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFD4E1FF),
-                                minimumSize: const Size(0, 86),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                elevation: 0,
-                              ),
-                              label: Text(
-                                'แก้ไขข้อมูลส่วนตัว',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: fontButtonSize.toDouble(),
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              onPressed: () {
-                                Get.to(() => const EditProfilePage());
-                              },
+                          CircleAvatar(
+                            radius: 60,
+                            backgroundColor: Colors.white,
+                            child: ClipOval(
+                              child: _appController.profileImage.isNotEmpty
+                                  ? Image.network(
+                                      _appController.profileImage,
+                                      width: 120,
+                                      height: 120,
+                                      fit: BoxFit.cover,
+                                    )
+                                  : Image.asset(
+                                      AppAssets.defaultAvatar,
+                                      width: 120,
+                                      height: 120,
+                                      fit: BoxFit.cover,
+                                    ),
                             ),
                           ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFD4E1FF),
-                                minimumSize: const Size(0, 86),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                elevation: 0,
-                              ),
-                              label: Text(
-                                'แก้ไขแพ็กเกจสมาชิกของคุณ',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: fontButtonSize.toDouble(),
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              onPressed: () {
-                                _showSubscriptionPackages(context);
-                              },
+                          Container(
+                            padding: EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 16,
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 10),
-                      Row(
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFD4E1FF),
-                                minimumSize: const Size(0, 86),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                elevation: 0,
-                              ),
-                              label: Text(
-                                'ยอดเงินคงเหลือ\n${appData.wallet} บาท',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: fontButtonSize.toDouble(),
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              onPressed: () {},
-                            ),
-                          ),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: FilledButton.icon(
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFFD4E1FF),
-                                minimumSize: const Size(0, 86),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                elevation: 0,
-                              ),
-                              label: Text(
-                                'รายการชีต\nทั้งหมดของคุณ',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: fontButtonSize.toDouble(),
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              onPressed: () => _openUserSheets(appData.uid),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 0),
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey[200],
-                            minimumSize: const Size.fromHeight(60),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            elevation: 0,
-                          ),
-                          icon: const Icon(Icons.logout, color: Colors.black),
-                          label: Text(
-                            'ออกจากระบบ',
+                          Text(
+                            _appController.username.isNotEmpty
+                                ? _appController.username
+                                : 'ชื่อผู้ใช้',
                             style: TextStyle(
-                              fontSize: fontButtonSize.toDouble(),
-                              color: Colors.black,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          onPressed: () => _showLogoutConfirmation(context),
-                        ),
+                          if (_appController.email.isNotEmpty)
+                            Text(
+                              _appController.email,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              _buildStatItem(
+                                context,
+                                'ผู้ติดตาม',
+                                _appController.followersCount,
+                              ),
+                              Container(
+                                height: 12,
+                                width: 1,
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
+                                color: Colors.grey[300],
+                              ),
+                              _buildStatItem(
+                                context,
+                                'กำลังติดตาม',
+                                _appController.followingsCount,
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
-        },
+              ),
+
+              SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 30),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFD4E1FF),
+                              minimumSize: const Size(0, 86),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              elevation: 0,
+                            ),
+                            label: Text(
+                              'แก้ไขข้อมูลส่วนตัว',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: fontButtonSize.toDouble(),
+                                color: Colors.black,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            onPressed: () {
+                              Get.to(() => const EditProfilePage());
+                            },
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFD4E1FF),
+                              minimumSize: const Size(0, 86),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              elevation: 0,
+                            ),
+                            label: Text(
+                              'แก้ไขแพ็กเกจสมาชิกของคุณ',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: fontButtonSize.toDouble(),
+                                color: Colors.black,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            onPressed: () {
+                              _showSubscriptionPackages(context);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFD4E1FF),
+                              minimumSize: const Size(0, 86),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              elevation: 0,
+                            ),
+                            label: Text(
+                              'ยอดเงินคงเหลือ\n${_appController.wallet} บาท',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: fontButtonSize.toDouble(),
+                                color: Colors.black,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            onPressed: () {},
+                          ),
+                        ),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFD4E1FF),
+                              minimumSize: const Size(0, 86),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              elevation: 0,
+                            ),
+                            label: Text(
+                              'รายการชีต\nทั้งหมดของคุณ',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: fontButtonSize.toDouble(),
+                                color: Colors.black,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            onPressed: () =>
+                                _openUserSheets(_appController.uid),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 10),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 0),
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[200],
+                          minimumSize: const Size.fromHeight(60),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          elevation: 0,
+                        ),
+                        icon: const Icon(Icons.logout, color: Colors.black),
+                        label: Text(
+                          'ออกจากระบบ',
+                          style: TextStyle(
+                            fontSize: fontButtonSize.toDouble(),
+                            color: Colors.black,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        onPressed: () => _showLogoutConfirmation(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

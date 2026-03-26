@@ -2,16 +2,15 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/controllers/admin_controller.dart';
 import 'package:flutter_application_1/core/models/user_model.dart'; // Ensure UserModel is imported
 import 'package:flutter_application_1/core/models/upload_state.dart';
 import 'package:flutter_application_1/features/admin/change_username.dart';
-import 'package:flutter_application_1/core/services/admin_service.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart'; // Needed for showCustomDialog if used, or standard dialogs
 import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_assets.dart';
@@ -27,6 +26,7 @@ class AdminEditUserProfilePage extends StatefulWidget {
 }
 
 class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
+  final AdminController _adminController = Get.find<AdminController>();
   final ImagePicker _picker = ImagePicker();
   File? _pickedImage;
   late UserModel _currentUser;
@@ -80,11 +80,10 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        // Refresh local user data if possible, or just update UI image
-        // We might want to call AdminService.fetchUserById again to ensure sync
         if (!mounted) return;
-        final adminService = Provider.of<AdminService>(context, listen: false);
-        final updatedUser = await adminService.fetchUserById(_currentUser.id);
+        final updatedUser = await _adminController.fetchUserById(
+          _currentUser.id,
+        );
 
         if (updatedUser != null) {
           setState(() {
@@ -226,9 +225,7 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
                                             ? _currentUser.profileImage!
                                             : '$apiEndpoint/${_currentUser.profileImage}',
                                       )
-                                    : const AssetImage(
-                                        AppAssets.defaultAvatar,
-                                      ))
+                                    : const AssetImage(AppAssets.defaultAvatar))
                                 as ImageProvider,
                     ),
                   ),
@@ -270,13 +267,8 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
                 );
 
                 if (result == true) {
-                  // Refresh user data if username changed
                   if (!context.mounted) return;
-                  final adminService = Provider.of<AdminService>(
-                    context,
-                    listen: false,
-                  );
-                  final updatedUser = await adminService.fetchUserById(
+                  final updatedUser = await _adminController.fetchUserById(
                     _currentUser.id,
                   );
                   if (updatedUser != null && mounted) {
@@ -287,7 +279,6 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
                 }
               },
             ),
-            // Placeholder for other actons or "Not Implemented"
             Opacity(
               opacity: 0.5,
               child: _buildMenuButton(

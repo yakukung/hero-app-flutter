@@ -110,10 +110,11 @@ class _CommentSheetState extends State<CommentSheet> {
 
   Future<void> _deleteComment(PostCommentModel comment) async {
     final currentUserId = _currentUserId;
-    final isCommentOwner = currentUserId != null &&
+    final isCommentOwner =
+        currentUserId != null &&
         (comment.userId == currentUserId || comment.user?.id == currentUserId);
-    final isPostOwner = currentUserId != null &&
-        widget.post.userId.toString() == currentUserId;
+    final isPostOwner =
+        currentUserId != null && widget.post.userId.toString() == currentUserId;
 
     if (!isCommentOwner && !isPostOwner) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -181,9 +182,9 @@ class _CommentSheetState extends State<CommentSheet> {
       widget.onCommentCountChanged?.call(_comments.length);
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ลบความคิดเห็นไม่สำเร็จ')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ลบความคิดเห็นไม่สำเร็จ')));
     }
   }
 
@@ -245,24 +246,26 @@ class _CommentSheetState extends State<CommentSheet> {
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
                       : _error != null
-                          ? Center(child: Text(_error!))
-                          : _comments.isEmpty
-                              ? const Center(child: Text('ยังไม่มีความคิดเห็น'))
-                              : ListView.separated(
-                                  itemCount: _comments.length,
-                                  separatorBuilder: (context, index) =>
-                                      const SizedBox(height: 12),
-                                  itemBuilder: (context, index) {
-                                    final comment = _comments[index];
-                                    return _buildCommentTile(comment);
-                                  },
-                                ),
+                      ? Center(child: Text(_error!))
+                      : _comments.isEmpty
+                      ? const Center(child: Text('ยังไม่มีความคิดเห็น'))
+                      : ListView.separated(
+                          itemCount: _comments.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final comment = _comments[index];
+                            return _buildCommentTile(comment);
+                          },
+                        ),
                 ),
               ),
               const SizedBox(height: 10),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 6,
+                ),
                 child: _buildInput(),
               ),
             ],
@@ -331,14 +334,16 @@ class _CommentSheetState extends State<CommentSheet> {
         ? initial.substring(0, 2).toUpperCase()
         : initial.toUpperCase();
     final rawDate = comment.createdAt.toString();
-    final formattedDate =
-        rawDate.length >= 16 ? rawDate.substring(0, 16) : rawDate;
+    final formattedDate = rawDate.length >= 16
+        ? rawDate.substring(0, 16)
+        : rawDate;
     final avatarProvider = _resolveAvatar(profileImage);
     final currentUserId = _currentUserId;
-    final isCommentOwner = currentUserId != null &&
+    final isCommentOwner =
+        currentUserId != null &&
         (comment.userId == currentUserId || comment.user?.id == currentUserId);
-    final isPostOwner = currentUserId != null &&
-        widget.post.userId.toString() == currentUserId;
+    final isPostOwner =
+        currentUserId != null && widget.post.userId.toString() == currentUserId;
     final canDelete = isCommentOwner || isPostOwner;
 
     return Container(
@@ -385,17 +390,16 @@ class _CommentSheetState extends State<CommentSheet> {
                     const SizedBox(width: 8),
                     Text(
                       formattedDate,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]),
                     ),
                     if (canDelete) ...[
                       const SizedBox(width: 8),
                       IconButton(
                         padding: EdgeInsets.zero,
-                        constraints:
-                            const BoxConstraints.tightFor(width: 32, height: 32),
+                        constraints: const BoxConstraints.tightFor(
+                          width: 32,
+                          height: 32,
+                        ),
                         visualDensity: VisualDensity.compact,
                         icon: Icon(
                           Icons.delete_outline,

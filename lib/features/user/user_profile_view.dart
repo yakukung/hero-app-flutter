@@ -124,9 +124,7 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
     );
   }
 
-  Future<void> _performFollowAction({
-    required bool currentlyFollowing,
-  }) async {
+  Future<void> _performFollowAction({required bool currentlyFollowing}) async {
     final user = _user;
     final currentUserId = _currentUserId;
 
@@ -155,8 +153,9 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
       if (!mounted) return;
 
       if (success) {
-        final updatedFollowers =
-            user.followersUid.map((e) => e.toString()).toList();
+        final updatedFollowers = user.followersUid
+            .map((e) => e.toString())
+            .toList();
         if (currentlyFollowing) {
           updatedFollowers.remove(currentUserId);
         } else {
@@ -250,10 +249,7 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
               borderRadius: BorderRadius.circular(14),
             ),
           ),
-          child: const Text(
-            'ลองใหม่',
-            style: TextStyle(color: Colors.white),
-          ),
+          child: const Text('ลองใหม่', style: TextStyle(color: Colors.white)),
         ),
       ],
     );
@@ -294,10 +290,7 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
         const SizedBox(height: 16),
         Text(
           user.username?.isNotEmpty == true ? user.username! : 'ผู้ใช้',
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 6),
         Row(
@@ -315,10 +308,12 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
             child: FilledButton(
               onPressed: _isFollowBusy ? null : _toggleFollow,
               style: FilledButton.styleFrom(
-                backgroundColor:
-                    _isFollowing(user) ? Colors.grey[200] : AppColors.primary,
-                foregroundColor:
-                    _isFollowing(user) ? Colors.black87 : Colors.white,
+                backgroundColor: _isFollowing(user)
+                    ? Colors.grey[200]
+                    : AppColors.primary,
+                foregroundColor: _isFollowing(user)
+                    ? Colors.black87
+                    : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -328,8 +323,8 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
                 _isFollowBusy
                     ? 'กำลังดำเนินการ...'
                     : _isFollowing(user)
-                        ? 'เลิกติดตาม'
-                        : 'ติดตาม',
+                    ? 'เลิกติดตาม'
+                    : 'ติดตาม',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -354,10 +349,7 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
     );
   }

@@ -1,27 +1,30 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/services/navigation_service.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
+import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
 
 class NavBottom extends StatelessWidget {
   const NavBottom({super.key});
 
   void _navigateToPage(int index) {
-    final navService = Get.find<NavigationService>();
-    navService.changeIndex(index);
+    final navigationController = Get.find<NavigationController>();
+    navigationController.changeIndex(index);
   }
 
   @override
   Widget build(BuildContext context) {
-    final navService = Get.find<NavigationService>();
+    final navigationController = Get.find<NavigationController>();
     return Obx(
       () => Container(
         margin: const EdgeInsets.only(bottom: 20, left: 16, right: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(42),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -42,7 +45,7 @@ class NavBottom extends StatelessWidget {
                 child: BottomNavigationBar(
                   backgroundColor: Colors.transparent,
                   elevation: 0,
-                  currentIndex: navService.currentIndex.value,
+                  currentIndex: navigationController.currentIndex.value,
                   onTap: _navigateToPage,
                   type: BottomNavigationBarType.fixed,
                   selectedItemColor: AppColors.primary,

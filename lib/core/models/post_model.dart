@@ -66,18 +66,16 @@ class PostModel {
     final sharesData = (sharesNode is Map && sharesNode['data'] is List)
         ? sharesNode['data'] as List
         : null;
-    final likesTotal =
-        (likesNode is Map && likesNode['total_items'] != null)
-            ? likesNode['total_items']
-            : null;
+    final likesTotal = (likesNode is Map && likesNode['total_items'] != null)
+        ? likesNode['total_items']
+        : null;
     final commentsTotal =
         (commentsNode is Map && commentsNode['total_items'] != null)
-            ? commentsNode['total_items']
-            : null;
-    final sharesTotal =
-        (sharesNode is Map && sharesNode['total_items'] != null)
-            ? sharesNode['total_items']
-            : null;
+        ? commentsNode['total_items']
+        : null;
+    final sharesTotal = (sharesNode is Map && sharesNode['total_items'] != null)
+        ? sharesNode['total_items']
+        : null;
 
     return PostModel(
       id: json['id'],

@@ -1,30 +1,25 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/models/user_model.dart';
+import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
 
-class AdminService extends ChangeNotifier {
-  List<UserModel> _users = [];
-  int _totalItems = 0;
-  bool _isLoading = false;
-  String _errorMessage = '';
+class AdminController extends GetxController {
+  AdminController({GetStorage? storage}) : _storage = storage ?? GetStorage();
 
-  List<UserModel> get users => _users;
-  int get totalItems => _totalItems;
-  bool get isLoading => _isLoading;
-  String get errorMessage => _errorMessage;
+  var users = <UserModel>[].obs;
+  var totalItems = 0.obs;
+  var isLoading = false.obs;
+  var errorMessage = ''.obs;
 
-  final GetStorage _storage = GetStorage();
+  final GetStorage _storage;
 
   Future<void> fetchUsers() async {
     final String? token = _storage.read('token');
-
-    _isLoading = true;
-    _errorMessage = '';
-    notifyListeners();
-
+    isLoading.value = true;
+    errorMessage.value = '';
     try {
       final response = await http.get(
         Uri.parse('$apiEndpoint/users/'),
@@ -37,27 +32,21 @@ class AdminService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
         final Map<String, dynamic> data = jsonResponse['data'];
-
-        _totalItems = data['total_items'] ?? 0;
-        final List<dynamic> usersJson = data['users'] ?? [];
-
-        _users = usersJson.map((json) => UserModel.fromJson(json)).toList();
-        _errorMessage = '';
+        _parseUsers(data);
+        errorMessage.value = '';
       } else {
-        _errorMessage = 'Failed to fetch users: ${response.statusCode}';
+        errorMessage.value = 'Failed to fetch users: ${response.statusCode}';
       }
     } catch (e) {
       debugPrint('Error fetching users: $e');
-      _errorMessage = 'Error fetching users: $e';
+      errorMessage.value = 'Error fetching users: $e';
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      isLoading.value = false;
     }
   }
 
   Future<UserModel?> fetchUserById(String userId) async {
     final String? token = _storage.read('token');
-
     try {
       final response = await http.get(
         Uri.parse('$apiEndpoint/users/$userId'),
@@ -66,21 +55,18 @@ class AdminService extends ChangeNotifier {
           'Content-Type': 'application/json',
         },
       );
-
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
         return UserModel.fromJson(jsonResponse['data']);
       }
     } catch (e) {
       debugPrint('Error fetching user by id: $e');
-      return null;
     }
     return null;
   }
 
   Future<bool> updateUserStatus(String userId, String statusFlag) async {
     final String? token = _storage.read('token');
-
     try {
       final response = await http.patch(
         Uri.parse('$apiEndpoint/users/update-status-flag/$userId'),
@@ -90,11 +76,7 @@ class AdminService extends ChangeNotifier {
         },
         body: jsonEncode({'status_flag': statusFlag}),
       );
-
-      if (response.statusCode == 204) {
-        return true;
-      }
-      return false;
+      return response.statusCode == 204;
     } catch (e) {
       debugPrint('Error updating user status: $e');
       return false;
@@ -103,7 +85,6 @@ class AdminService extends ChangeNotifier {
 
   Future<bool> updateUserUsername(String userId, String newUsername) async {
     final String? token = _storage.read('token');
-
     try {
       final response = await http.patch(
         Uri.parse('$apiEndpoint/users/update-username'),
@@ -113,14 +94,23 @@ class AdminService extends ChangeNotifier {
         },
         body: jsonEncode({'uid': userId, 'username': newUsername}),
       );
-
-      if (response.statusCode == 204) {
-        return true;
-      }
-      return false;
+      return response.statusCode == 204;
     } catch (e) {
       debugPrint('Error updating username by admin: $e');
       return false;
     }
+  }
+
+  void resetState() {
+    users.clear();
+    totalItems.value = 0;
+    isLoading.value = false;
+    errorMessage.value = '';
+  }
+
+  void _parseUsers(Map<String, dynamic> data) {
+    final List<dynamic> usersJson = data['users'] ?? [];
+    users.assignAll(usersJson.map((json) => UserModel.fromJson(json)).toList());
+    totalItems.value = data['total_items'] ?? 0;
   }
 }

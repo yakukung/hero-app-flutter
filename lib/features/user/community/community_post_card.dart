@@ -136,7 +136,6 @@ class CommunityPostCard extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _ActionButton extends StatelessWidget {

@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/models/user_model.dart';
-import 'package:flutter_application_1/core/services/admin_service.dart';
-import 'package:flutter_application_1/core/services/navigation_service.dart';
-import 'package:flutter_application_1/shared/widgets/navigation/admin_navbottom.dart';
-import 'package:flutter_application_1/shared/widgets/navigation/admin_navbar.dart';
-import 'package:flutter_application_1/shared/widgets/layout/main_sidebar.dart';
-import 'package:flutter_application_1/features/admin/user_profile.dart';
-import 'package:get/get.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_fonts.dart';
+import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/controllers/admin_controller.dart';
+import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
+import 'package:flutter_application_1/core/models/user_model.dart';
+import 'package:flutter_application_1/features/admin/user_profile.dart';
+import 'package:flutter_application_1/shared/widgets/layout/main_sidebar.dart';
+import 'package:flutter_application_1/shared/widgets/navigation/admin_navbottom.dart';
+import 'package:flutter_application_1/shared/widgets/navigation/admin_navbar.dart';
+import 'package:get/get.dart';
 
 class AdminHomePage extends StatefulWidget {
   const AdminHomePage({super.key});
@@ -20,32 +19,32 @@ class AdminHomePage extends StatefulWidget {
 }
 
 class _AdminHomePageState extends State<AdminHomePage> {
-  // Ideally these pages would be in separate files
-  final List<Widget> _pages = [
-    const Center(child: Text('Community Page')),
-    const Center(child: Text('Reports Page')),
-    const AdminUserListPage(),
+  final NavigationController _navigationController =
+      Get.find<NavigationController>();
+
+  final List<Widget> _pages = const [
+    Center(child: Text('Community Page')),
+    Center(child: Text('Reports Page')),
+    AdminUserListPage(),
   ];
 
   @override
   void initState() {
     super.initState();
-    // Default to Users tab (index 2)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Get.find<NavigationService>().currentIndex.value = 2;
+      _navigationController.changeIndex(2);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final navService = Get.find<NavigationService>();
     return Obx(
       () => Scaffold(
         backgroundColor: Colors.white,
         appBar: const AdminNavbar(),
         drawer: const SideBar(),
         extendBody: true,
-        body: _pages[navService.currentIndex.value],
+        body: _pages[_navigationController.currentIndex.value],
         bottomNavigationBar: const AdminNavBottom(),
       ),
     );
@@ -60,6 +59,7 @@ class AdminUserListPage extends StatefulWidget {
 }
 
 class _AdminUserListPageState extends State<AdminUserListPage> {
+  final AdminController _adminController = Get.find<AdminController>();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -67,7 +67,7 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AdminService>(context, listen: false).fetchUsers();
+      _adminController.fetchUsers();
     });
   }
 
@@ -79,91 +79,92 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final adminService = Provider.of<AdminService>(context);
-    final filteredUsers = adminService.users.where((user) {
-      final query = _searchQuery.toLowerCase();
-      final username = (user.username ?? '').toLowerCase();
-      final uid = user.id.toLowerCase();
-      return username.contains(query) || uid.contains(query);
-    }).toList();
+    return Obx(() {
+      final filteredUsers = _adminController.users.where((user) {
+        final query = _searchQuery.toLowerCase();
+        final username = (user.username ?? '').toLowerCase();
+        final uid = user.id.toLowerCase();
+        return username.contains(query) || uid.contains(query);
+      }).toList();
 
-    return SafeArea(
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 16.0,
-              ),
-              child: Container(
-                padding: const EdgeInsets.only(left: 25),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF7F8FA),
-                  borderRadius: BorderRadius.circular(30),
+      return SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 16.0,
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (value) {
-                          setState(() {
-                            _searchQuery = value;
-                          });
-                        },
-                        decoration: InputDecoration(
-                          hintText: 'ค้นหาชื่อผู้ใช้ หรือ UID',
-                          hintStyle: TextStyle(color: Colors.grey[700]),
-                          border: InputBorder.none,
+                child: Container(
+                  padding: const EdgeInsets.only(left: 25),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF7F8FA),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'ค้นหาชื่อผู้ใช้ หรือ UID',
+                            hintStyle: TextStyle(color: Colors.grey[700]),
+                            border: InputBorder.none,
+                          ),
                         ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(15),
-                      decoration: const BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
+                      Container(
+                        padding: const EdgeInsets.all(15),
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.search,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.search,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          if (adminService.isLoading)
-            const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (adminService.errorMessage.isNotEmpty)
-            SliverFillRemaining(
-              child: Center(child: Text(adminService.errorMessage)),
-            )
-          else if (filteredUsers.isEmpty)
-            const SliverFillRemaining(
-              child: Center(child: Text('ไม่พบข้อมูลผู้ใช้')),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.only(bottom: 140),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: _buildUserCard(filteredUsers[index]),
-                  );
-                }, childCount: filteredUsers.length),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+            if (_adminController.isLoading.value)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_adminController.errorMessage.value.isNotEmpty)
+              SliverFillRemaining(
+                child: Center(child: Text(_adminController.errorMessage.value)),
+              )
+            else if (filteredUsers.isEmpty)
+              const SliverFillRemaining(
+                child: Center(child: Text('ไม่พบข้อมูลผู้ใช้')),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.only(bottom: 140),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: _buildUserCard(filteredUsers[index]),
+                    );
+                  }, childCount: filteredUsers.length),
+                ),
               ),
-            ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildUserCard(UserModel user) {
@@ -197,8 +198,6 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
             ),
           ),
           const SizedBox(width: 16),
-
-          // User Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,7 +226,6 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
               ],
             ),
           ),
-
           GestureDetector(
             onTap: () {
               Get.to(() => AdminUserProfilePage(userId: user.id));

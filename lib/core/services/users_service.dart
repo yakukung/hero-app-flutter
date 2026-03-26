@@ -21,7 +21,9 @@ class UsersService {
         },
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 409) {
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 409) {
         return true;
       }
       return false;
@@ -45,7 +47,9 @@ class UsersService {
         },
       );
 
-      if (response.statusCode == 200 || response.statusCode == 204 || response.statusCode == 404) {
+      if (response.statusCode == 200 ||
+          response.statusCode == 204 ||
+          response.statusCode == 404) {
         return true;
       }
       return false;

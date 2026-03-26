@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:flutter_application_1/core/models/question_model.dart';
-import 'package:flutter_application_1/core/services/app_data.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:provider/provider.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 
@@ -24,6 +23,7 @@ class QuizPage extends StatefulWidget {
 }
 
 class _QuizPageState extends State<QuizPage> {
+  final AppController _appController = Get.find<AppController>();
   int _currentIndex = 0;
   Map<int, int?> _selectedAnswers = {};
   bool _showScore = false;
@@ -126,31 +126,33 @@ class _QuizPageState extends State<QuizPage> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<Appdata>().user;
-    final rName = user?.roleName?.toUpperCase() ?? '';
-    final rId = user?.roleId ?? '';
-    final isPremium =
-        rName.contains('PREMIUM_MEMBER') ||
-        rId == '019affa1-0872-78cb-b4ff-5376279dba2d';
+    return Obx(() {
+      final user = _appController.user.value;
+      final rName = user?.roleName?.toUpperCase() ?? '';
+      final rId = user?.roleId ?? '';
+      final isPremium =
+          rName.contains('PREMIUM_MEMBER') ||
+          rId == '019affa1-0872-78cb-b4ff-5376279dba2d';
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const Divider(height: 1),
-            Expanded(
-              child: _showScore
-                  ? _buildScoreScreen(isPremium)
-                  : _buildQuizContent(isPremium),
-            ),
-            _buildFooter(isPremium),
-          ],
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const Divider(height: 1),
+              Expanded(
+                child: _showScore
+                    ? _buildScoreScreen(isPremium)
+                    : _buildQuizContent(isPremium),
+              ),
+              _buildFooter(isPremium),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   Widget _buildHeader() {

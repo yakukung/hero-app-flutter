@@ -9,7 +9,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart';
-import 'package:flutter_application_1/core/services/navigation_service.dart';
+import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
 
 class SheetUploadData {
   final String title;
@@ -82,8 +82,8 @@ class SheetUploadService {
       stateNotifier: stateNotifier,
       onComplete: () {
         try {
-          final navService = Get.find<NavigationService>();
-          navService.changeIndex(0);
+          final navigationController = Get.find<NavigationController>();
+          navigationController.changeIndex(0);
         } catch (e) {
           debugPrint('Error changing navigation index after upload: $e');
           return;

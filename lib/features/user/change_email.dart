@@ -2,9 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/services/app_data.dart';
+import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/validations/auth_validators.dart';
@@ -33,18 +32,18 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
   }
 
   Future<void> _changeEmail() async {
+    final appController = Get.find<AppController>();
     final formState = _formKey.currentState;
     if (formState == null || !formState.validate()) {
       return;
     }
 
-    final appData = Provider.of<Appdata>(context, listen: false);
     final newEmail = _emailCtl.text.trim();
     final password = _passwordCtl.text;
 
     final validationError = validateChangeEmail(
       newEmail: newEmail,
-      currentEmail: appData.email,
+      currentEmail: appController.email,
       password: password,
     );
     if (validationError != null) {
@@ -63,14 +62,14 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
         uri,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'uid': appData.uid,
+          'uid': appController.uid,
           'email': newEmail,
           'password': password,
         }),
       );
       switch (response.statusCode) {
         case 204:
-          await appData.fetchUserData();
+          await appController.fetchUserData();
           showCustomDialog(
             title: 'สำเร็จ',
             message: 'เปลี่ยนอีเมลสำเร็จ',
@@ -98,7 +97,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final appData = Provider.of<Appdata>(context);
+    final appController = Get.find<AppController>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -122,7 +121,8 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
           child: Column(
             children: [
               TextFormField(
-                initialValue: appData.email,
+                key: ValueKey(appController.email),
+                initialValue: appController.email,
                 readOnly: true,
                 decoration: InputDecoration(
                   labelText: 'อีเมลปัจจุบัน',
@@ -167,7 +167,9 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
                   ),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                     ),
                     onPressed: () =>
                         setState(() => _obscurePassword = !_obscurePassword),

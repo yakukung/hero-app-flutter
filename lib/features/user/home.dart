@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/core/models/product_model.dart';
 import 'package:flutter_application_1/core/models/sheet_model.dart';
 import 'package:flutter_application_1/features/user/sheet/preview_sheet.dart';
 import 'package:flutter_application_1/shared/widgets/product/product_card.dart';
 import 'package:flutter_application_1/shared/widgets/search/search_sheet_box.dart';
 import 'package:get/get.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_application_1/core/services/sheets.service.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 
@@ -18,51 +17,51 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final SheetsController _sheetsController = Get.find<SheetsController>();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<SheetData>(context, listen: false).fetchSheets();
+      _sheetsController.fetchSheets();
     });
   }
 
   Future<void> _onRefresh() async {
-    await Provider.of<SheetData>(context, listen: false).refreshSheets();
+    await _sheetsController.refreshSheets();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SheetData>(
-      builder: (context, sheetData, child) {
-        final isLoading = sheetData.isLoading;
-        final errorMessage = sheetData.errorMessage;
-        final sheets = sheetData.sheets;
+    return Obx(() {
+      final isLoading = _sheetsController.isLoading.value;
+      final errorMessage = _sheetsController.errorMessage.value;
+      final sheets = _sheetsController.sheets.toList();
 
-        return Scaffold(
-          body: Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.white,
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : errorMessage.isNotEmpty
-                ? _buildErrorView(sheetData)
-                : sheets.isEmpty
-                ? _buildEmptyView()
-                : _buildContent(sheets, sheetData),
-          ),
-        );
-      },
-    );
+      return Scaffold(
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          color: Colors.white,
+          child: isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : errorMessage.isNotEmpty
+              ? _buildErrorView()
+              : sheets.isEmpty
+              ? _buildEmptyView()
+              : _buildContent(sheets),
+        ),
+      );
+    });
   }
 
-  Widget _buildErrorView(SheetData sheetData) {
+  Widget _buildErrorView() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            sheetData.errorMessage,
+            _sheetsController.errorMessage.value,
             style: const TextStyle(
               color: Colors.red,
               fontSize: 16,
@@ -72,7 +71,7 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: sheetData.fetchSheets,
+            onPressed: _sheetsController.fetchSheets,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               shape: RoundedRectangleBorder(
@@ -107,7 +106,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildContent(List<SheetModel> sheets, SheetData sheetData) {
+  Widget _buildContent(List<SheetModel> sheets) {
     return RefreshIndicator(
       onRefresh: _onRefresh,
       color: AppColors.primary,
@@ -120,11 +119,11 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 35),
             _buildSectionHeader('ชีตยอดนิยม'),
             const SizedBox(height: 16),
-            _buildProductList(sheets, sheetData),
+            _buildProductList(sheets),
             const SizedBox(height: 20),
             _buildSectionHeader('ชีตใหม่ล่าสุด'),
             const SizedBox(height: 16),
-            _buildProductList(sheets, sheetData),
+            _buildProductList(sheets),
             const SizedBox(height: 140),
           ],
         ),
@@ -164,7 +163,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildProductList(List<SheetModel> sheets, SheetData sheetData) {
+  Widget _buildProductList(List<SheetModel> sheets) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       clipBehavior: Clip.none,
@@ -202,9 +201,13 @@ class _HomePageState extends State<HomePage> {
                     onOk: () async {
                       bool success;
                       if (isCurrentlyFavorite) {
-                        success = await sheetData.removeFavorite(sheets[i].id);
+                        success = await _sheetsController.removeFavorite(
+                          sheets[i].id,
+                        );
                       } else {
-                        success = await sheetData.addFavorite(sheets[i].id);
+                        success = await _sheetsController.addFavorite(
+                          sheets[i].id,
+                        );
                       }
 
                       if (mounted) {

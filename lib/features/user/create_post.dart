@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/core/models/sheet_model.dart';
-import 'package:flutter_application_1/core/services/sheets.service.dart';
 import 'package:flutter_application_1/core/services/posts_service.dart';
-import 'package:provider/provider.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/features/user/sheet/preview_sheet.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
@@ -288,17 +287,15 @@ class SheetSelectionModal extends StatefulWidget {
 }
 
 class _SheetSelectionModalState extends State<SheetSelectionModal> {
+  final SheetsController _sheetsController = Get.find<SheetsController>();
   final TextEditingController _searchController = TextEditingController();
-  List<SheetModel> _filteredSheets = [];
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
-    // Fetch sheets when modal opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final sheetData = Provider.of<SheetData>(context, listen: false);
-      sheetData.fetchSheets();
-      _filteredSheets = sheetData.sheets;
+      _sheetsController.fetchSheets();
     });
 
     _searchController.addListener(_onSearchChanged);
@@ -311,12 +308,8 @@ class _SheetSelectionModalState extends State<SheetSelectionModal> {
   }
 
   void _onSearchChanged() {
-    final sheetData = Provider.of<SheetData>(context, listen: false);
-    final query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredSheets = sheetData.sheets.where((sheet) {
-        return sheet.title.toLowerCase().contains(query);
-      }).toList();
+      _query = _searchController.text.toLowerCase();
     });
   }
 
@@ -364,98 +357,89 @@ class _SheetSelectionModalState extends State<SheetSelectionModal> {
                 ),
               ),
               Expanded(
-                child: Consumer<SheetData>(
-                  builder: (context, sheetData, child) {
-                    if (sheetData.isLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+                child: Obx(() {
+                  final allSheets = _sheetsController.sheets.toList();
+                  final filteredSheets = allSheets.where((sheet) {
+                    return sheet.title.toLowerCase().contains(_query);
+                  }).toList();
 
-                    // Use _filteredSheets if search is active, otherwise all sheets (or update _filteredSheets in listen)
-                    // Better to just use _filteredSheets which is initialized with all sheets
-                    // But we need to update it if sheetData changes (e.g. initial load)
-                    if (_filteredSheets.isEmpty &&
-                        _searchController.text.isEmpty &&
-                        sheetData.sheets.isNotEmpty) {
-                      _filteredSheets = sheetData.sheets;
-                    }
+                  if (_sheetsController.isLoading.value && allSheets.isEmpty) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                    if (_filteredSheets.isEmpty) {
-                      return Center(
-                        child: Text(
-                          sheetData.sheets.isEmpty
-                              ? 'ไม่มีชีตสรุปในระบบ'
-                              : 'ไม่พบชีตที่ค้นหา',
-                          style: TextStyle(color: Colors.grey[600]),
+                  if (filteredSheets.isEmpty) {
+                    return Center(
+                      child: Text(
+                        allSheets.isEmpty
+                            ? 'ไม่มีชีตสรุปในระบบ'
+                            : 'ไม่พบชีตที่ค้นหา',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    controller: controller,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filteredSheets.length,
+                    itemBuilder: (context, index) {
+                      final sheet = filteredSheets[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 0,
+                        color: Colors.grey[50],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey[200]!),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(8),
+                          leading: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: sheet.thumbnail.isNotEmpty
+                                ? Image.network(
+                                    sheet.thumbnail,
+                                    width: 50,
+                                    height: 50,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 50,
+                                        height: 50,
+                                        color: Colors.grey[300],
+                                        child: const Icon(
+                                          Icons.broken_image,
+                                          color: Colors.grey,
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Container(
+                                    width: 50,
+                                    height: 50,
+                                    color: Colors.grey[300],
+                                    child: const Icon(
+                                      Icons.description,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                          ),
+                          title: Text(
+                            sheet.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            '฿${sheet.price}',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                          onTap: () => widget.onSheetSelected(sheet),
                         ),
                       );
-                    }
-
-                    return ListView.builder(
-                      controller: controller,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _filteredSheets.length,
-                      itemBuilder: (context, index) {
-                        final sheet = _filteredSheets[index];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          elevation: 0,
-                          color: Colors.grey[50],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(color: Colors.grey[200]!),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(8),
-                            leading: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: sheet.thumbnail.isNotEmpty
-                                  ? Image.network(
-                                      sheet.thumbnail,
-                                      width: 50,
-                                      height: 50,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return Container(
-                                              width: 50,
-                                              height: 50,
-                                              color: Colors.grey[300],
-                                              child: const Icon(
-                                                Icons.broken_image,
-                                                color: Colors.grey,
-                                              ),
-                                            );
-                                          },
-                                    )
-                                  : Container(
-                                      width: 50,
-                                      height: 50,
-                                      color: Colors.grey[300],
-                                      child: const Icon(
-                                        Icons.description,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                            ),
-                            title: Text(
-                              sheet.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              '฿${sheet.price}',
-                              style: TextStyle(color: Colors.grey[600]),
-                            ),
-                            onTap: () => widget.onSheetSelected(sheet),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+                    },
+                  );
+                }),
               ),
             ],
           ),

@@ -3,15 +3,16 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/app/app.dart';
+import 'package:flutter_application_1/core/controllers/admin_controller.dart';
 import 'package:flutter_application_1/features/auth/register.dart';
 import 'package:flutter_application_1/features/auth/reset_password.dart';
-import 'package:flutter_application_1/core/services/app_data.dart';
-import 'package:flutter_application_1/core/services/navigation_service.dart';
+import 'package:flutter_application_1/core/controllers/app_controller.dart';
+import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
+import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/core/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/features/admin/home.dart';
 import 'package:flutter_application_1/validations/auth_validators.dart';
@@ -448,14 +449,17 @@ class _LoginPageState extends State<LoginPage> {
     storage.write('uid', uid);
 
     if (!mounted) return;
-    final appData = Provider.of<Appdata>(context, listen: false);
-    appData.updateFromMap(userData);
-    // await appData.fetchUserData();
+    final AppController appCtrl = Get.find<AppController>();
+    final SheetsController sheetsCtrl = Get.find<SheetsController>();
+    final AdminController adminCtrl = Get.find<AdminController>();
+    final NavigationController navCtrl = Get.find<NavigationController>();
 
-    final NavigationService navService = Get.find<NavigationService>();
-    navService.currentIndex.value = 0;
+    appCtrl.updateFromMap(userData);
+    sheetsCtrl.resetState();
+    adminCtrl.resetState();
 
-    if (appData.user?.roleName == 'ADMIN') {
+    navCtrl.reset();
+    if ((appCtrl.user.value?.roleName ?? '').toUpperCase() == 'ADMIN') {
       Get.offAll(() => const AdminHomePage());
     } else {
       Get.offAll(() => const MainPage());

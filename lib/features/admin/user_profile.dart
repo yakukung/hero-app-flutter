@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/controllers/admin_controller.dart';
 import 'package:flutter_application_1/core/models/user_model.dart';
 import 'package:flutter_application_1/core/models/enums.dart';
-import 'package:flutter_application_1/core/services/admin_service.dart';
 import 'package:flutter_application_1/features/admin/edit_user_profile.dart'; // Import the new page
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_fonts.dart';
 
@@ -19,6 +18,7 @@ class AdminUserProfilePage extends StatefulWidget {
 }
 
 class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
+  final AdminController _adminController = Get.find<AdminController>();
   late Future<UserModel?> _userFuture;
 
   @override
@@ -28,10 +28,7 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
   }
 
   void _refreshUser() {
-    _userFuture = Provider.of<AdminService>(
-      context,
-      listen: false,
-    ).fetchUserById(widget.userId);
+    _userFuture = _adminController.fetchUserById(widget.userId);
   }
 
   @override
@@ -225,10 +222,10 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
         },
       ),
       onOk: () async {
-        final success = await Provider.of<AdminService>(
-          context,
-          listen: false,
-        ).updateUserStatus(user.id, selectedStatus.name);
+        final success = await _adminController.updateUserStatus(
+          user.id,
+          selectedStatus.name,
+        );
 
         if (success) {
           if (mounted) {
