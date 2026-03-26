@@ -2,9 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/services/app_data.dart';
+import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
@@ -35,7 +34,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   }
 
   Future<void> _changePassword() async {
-    final appData = Provider.of<Appdata>(context, listen: false);
+    final appController = Get.find<AppController>();
     final oldPassword = _oldPasswordCtl.text;
     final newPassword = _passwordCtl.text;
     final cfPassword = _cfPasswordCtl.text;
@@ -72,7 +71,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         uri,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'uid': appData.uid,
+          'uid': appController.uid,
           'old_password': oldPassword,
           'new_password': newPassword,
         }),

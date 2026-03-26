@@ -2,11 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/core/models/sheet_model.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:flutter_application_1/core/services/sheets.service.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
-import 'package:provider/provider.dart';
 import 'dart:ui';
 import 'sheet_reader.dart';
 import 'quiz_page.dart';
@@ -23,6 +22,7 @@ class PreviewSheetPage extends StatefulWidget {
 }
 
 class _PreviewSheetPageState extends State<PreviewSheetPage> {
+  final SheetsController _sheetsController = Get.find<SheetsController>();
   SheetModel? sheet;
   bool isLoading = true;
   String errorMessage = '';
@@ -49,9 +49,8 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       final String? token = gs.read('token')?.toString();
       final String currentUserId = gs.read('uid')?.toString() ?? '';
 
-      final sheetData = context.read<SheetData>();
-      if (token != null && sheetData.favoriteSheets.isEmpty) {
-        await sheetData.fetchFavorites();
+      if (token != null && _sheetsController.favoriteSheets.isEmpty) {
+        await _sheetsController.fetchFavorites();
       }
 
       final response = await http.get(
@@ -72,8 +71,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
             newSheet.files?.map((f) => f.fullOriginalUrl).toList() ?? [];
         final limitedPreview = images.take(2).toList();
 
-        // Cross-reference with SheetData to ensure isFavorite is accurate
-        final isFavorited = sheetData.favoriteSheets.any(
+        final isFavorited = _sheetsController.favoriteSheets.any(
           (fav) => fav.id == newSheet.id,
         );
 
@@ -185,7 +183,6 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
     if (sheet == null) return;
 
     final isCurrentlyFavorite = sheet!.isFavorite;
-    final sheetData = context.read<SheetData>();
 
     showCustomDialog(
       title: isCurrentlyFavorite ? 'นำออกจากรายการโปรด' : 'เพิ่มเป็นรายการโปรด',
@@ -196,9 +193,9 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       onOk: () async {
         bool success;
         if (isCurrentlyFavorite) {
-          success = await sheetData.removeFavorite(sheet!.id);
+          success = await _sheetsController.removeFavorite(sheet!.id);
         } else {
-          success = await sheetData.addFavorite(sheet!.id);
+          success = await _sheetsController.addFavorite(sheet!.id);
         }
 
         if (mounted) {

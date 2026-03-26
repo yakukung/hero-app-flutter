@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/services/admin_service.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_application_1/core/controllers/admin_controller.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
@@ -21,6 +20,7 @@ class AdminChangeUsernamePage extends StatefulWidget {
 }
 
 class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
+  final AdminController _adminController = Get.find<AdminController>();
   late TextEditingController _usernameCtl;
   bool _isLoading = false;
 
@@ -55,22 +55,19 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
     setState(() => _isLoading = true);
 
     try {
-      final adminService = Provider.of<AdminService>(context, listen: false);
-      final success = await adminService.updateUserUsername(
+      final success = await _adminController.updateUserUsername(
         widget.userId,
         newUsername,
       );
 
       if (success) {
-        // Refresh admin user list if needed, or just return success
-        // Ideally, we should refresh the specific user details in the previous page
         if (mounted) {
           showCustomDialog(
             title: 'สำเร็จ',
             message: 'เปลี่ยนชื่อผู้ใช้สำเร็จ',
             isSuccess: true,
             onOk: () {
-              Get.back(result: true); // Return true to indicate success
+              Get.back(result: true);
             },
           );
         }

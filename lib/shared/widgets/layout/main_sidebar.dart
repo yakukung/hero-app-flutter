@@ -1,13 +1,14 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/core/controllers/admin_controller.dart';
+import 'package:flutter_application_1/core/controllers/app_controller.dart';
+import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
+import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/features/auth/intro.dart';
 import 'package:flutter_application_1/features/user/search/search_results_page.dart';
-import 'package:flutter_application_1/core/services/app_data.dart';
-import 'package:flutter_application_1/core/services/navigation_service.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_application_1/shared/widgets/layout/sidebar_menu_item.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_fonts.dart';
@@ -39,6 +40,11 @@ class _SideBarState extends State<SideBar> {
   }
 
   void _showLogoutConfirmation(BuildContext context) {
+    final appController = Get.find<AppController>();
+    final sheetsController = Get.find<SheetsController>();
+    final adminController = Get.find<AdminController>();
+    final navigationController = Get.find<NavigationController>();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -109,6 +115,10 @@ class _SideBarState extends State<SideBar> {
                     TextButton(
                       onPressed: () {
                         GetStorage().erase();
+                        appController.clearUserData();
+                        sheetsController.resetState();
+                        adminController.resetState();
+                        navigationController.reset();
                         Get.offAll(() => IntroPage());
                       },
                       child: const Padding(
@@ -136,274 +146,273 @@ class _SideBarState extends State<SideBar> {
 
   @override
   Widget build(BuildContext context) {
-    final navigationService = Get.find<NavigationService>();
+    final navigationController = Get.find<NavigationController>();
+    final appController = Get.find<AppController>();
 
     return Drawer(
       backgroundColor: const Color(0xFFF5F6FA),
       child: SafeArea(
-        child: Consumer<Appdata>(
-          builder: (context, appData, child) {
-            return Column(
-              children: [
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Stack(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 12),
-                          child: CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Colors.white,
-                            child: ClipOval(
-                              child: appData.profileImage.isNotEmpty
-                                  ? Image.network(
-                                      appData.profileImage,
-                                      width: 90,
-                                      height: 90,
-                                      fit: BoxFit.cover,
-                                    )
-                                  : Image.asset(
-                                      AppAssets.defaultAvatar,
-                                      width: 90,
-                                      height: 90,
-                                      fit: BoxFit.cover,
-                                    ),
-                            ),
+        child: Obx(
+          () => Column(
+            children: [
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Stack(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Colors.white,
+                          child: ClipOval(
+                            child: appController.profileImage.isNotEmpty
+                                ? Image.network(
+                                    appController.profileImage,
+                                    width: 90,
+                                    height: 90,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.asset(
+                                    AppAssets.defaultAvatar,
+                                    width: 90,
+                                    height: 90,
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                         ),
-                        Positioned(
-                          bottom: 4,
-                          right: 4,
-                          child: Container(
-                            width: 15,
-                            height: 15,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
+                      ),
+                      Positioned(
+                        bottom: 4,
+                        right: 4,
+                        child: Container(
+                          width: 15,
+                          height: 15,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
                           ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          appController.username.isNotEmpty
+                              ? appController.username
+                              : 'ชื่อผู้ใช้',
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          appController.email.isNotEmpty
+                              ? appController.email
+                              : 'example@email.com',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            appData.username.isNotEmpty
-                                ? appData.username
-                                : 'ชื่อผู้ใช้',
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            appData.email.isNotEmpty
-                                ? appData.email
-                                : 'example@email.com',
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                  ),
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.horizontal(
+                        left: Radius.circular(90),
                       ),
                     ),
-                    Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.horizontal(
-                          left: Radius.circular(90),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        Get.back();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 26),
+              // Search Box
+              if (appController.user.value?.roleName != 'ADMIN')
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.09),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onSubmitted: (_) => _onSearch(),
+                      textInputAction: TextInputAction.search,
+                      style: const TextStyle(
+                        fontFamily: AppFonts.sukhumvit,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'ค้นหาชีต',
+                        hintStyle: const TextStyle(
+                          fontFamily: AppFonts.sukhumvit,
+                          color: Color(0xFFB0B0B0),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                        prefixIcon: IconButton(
+                          icon: const Icon(
+                            Icons.search,
+                            color: AppColors.primary,
+                            size: 26,
+                          ),
+                          onPressed: _onSearch,
+                        ),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
                         ),
                       ),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        onPressed: () {
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              // Menu List
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    if (appController.user.value?.roleName == 'ADMIN') ...[
+                      SidebarMenuItem(
+                        icon: Icons.people_alt_rounded,
+                        label: 'ชุมชน',
+                        selected: navigationController.currentIndex.value == 0,
+                        onTap: () {
+                          navigationController.changeIndex(0);
                           Get.back();
                         },
                       ),
-                    ),
+                      SidebarMenuItem(
+                        icon: Icons.report_problem_rounded,
+                        label: 'รายงานแจ้งปัญหา',
+                        selected: navigationController.currentIndex.value == 1,
+                        onTap: () {
+                          navigationController.changeIndex(1);
+                          Get.back();
+                        },
+                      ),
+                      SidebarMenuItem(
+                        icon: Icons.supervisor_account_rounded,
+                        label: 'จัดการผู้ใช้',
+                        selected: navigationController.currentIndex.value == 2,
+                        onTap: () {
+                          navigationController.changeIndex(2);
+                          Get.back();
+                        },
+                      ),
+                    ] else ...[
+                      SidebarMenuItem(
+                        icon: Icons.home_rounded,
+                        label: 'หน้าหลัก',
+                        selected: navigationController.currentIndex.value == 0,
+                        onTap: () {
+                          navigationController.changeIndex(0);
+                          Get.back();
+                        },
+                      ),
+                      SidebarMenuItem(
+                        icon: Icons.star_rounded,
+                        label: 'ชีตโปรด',
+                        selected: navigationController.currentIndex.value == 1,
+                        onTap: () {
+                          navigationController.changeIndex(1);
+                          Get.back();
+                        },
+                      ),
+                      SidebarMenuItem(
+                        icon: Icons.upload_rounded,
+                        label: 'อัปโหลดชีต',
+                        selected: navigationController.currentIndex.value == 2,
+                        onTap: () {
+                          navigationController.changeIndex(2);
+                          Get.back();
+                        },
+                      ),
+                      SidebarMenuItem(
+                        icon: Icons.people_alt_rounded,
+                        label: 'คอมมูนิตี้',
+                        selected: navigationController.currentIndex.value == 3,
+                        badge: 6,
+                        onTap: () {
+                          navigationController.changeIndex(3);
+                          Get.back();
+                        },
+                      ),
+                      SidebarMenuItem(
+                        icon: Icons.person_rounded,
+                        label: 'โปรไฟล์ของฉัน',
+                        selected: navigationController.currentIndex.value == 4,
+                        onTap: () {
+                          navigationController.changeIndex(4);
+                          Get.back();
+                        },
+                      ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 26),
-                // Search Box
-                if (appData.user?.roleName != 'ADMIN')
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.09),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onSubmitted: (_) => _onSearch(),
-                        textInputAction: TextInputAction.search,
-                        style: const TextStyle(
-                          fontFamily: AppFonts.sukhumvit,
-                          color: Colors.black,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'ค้นหาชีต',
-                          hintStyle: const TextStyle(
-                            fontFamily: AppFonts.sukhumvit,
-                            color: Color(0xFFB0B0B0),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                          prefixIcon: IconButton(
-                            icon: const Icon(
-                              Icons.search,
-                              color: AppColors.primary,
-                              size: 26,
-                            ),
-                            onPressed: _onSearch,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 24),
-                // Menu List
-                Expanded(
-                  child: ListView(
-                    padding: EdgeInsets.zero,
-                    children: [
-                      if (appData.user?.roleName == 'ADMIN') ...[
-                        SidebarMenuItem(
-                          icon: Icons.people_alt_rounded,
-                          label: 'ชุมชน',
-                          selected: navigationService.currentIndex.value == 0,
-                          onTap: () {
-                            navigationService.changeIndex(0);
-                            Get.back();
-                          },
-                        ),
-                        SidebarMenuItem(
-                          icon: Icons.report_problem_rounded,
-                          label: 'รายงานแจ้งปัญหา',
-                          selected: navigationService.currentIndex.value == 1,
-                          onTap: () {
-                            navigationService.changeIndex(1);
-                            Get.back();
-                          },
-                        ),
-                        SidebarMenuItem(
-                          icon: Icons.supervisor_account_rounded,
-                          label: 'จัดการผู้ใช้',
-                          selected: navigationService.currentIndex.value == 2,
-                          onTap: () {
-                            navigationService.changeIndex(2);
-                            Get.back();
-                          },
-                        ),
-                      ] else ...[
-                        SidebarMenuItem(
-                          icon: Icons.home_rounded,
-                          label: 'หน้าหลัก',
-                          selected: navigationService.currentIndex.value == 0,
-                          onTap: () {
-                            navigationService.changeIndex(0);
-                            Get.back();
-                          },
-                        ),
-                        SidebarMenuItem(
-                          icon: Icons.star_rounded,
-                          label: 'ชีตโปรด',
-                          selected: navigationService.currentIndex.value == 1,
-                          onTap: () {
-                            navigationService.changeIndex(1);
-                            Get.back();
-                          },
-                        ),
-                        SidebarMenuItem(
-                          icon: Icons.upload_rounded,
-                          label: 'อัปโหลดชีต',
-                          selected: navigationService.currentIndex.value == 2,
-                          onTap: () {
-                            navigationService.changeIndex(2);
-                            Get.back();
-                          },
-                        ),
-                        SidebarMenuItem(
-                          icon: Icons.people_alt_rounded,
-                          label: 'คอมมูนิตี้',
-                          selected: navigationService.currentIndex.value == 3,
-                          badge: 6,
-                          onTap: () {
-                            navigationService.changeIndex(3);
-                            Get.back();
-                          },
-                        ),
-                        SidebarMenuItem(
-                          icon: Icons.person_rounded,
-                          label: 'โปรไฟล์ของฉัน',
-                          selected: navigationService.currentIndex.value == 4,
-                          onTap: () {
-                            navigationService.changeIndex(4);
-                            Get.back();
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
+              ),
+              // Logout
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 16,
                 ),
-                // Logout
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24.0,
-                    vertical: 16,
-                  ),
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF92A47),
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF92A47),
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    icon: const Icon(Icons.logout, color: Colors.white),
-                    label: const Text(
-                      'ออกจากระบบ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    onPressed: () => _showLogoutConfirmation(context),
                   ),
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  label: const Text(
+                    'ออกจากระบบ',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onPressed: () => _showLogoutConfirmation(context),
                 ),
-              ],
-            );
-          },
+              ),
+            ],
+          ),
         ),
       ),
     );

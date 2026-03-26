@@ -57,7 +57,9 @@ class _SheetPreviewReaderState extends State<SheetPreviewReader> {
 
   Future<void> _clearSecureScreen() async {
     if (Platform.isAndroid) {
-      await FlutterWindowManagerV2.clearFlags(FlutterWindowManagerV2.FLAG_SECURE);
+      await FlutterWindowManagerV2.clearFlags(
+        FlutterWindowManagerV2.FLAG_SECURE,
+      );
     }
   }
 

@@ -2,9 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/services/app_data.dart';
+import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:http/http.dart' as http;
-import 'package:provider/provider.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
@@ -17,14 +16,14 @@ class ChangeUsernamePage extends StatefulWidget {
 }
 
 class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
+  final AppController _appController = Get.find<AppController>();
   final _usernameCtl = TextEditingController();
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    final appData = Provider.of<Appdata>(context, listen: false);
-    _usernameCtl.text = appData.username;
+    _usernameCtl.text = _appController.username;
   }
 
   @override
@@ -34,7 +33,6 @@ class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
   }
 
   Future<void> _changeUsername() async {
-    final appData = Provider.of<Appdata>(context, listen: false);
     final newUsername = _usernameCtl.text.trim();
 
     if (newUsername.isEmpty) {
@@ -45,7 +43,7 @@ class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
       return;
     }
 
-    if (newUsername == appData.username) {
+    if (newUsername == _appController.username) {
       Get.back();
       return;
     }
@@ -78,11 +76,11 @@ class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
       final response = await http.patch(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'uid': appData.uid, 'username': newUsername}),
+        body: jsonEncode({'uid': _appController.uid, 'username': newUsername}),
       );
       switch (response.statusCode) {
         case 204:
-          await appData.fetchUserData();
+          await _appController.fetchUserData();
           showCustomDialog(
             title: 'สำเร็จ',
             message: 'เปลี่ยนชื่อผู้ใช้สำเร็จ',

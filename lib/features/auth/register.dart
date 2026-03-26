@@ -3,16 +3,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/app/app.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/controllers/admin_controller.dart';
+import 'package:flutter_application_1/core/controllers/app_controller.dart';
+import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
+import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/features/admin/home.dart';
-import 'package:flutter_application_1/core/services/app_data.dart';
 import 'package:flutter_application_1/core/services/auth_service.dart';
-import 'package:flutter_application_1/core/services/navigation_service.dart';
 import 'package:flutter_application_1/features/auth/reset_password.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'login.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/core/utils/api_utils.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
@@ -381,13 +382,17 @@ class _RegisterPageState extends State<RegisterPage> {
     storage.write('uid', uid);
 
     if (!mounted) return;
-    final appData = Provider.of<Appdata>(context, listen: false);
-    appData.updateFromMap(userData);
+    final appController = Get.find<AppController>();
+    final sheetsController = Get.find<SheetsController>();
+    final adminController = Get.find<AdminController>();
+    final navigationController = Get.find<NavigationController>();
 
-    final NavigationService navService = Get.find<NavigationService>();
-    navService.currentIndex.value = 0;
+    appController.updateFromMap(userData);
+    sheetsController.resetState();
+    adminController.resetState();
+    navigationController.reset();
 
-    if (appData.user?.roleName == 'ADMIN') {
+    if ((appController.user.value?.roleName ?? '').toUpperCase() == 'ADMIN') {
       Get.offAll(() => const AdminHomePage());
     } else {
       Get.offAll(() => const MainPage());

@@ -51,10 +51,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       final response = await http.post(
         Uri.parse('$apiEndpoint/auth/forgot-password'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'base_url': apiEndpoint,
-        }),
+        body: jsonEncode({'email': email, 'base_url': apiEndpoint}),
       );
 
       if (response.statusCode == 200) {

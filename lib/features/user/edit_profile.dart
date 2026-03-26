@@ -2,16 +2,15 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:flutter_application_1/core/models/upload_state.dart';
 import 'package:flutter_application_1/features/user/change_email.dart';
 import 'package:flutter_application_1/features/user/change_password.dart';
 import 'package:flutter_application_1/features/user/change_username.dart';
-import 'package:flutter_application_1/core/services/app_data.dart';
 import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_assets.dart';
@@ -24,6 +23,7 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
+  final AppController _appController = Get.find<AppController>();
   final ImagePicker _picker = ImagePicker();
 
   File? _pickedImage;
@@ -41,8 +41,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _uploadProfileImage(File imageFile) async {
-    final appData = Provider.of<Appdata>(context, listen: false);
-
     final stateNotifier = ValueNotifier(const UploadState(isUploading: true));
     if (mounted) {
       UploadProgressDialog.show(stateNotifier: stateNotifier);
@@ -52,7 +50,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final uri = Uri.parse('$apiEndpoint/users/update-profile-image');
       final request = http.MultipartRequest('PUT', uri);
 
-      request.fields['uid'] = appData.uid;
+      request.fields['uid'] = _appController.uid;
 
       final mediaType = imageFile.path.endsWith('.png')
           ? MediaType('image', 'png')
@@ -70,7 +68,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200 || response.statusCode == 204) {
-        await appData.fetchUserData();
+        await _appController.fetchUserData();
         stateNotifier.value = stateNotifier.value.copyWith(
           isUploading: false,
           isSuccess: true,
@@ -155,172 +153,175 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final appData = Provider.of<Appdata>(context);
-    final isGoogle = appData.provider == 'GOOGLE';
+    return Obx(() {
+      final isGoogle = _appController.provider == 'GOOGLE';
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          'แก้ไขข้อมูลส่วนตัว',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        centerTitle: true,
+      return Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Get.back(),
+        appBar: AppBar(
+          title: const Text(
+            'แก้ไขข้อมูลส่วนตัว',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () => Get.back(),
+          ),
         ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 65,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: _pickedImage != null
-                          ? FileImage(_pickedImage!)
-                          : (appData.profileImage.isNotEmpty
-                                    ? NetworkImage(appData.profileImage)
-                                    : const AssetImage(
-                                        AppAssets.defaultAvatar,
-                                      ))
-                                as ImageProvider,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                    ),
-                    child: const Icon(
-                      Icons.edit,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'แตะเพื่อเปลี่ยนรูปโปรไฟล์',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 40),
-            _buildMenuButton(
-              title: 'เปลี่ยนชื่อผู้ใช้',
-              icon: Icons.person_outline_rounded,
-              onPressed: () {
-                Get.to(() => const ChangeUsernamePage());
-              },
-            ),
-            if (isGoogle) ...[
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade200),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              GestureDetector(
+                onTap: _pickImage,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.grey[50],
                         shape: BoxShape.circle,
-                      ),
-                      child: Image.asset(
-                        'assets/images/logo/google-icon-logo.png',
-                        width: 24,
-                        height: 24,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.g_mobiledata, size: 24),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'เชื่อมต่อผ่าน Google',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                              fontSize: 16,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'บัญชีนี้เชื่อมต่อกับ Google แล้ว',
-                            style: TextStyle(
-                              color: Colors.black54,
-                              fontSize: 13,
-                            ),
+                        border: Border.all(color: Colors.white, width: 4),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                           ),
                         ],
                       ),
+                      child: CircleAvatar(
+                        radius: 65,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage: _pickedImage != null
+                            ? FileImage(_pickedImage!)
+                            : (_appController.profileImage.isNotEmpty
+                                      ? NetworkImage(
+                                          _appController.profileImage,
+                                        )
+                                      : const AssetImage(
+                                          AppAssets.defaultAvatar,
+                                        ))
+                                  as ImageProvider,
+                      ),
                     ),
-                    const Icon(
-                      Icons.check_circle_rounded,
-                      color: Color(0xFF2AB950),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 3),
+                      ),
+                      child: const Icon(
+                        Icons.edit,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ],
                 ),
               ),
-            ] else ...[
+              const SizedBox(height: 16),
+              Text(
+                'แตะเพื่อเปลี่ยนรูปโปรไฟล์',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 40),
               _buildMenuButton(
-                title: 'เปลี่ยนอีเมล',
-                icon: Icons.email_outlined,
+                title: 'เปลี่ยนชื่อผู้ใช้',
+                icon: Icons.person_outline_rounded,
                 onPressed: () {
-                  Get.to(() => const ChangeEmailPage());
+                  Get.to(() => const ChangeUsernamePage());
                 },
               ),
-              _buildMenuButton(
-                title: 'เปลี่ยนรหัสผ่าน',
-                icon: Icons.lock_outline_rounded,
-                onPressed: () {
-                  Get.to(() => const ChangePasswordPage());
-                },
-              ),
+              if (isGoogle) ...[
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey.shade200),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          shape: BoxShape.circle,
+                        ),
+                        child: Image.asset(
+                          'assets/images/logo/google-icon-logo.png',
+                          width: 24,
+                          height: 24,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.g_mobiledata, size: 24),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'เชื่อมต่อผ่าน Google',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                                fontSize: 16,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'บัญชีนี้เชื่อมต่อกับ Google แล้ว',
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: Color(0xFF2AB950),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                _buildMenuButton(
+                  title: 'เปลี่ยนอีเมล',
+                  icon: Icons.email_outlined,
+                  onPressed: () {
+                    Get.to(() => const ChangeEmailPage());
+                  },
+                ),
+                _buildMenuButton(
+                  title: 'เปลี่ยนรหัสผ่าน',
+                  icon: Icons.lock_outline_rounded,
+                  onPressed: () {
+                    Get.to(() => const ChangePasswordPage());
+                  },
+                ),
+              ],
             ],
-          ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

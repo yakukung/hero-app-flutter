@@ -1,9 +1,7 @@
 import 'package:flutter_application_1/validations/validation_error.dart';
 import 'package:flutter_application_1/validations/validation_messages.dart';
 
-final RegExp _basicEmailRegExp = RegExp(
-  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-);
+final RegExp _basicEmailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
 
 bool isValidEmail(String email) {
   return _basicEmailRegExp.hasMatch(email);
