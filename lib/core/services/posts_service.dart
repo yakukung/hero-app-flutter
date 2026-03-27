@@ -379,10 +379,7 @@ class PostsService {
 
     try {
       final url = Uri.parse('$apiEndpoint/posts/create');
-      final body = {
-        'content': content,
-        if (sheetId != null) 'sheet_id': sheetId,
-      };
+      final body = {'content': content, 'sheet_id': ?sheetId};
 
       final response = await http.post(
         url,
