@@ -16,6 +16,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/features/admin/home.dart';
 import 'package:flutter_application_1/validations/auth_validators.dart';
+import 'package:flutter_application_1/core/utils/api_utils.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_fonts.dart';
 
@@ -285,9 +286,7 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (response.statusCode != 200) {
-        _handleInvalidCredentials(
-          jsonDecode(response.body)['error']?['message']?['th'],
-        );
+        _handleInvalidCredentials(getErrorMessage(response));
         return;
       }
 
@@ -390,10 +389,8 @@ class _LoginPageState extends State<LoginPage> {
         );
 
         if (response.statusCode != 200) {
-          showCustomDialog(
-            title: 'เข้าสู่ระบบไม่สำเร็จ',
-            message: 'เชื่อมต่อกับเซิร์ฟเวอร์ล้มเหลว',
-          );
+          final String errorMsg = getErrorMessage(response);
+          showCustomDialog(title: 'เข้าสู่ระบบไม่สำเร็จ', message: errorMsg);
           return;
         }
 
@@ -430,7 +427,7 @@ class _LoginPageState extends State<LoginPage> {
       debugPrint('Google Sign-In error: $e');
       showCustomDialog(
         title: 'เกิดข้อผิดพลาด',
-        message: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้',
+        message: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้\n\nรายละเอียด: $e',
       );
     } finally {
       if (mounted) {

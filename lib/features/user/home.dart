@@ -45,9 +45,9 @@ class _HomePageState extends State<HomePage> {
           color: Colors.white,
           child: isLoading
               ? const Center(child: CircularProgressIndicator())
-              : errorMessage.isNotEmpty
+              : (errorMessage.isNotEmpty && !errorMessage.contains('404'))
               ? _buildErrorView()
-              : sheets.isEmpty
+              : (sheets.isEmpty || errorMessage.contains('404'))
               ? _buildEmptyView()
               : _buildContent(sheets),
         ),
@@ -94,14 +94,44 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildEmptyView() {
-    return const Center(
-      child: Text(
-        'ไม่มีข้อมูลผลิตภัณฑ์',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey,
-        ),
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.inbox_outlined,
+            size: 64,
+            color: Colors.grey,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'ไม่พบชีต',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _sheetsController.fetchSheets,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
+            child: const Text(
+              'รีเฟรช',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -29,12 +29,20 @@ class _QuizPageState extends State<QuizPage> {
   bool _showScore = false;
   bool _revealedAll = false;
   final _storage = GetStorage();
+  late List<QuestionModel> _sortedQuestions;
 
   String get _storageKey => 'quiz_progress_${widget.id}';
 
   @override
   void initState() {
     super.initState();
+    _sortedQuestions = List.from(widget.questions);
+    _sortedQuestions.sort((a, b) => a.index.compareTo(b.index));
+    for (var q in _sortedQuestions) {
+      if (q.answers != null) {
+        q.answers!.sort((a, b) => a.index.compareTo(b.index));
+      }
+    }
     _loadProgress();
   }
 
@@ -69,8 +77,8 @@ class _QuizPageState extends State<QuizPage> {
 
   int get _score {
     int s = 0;
-    for (int i = 0; i < widget.questions.length; i++) {
-      final question = widget.questions[i];
+    for (int i = 0; i < _sortedQuestions.length; i++) {
+      final question = _sortedQuestions[i];
       final selectedIndex = _selectedAnswers[i];
       if (selectedIndex != null &&
           question.answers != null &&
@@ -101,7 +109,7 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _nextQuestion() {
-    if (_currentIndex < widget.questions.length - 1) {
+    if (_currentIndex < _sortedQuestions.length - 1) {
       setState(() {
         _currentIndex++;
       });
@@ -176,14 +184,14 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   Widget _buildQuizContent(bool isPremium) {
-    final question = widget.questions[_currentIndex];
+    final question = _sortedQuestions[_currentIndex];
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'คำถามที่ ${_currentIndex + 1}',
+            'คำถามที่ ${question.index}',
             style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
@@ -337,7 +345,7 @@ class _QuizPageState extends State<QuizPage> {
             ),
             const SizedBox(height: 12),
             Text(
-              '$_score / ${widget.questions.length}',
+              '$_score / ${_sortedQuestions.length}',
               style: const TextStyle(
                 fontSize: 48,
                 fontWeight: FontWeight.w800,
@@ -381,7 +389,7 @@ class _QuizPageState extends State<QuizPage> {
 
   Widget _buildFooter(bool isPremium) {
     final hasSelected = _selectedAnswers[_currentIndex] != null;
-    final isLast = _currentIndex == widget.questions.length - 1;
+    final isLast = _currentIndex == _sortedQuestions.length - 1;
 
     if (_showScore) {
       return Container(

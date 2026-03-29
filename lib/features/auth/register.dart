@@ -297,9 +297,10 @@ class _RegisterPageState extends State<RegisterPage> {
         );
 
         if (response.statusCode != 200) {
+          final String errorMsg = getErrorMessage(response);
           showCustomDialog(
             title: 'เข้าสู่ระบบไม่สำเร็จ',
-            message: 'เชื่อมต่อกับเซิร์ฟเวอร์ล้มเหลว',
+            message: errorMsg,
           );
           return;
         }
@@ -337,7 +338,7 @@ class _RegisterPageState extends State<RegisterPage> {
       debugPrint('Google Sign-In error: $e');
       showCustomDialog(
         title: 'เกิดข้อผิดพลาด',
-        message: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้',
+        message: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้\n\nรายละเอียด: $e',
       );
     } finally {
       if (mounted) {
