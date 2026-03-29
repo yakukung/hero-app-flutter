@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/models/category_model.dart';
-import 'package:flutter_application_1/core/models/enums.dart';
 import 'package:flutter_application_1/core/services/sheet_upload_service.dart';
 import 'package:flutter_application_1/shared/widgets/upload/image_upload_section.dart';
 import 'package:flutter_application_1/shared/widgets/upload/keyword_section.dart';
@@ -190,24 +189,13 @@ class _UploadPageState extends State<UploadPage> {
       return;
     }
 
-    String categoryId = '';
-    final selectedCategory = _categories.firstWhere(
-      (cat) => cat.name == selectedSubject,
-      orElse: () => CategoryModel(
-        id: '',
-        name: '',
-        visibleFlag: false,
-        statusFlag: StatusFlag.fromString('INACTIVE'),
-      ),
-    );
-    if (selectedCategory.id.isNotEmpty) {
-      categoryId = selectedCategory.id;
-    }
+    // ส่งชื่อ category ที่เลือกไปโดยตรงเลย ตามที่แบ็กเอนด์/API ล่าสุดต้องการใช้งาน
+    String categoryToSend = selectedSubject ?? '';
 
     final data = SheetUploadData(
       title: _titleController.text,
       description: _descriptionController.text,
-      categoryId: categoryId,
+      categoryId: categoryToSend,
       keywords: keywords,
       price: selectedPrice ?? '',
       images: uploadedImages,
