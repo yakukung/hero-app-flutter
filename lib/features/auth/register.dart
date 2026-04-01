@@ -338,7 +338,7 @@ class _RegisterPageState extends State<RegisterPage> {
       debugPrint('Google Sign-In error: $e');
       showCustomDialog(
         title: 'เกิดข้อผิดพลาด',
-        message: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้\n\nรายละเอียด: $e',
+        message: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้\nกรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่อีกครั้ง',
       );
     } finally {
       if (mounted) {
