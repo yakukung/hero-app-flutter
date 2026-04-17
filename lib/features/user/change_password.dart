@@ -1,9 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/controllers/app_controller.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_application_1/core/services/users_service.dart';
+import 'package:flutter_application_1/core/utils/api_utils.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
@@ -66,15 +64,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     setState(() => _isLoading = true);
 
     try {
-      final uri = Uri.parse('$apiEndpoint/users/update-password');
-      final response = await http.patch(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'uid': appController.uid,
-          'old_password': oldPassword,
-          'new_password': newPassword,
-        }),
+      final response = await UsersService.updatePassword(
+        uid: appController.uid,
+        oldPassword: oldPassword,
+        newPassword: newPassword,
       );
       switch (response.statusCode) {
         case 204:
@@ -88,7 +81,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
         default:
           showCustomDialog(
             title: 'เกิดข้อผิดพลาด',
-            message: jsonDecode(response.body)['error']?['message']?['th'],
+            message: getErrorMessage(response),
           );
           break;
       }

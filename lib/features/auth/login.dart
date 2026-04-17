@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/app/app.dart';
 import 'package:flutter_application_1/core/controllers/admin_controller.dart';
 import 'package:flutter_application_1/features/auth/register.dart';
@@ -12,7 +11,6 @@ import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/core/services/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/features/admin/home.dart';
 import 'package:flutter_application_1/validations/auth_validators.dart';
@@ -276,13 +274,9 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      final response = await http.post(
-        Uri.parse('$apiEndpoint/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'usernameOrEmail': _usernameOrEmailCtl.text.trim(),
-          'password': _passwordCtl.text.trim(),
-        }),
+      final response = await AuthService.login(
+        usernameOrEmail: _usernameOrEmailCtl.text.trim(),
+        password: _passwordCtl.text.trim(),
       );
 
       if (response.statusCode != 200) {

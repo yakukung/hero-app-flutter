@@ -5,11 +5,11 @@ import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/controllers/admin_controller.dart';
 import 'package:flutter_application_1/core/models/user_model.dart'; // Ensure UserModel is imported
 import 'package:flutter_application_1/core/models/upload_state.dart';
+import 'package:flutter_application_1/core/services/users_service.dart';
 import 'package:flutter_application_1/features/admin/change_username.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart'; // Needed for showCustomDialog if used, or standard dialogs
 import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
+import 'package:get_storage/get_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
@@ -50,11 +50,15 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
   }
 
   Future<void> _uploadProfileImage(File imageFile) async {
-    // Determine mime type
-    final mimeType = imageFile.path.endsWith('.png')
-        ? 'image/png'
-        : 'image/jpeg';
-    final mediaType = MediaType.parse(mimeType);
+    final String currentUid = GetStorage().read('uid')?.toString() ?? '';
+    if (currentUid.isEmpty || currentUid != _currentUser.id) {
+      showCustomDialog(
+        title: 'ยังไม่รองรับ',
+        message:
+            'แบ็กเอนด์เวอร์ชันปัจจุบันยังไม่รองรับให้แอดมินเปลี่ยนรูปโปรไฟล์ของผู้ใช้อื่น',
+      );
+      return;
+    }
 
     final stateNotifier = ValueNotifier(const UploadState(isUploading: true));
     if (mounted) {
@@ -62,24 +66,12 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
     }
 
     try {
-      final uri = Uri.parse('$apiEndpoint/users/update-profile-image');
-      final request = http.MultipartRequest('PUT', uri);
-
-      // Use the target user's UID
-      request.fields['uid'] = _currentUser.id;
-
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'profile_image',
-          imageFile.path,
-          contentType: mediaType,
-        ),
+      final result = await UsersService.updateProfileImage(
+        uid: _currentUser.id,
+        imageFile: imageFile,
       );
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
+      if (result.success) {
         if (!mounted) return;
         final updatedUser = await _adminController.fetchUserById(
           _currentUser.id,
@@ -99,7 +91,11 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
           progress: 1.0,
         );
       } else {
-        throw Exception('Failed to update profile image: ${response.body}');
+        stateNotifier.value = stateNotifier.value.copyWith(
+          isUploading: false,
+          isSuccess: false,
+          errorMessage: result.message,
+        );
       }
     } catch (e) {
       debugPrint('Error updating user profile image (admin): $e');
@@ -259,6 +255,17 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
               title: 'เปลี่ยนชื่อผู้ใช้',
               icon: Icons.person_outline_rounded,
               onPressed: () async {
+                final String currentUid =
+                    GetStorage().read('uid')?.toString() ?? '';
+                if (currentUid.isEmpty || currentUid != _currentUser.id) {
+                  showCustomDialog(
+                    title: 'ยังไม่รองรับ',
+                    message:
+                        'แบ็กเอนด์เวอร์ชันปัจจุบันยังไม่รองรับให้แอดมินเปลี่ยนชื่อผู้ใช้ของผู้ใช้อื่น',
+                  );
+                  return;
+                }
+
                 final result = await Get.to(
                   () => AdminChangeUsernamePage(
                     userId: _currentUser.id,

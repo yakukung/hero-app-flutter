@@ -111,7 +111,9 @@ class UserModel {
       point: json['point'] != null ? int.parse(json['point'].toString()) : 0,
       wallet: json['wallet'] != null
           ? double.tryParse(json['wallet'].toString()) ?? 0.0
-          : 0.0,
+          : (json['total_wallet'] != null
+                ? double.tryParse(json['total_wallet'].toString()) ?? 0.0
+                : 0.0),
       visibleFlag:
           json['visible_flag'] == true ||
           json['visible_flag'] == 1 ||

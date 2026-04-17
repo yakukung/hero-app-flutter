@@ -20,16 +20,17 @@ class ShareActionResult {
 class PostsService {
   static Future<List<PostModel>> getPosts() async {
     final storage = GetStorage();
-    final String? token = storage.read('token');
+    final String? token = storage.read('token')?.toString();
 
-    final String? currentUserId = storage.read('uid');
+    final String? currentUserId = storage.read('uid')?.toString();
 
     try {
       final url = Uri.parse('$apiEndpoint/posts');
       final response = await http.get(
         url,
         headers: {
-          'Authorization': 'Bearer $token',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
         },
@@ -63,7 +64,7 @@ class PostsService {
 
   static Future<PostModel?> getPostById(String postId) async {
     final storage = GetStorage();
-    final String? token = storage.read('token');
+    final String? token = storage.read('token')?.toString();
     final String? currentUserId = storage.read('uid')?.toString();
 
     try {
@@ -172,37 +173,28 @@ class PostsService {
       'Content-Type': 'application/json',
     };
 
-    final encodedBody = jsonEncode({'content': content, 'post_id': postId});
-    final endpoints = <Uri>[
-      Uri.parse('$apiEndpoint/posts/$postId/comment'),
-      Uri.parse('$apiEndpoint/posts/$postId/comments'),
-      Uri.parse('$apiEndpoint/posts/comment'),
-    ];
+    try {
+      final response = await http.post(
+        Uri.parse('$apiEndpoint/posts/$postId/comment'),
+        headers: headers,
+        body: jsonEncode({'content': content}),
+      );
 
-    for (final url in endpoints) {
-      try {
-        final response = await http.post(
-          url,
-          headers: headers,
-          body: encodedBody,
-        );
-
-        if (response.statusCode == 200 ||
-            response.statusCode == 201 ||
-            response.statusCode == 204) {
-          final parsed = _extractSingleComment(response.body, postId: postId);
-          return parsed ??
-              PostCommentModel(
-                id: 'gen-$postId-${DateTime.now().millisecondsSinceEpoch}',
-                postId: postId,
-                userId: storage.read('uid')?.toString() ?? '',
-                content: content,
-                createdAt: DateTime.now(),
-              );
-        }
-      } catch (e) {
-        debugPrint('Error commenting post ($url): $e');
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204) {
+        final parsed = _extractSingleComment(response.body, postId: postId);
+        return parsed ??
+            PostCommentModel(
+              id: 'gen-$postId-${DateTime.now().millisecondsSinceEpoch}',
+              postId: postId,
+              userId: storage.read('uid')?.toString() ?? '',
+              content: content,
+              createdAt: DateTime.now(),
+            );
       }
+    } catch (e) {
+      debugPrint('Error commenting post: $e');
     }
 
     return null;
@@ -218,24 +210,20 @@ class PostsService {
       'Cache-Control': 'no-cache',
     };
 
-    final urls = <Uri>[
-      Uri.parse('$apiEndpoint/posts/$postId/comments'),
-      Uri.parse('$apiEndpoint/posts/$postId'),
-    ];
-
-    for (final url in urls) {
-      try {
-        final response = await http.get(url, headers: headers);
-        if (response.statusCode == 200) {
-          final dynamic data = jsonDecode(response.body);
-          final comments = _extractComments(data);
-          if (comments != null) {
-            return comments;
-          }
+    try {
+      final response = await http.get(
+        Uri.parse('$apiEndpoint/posts/$postId/comments'),
+        headers: headers,
+      );
+      if (response.statusCode == 200) {
+        final dynamic data = jsonDecode(response.body);
+        final comments = _extractComments(data);
+        if (comments != null) {
+          return comments;
         }
-      } catch (e) {
-        debugPrint('Error fetching comments ($url): $e');
       }
+    } catch (e) {
+      debugPrint('Error fetching comments: $e');
     }
 
     return [];
@@ -292,8 +280,7 @@ class PostsService {
     return statusCode == 200 ||
         statusCode == 204 ||
         statusCode == 202 ||
-        statusCode == 201 ||
-        statusCode == 404 /* already removed */;
+        statusCode == 201;
   }
 
   static Future<bool> deleteComment({
@@ -333,34 +320,29 @@ class PostsService {
       'Content-Type': 'application/json',
     };
 
-    // Backend primary: POST /posts/:id/share
-    final urls = <Uri>[
-      Uri.parse('$apiEndpoint/posts/$postId/share'),
-      Uri.parse('$apiEndpoint/posts/$postId/shares'),
-    ];
+    try {
+      final response = await http.post(
+        Uri.parse('$apiEndpoint/posts/$postId/share'),
+        headers: headers,
+      );
 
-    for (final url in urls) {
-      try {
-        final response = await http.post(url, headers: headers);
-
-        if (response.statusCode == 200 ||
-            response.statusCode == 201 ||
-            response.statusCode == 204) {
-          final shareCount = _extractShareCount(response.body);
-          return ShareActionResult(success: true, shareCount: shareCount);
-        }
-
-        if (response.statusCode == 409) {
-          final shareCount = _extractShareCount(response.body);
-          return ShareActionResult(
-            success: true,
-            alreadyShared: true,
-            shareCount: shareCount,
-          );
-        }
-      } catch (e) {
-        debugPrint('Error sharing post ($url): $e');
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204) {
+        final shareCount = _extractShareCount(response.body);
+        return ShareActionResult(success: true, shareCount: shareCount);
       }
+
+      if (response.statusCode == 409) {
+        final shareCount = _extractShareCount(response.body);
+        return ShareActionResult(
+          success: true,
+          alreadyShared: true,
+          shareCount: shareCount,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error sharing post: $e');
     }
 
     return const ShareActionResult(success: false);

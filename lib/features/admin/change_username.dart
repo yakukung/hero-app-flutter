@@ -75,7 +75,9 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
         if (mounted) {
           showCustomDialog(
             title: 'เกิดข้อผิดพลาด',
-            message: 'ไม่สามารถเปลี่ยนชื่อผู้ใช้ได้ (อาจมีชื่อซ้ำ)',
+            message: _adminController.errorMessage.value.isNotEmpty
+                ? _adminController.errorMessage.value
+                : 'ไม่สามารถเปลี่ยนชื่อผู้ใช้ได้ (อาจมีชื่อซ้ำ)',
           );
         }
       }

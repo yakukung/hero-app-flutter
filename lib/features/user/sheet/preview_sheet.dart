@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/core/models/sheet_model.dart';
+import 'package:flutter_application_1/core/services/sheets.service.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'dart:ui';
@@ -53,60 +51,53 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
         await _sheetsController.fetchFavorites();
       }
 
-      final response = await http.get(
-        Uri.parse('$apiEndpoint/sheets/${widget.sheetId}'),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      final SheetModel? newSheet = await SheetsService.fetchSheetById(
+        widget.sheetId,
+        token: token,
       );
 
-      if (response.statusCode == 200) {
-        if (!mounted) return;
-        final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
-        final dynamic data =
-            jsonResponse['data']?['sheet'] ?? jsonResponse['data'];
-
-        if (data == null) throw Exception('No data returned');
-
-        final newSheet = SheetModel.fromJson(data is List ? data.first : data);
-        final images =
-            newSheet.files?.map((f) => f.fullOriginalUrl).toList() ?? [];
-        final limitedPreview = images.take(2).toList();
-
-        final isFavorited = _sheetsController.favoriteSheets.any(
-          (fav) => fav.id == newSheet.id,
-        );
-
-        if (!mounted) return;
-        setState(() {
-          sheet = SheetModel(
-            id: newSheet.id,
-            authorId: newSheet.authorId,
-            title: newSheet.title,
-            description: newSheet.description,
-            rating: newSheet.rating,
-            price: newSheet.price,
-            visibleFlag: newSheet.visibleFlag,
-            statusFlag: newSheet.statusFlag,
-            createdAt: newSheet.createdAt,
-            createdBy: newSheet.createdBy,
-            updatedAt: newSheet.updatedAt,
-            updatedBy: newSheet.updatedBy,
-            authorName: newSheet.authorName,
-            authorAvatar: newSheet.authorAvatar,
-            files: newSheet.files,
-            questions: newSheet.questions,
-            categoryIds: newSheet.categoryIds,
-            keywordIds: newSheet.keywordIds,
-            buyerCount: newSheet.buyerCount,
-            isPurchased: newSheet.isPurchased,
-            isFavorite: isFavorited,
-          );
-          _currentUserId = currentUserId;
-          previewImages = limitedPreview;
-          isLoading = false;
-        });
-      } else {
-        _setError('Failed to load sheet: ${response.statusCode}');
+      if (newSheet == null) {
+        _setError('Failed to load sheet');
+        return;
       }
+
+      final images =
+          newSheet.files?.map((f) => f.fullOriginalUrl).toList() ?? [];
+      final limitedPreview = images.take(2).toList();
+
+      final isFavorited = _sheetsController.favoriteSheets.any(
+        (fav) => fav.id == newSheet.id,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        sheet = SheetModel(
+          id: newSheet.id,
+          authorId: newSheet.authorId,
+          title: newSheet.title,
+          description: newSheet.description,
+          rating: newSheet.rating,
+          price: newSheet.price,
+          visibleFlag: newSheet.visibleFlag,
+          statusFlag: newSheet.statusFlag,
+          createdAt: newSheet.createdAt,
+          createdBy: newSheet.createdBy,
+          updatedAt: newSheet.updatedAt,
+          updatedBy: newSheet.updatedBy,
+          authorName: newSheet.authorName,
+          authorAvatar: newSheet.authorAvatar,
+          files: newSheet.files,
+          questions: newSheet.questions,
+          categoryIds: newSheet.categoryIds,
+          keywordIds: newSheet.keywordIds,
+          buyerCount: newSheet.buyerCount,
+          isPurchased: newSheet.isPurchased,
+          isFavorite: isFavorited,
+        );
+        _currentUserId = currentUserId;
+        previewImages = limitedPreview;
+        isLoading = false;
+      });
     } catch (e) {
       debugPrint('Error fetching sheet details: $e');
       _setError('Error: $e');

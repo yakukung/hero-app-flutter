@@ -2,9 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/models/user_model.dart';
+import 'package:flutter_application_1/core/services/admin_service.dart';
 
 class AdminController extends GetxController {
   AdminController({GetStorage? storage}) : _storage = storage ?? GetStorage();
@@ -21,13 +20,7 @@ class AdminController extends GetxController {
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      final response = await http.get(
-        Uri.parse('$apiEndpoint/users/'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
+      final response = await AdminService.fetchUsers(token: token?.toString());
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
@@ -48,12 +41,9 @@ class AdminController extends GetxController {
   Future<UserModel?> fetchUserById(String userId) async {
     final String? token = _storage.read('token');
     try {
-      final response = await http.get(
-        Uri.parse('$apiEndpoint/users/$userId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await AdminService.fetchUserById(
+        userId,
+        token: token?.toString(),
       );
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
@@ -68,13 +58,10 @@ class AdminController extends GetxController {
   Future<bool> updateUserStatus(String userId, String statusFlag) async {
     final String? token = _storage.read('token');
     try {
-      final response = await http.patch(
-        Uri.parse('$apiEndpoint/users/update-status-flag/$userId'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'status_flag': statusFlag}),
+      final response = await AdminService.updateUserStatus(
+        userId: userId,
+        statusFlag: statusFlag,
+        token: token?.toString(),
       );
       return response.statusCode == 204;
     } catch (e) {
@@ -85,14 +72,19 @@ class AdminController extends GetxController {
 
   Future<bool> updateUserUsername(String userId, String newUsername) async {
     final String? token = _storage.read('token');
+    final String currentUserId = _storage.read('uid')?.toString() ?? '';
+
+    if (currentUserId.isEmpty || currentUserId != userId) {
+      errorMessage.value =
+          'แบ็กเอนด์ปัจจุบันรองรับการเปลี่ยนชื่อได้เฉพาะบัญชีของตนเอง';
+      return false;
+    }
+
     try {
-      final response = await http.patch(
-        Uri.parse('$apiEndpoint/users/update-username'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'uid': userId, 'username': newUsername}),
+      final response = await AdminService.updateUserUsername(
+        userId: userId,
+        username: newUsername,
+        token: token?.toString(),
       );
       return response.statusCode == 204;
     } catch (e) {

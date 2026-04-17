@@ -57,6 +57,30 @@ class SheetModel {
         : null;
     final dynamic buyers = json['buyers'];
     final dynamic buyersCount = json['buyers_count'] ?? json['buyer_count'];
+    final List<dynamic>? rawCategories = json['categories'] as List?;
+    final List<String>? parsedCategoryIds = (json['category_ids'] as List?)
+        ?.map((e) => e.toString())
+        .toList();
+    final List<String>? parsedCategoryNames = rawCategories
+        ?.whereType<Map>()
+        .map((e) {
+          final map = Map<String, dynamic>.from(e);
+          return map['name']?.toString() ?? map['id']?.toString() ?? '';
+        })
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final List<dynamic>? rawKeywords = json['keywords'] as List?;
+    final List<String>? parsedKeywordIds = (json['keyword_ids'] as List?)
+        ?.map((e) => e.toString())
+        .toList();
+    final List<String>? parsedKeywordNames = rawKeywords
+        ?.whereType<Map>()
+        .map((e) {
+          final map = Map<String, dynamic>.from(e);
+          return map['name']?.toString() ?? map['id']?.toString() ?? '';
+        })
+        .where((e) => e.isNotEmpty)
+        .toList();
     final int resolvedBuyerCount = buyers is List
         ? buyers.length
         : buyers is Map<String, dynamic>
@@ -111,12 +135,8 @@ class SheetModel {
               ?.map((e) => QuestionModel.fromJson(e))
               .toList()
             ?..sort((a, b) => a.index.compareTo(b.index)),
-      categoryIds: (json['category_ids'] as List?)
-          ?.map((e) => e.toString())
-          .toList(),
-      keywordIds: (json['keyword_ids'] as List?)
-          ?.map((e) => e.toString())
-          .toList(),
+      categoryIds: parsedCategoryIds ?? parsedCategoryNames,
+      keywordIds: parsedKeywordIds ?? parsedKeywordNames,
       buyerCount: resolvedBuyerCount,
       isPurchased:
           json['is_purchased'] == true ||

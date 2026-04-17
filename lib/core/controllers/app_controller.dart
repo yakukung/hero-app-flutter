@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/models/user_model.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_application_1/core/services/users_service.dart';
 
 class AppController extends GetxController {
   AppController({GetStorage? storage}) : _storage = storage ?? GetStorage();
@@ -61,9 +61,9 @@ class AppController extends GetxController {
     try {
       if (storedUid != null && storedUid.isNotEmpty) {
         final String? token = _storage.read('token')?.toString();
-        final response = await http.get(
-          Uri.parse('$apiEndpoint/users/$storedUid'),
-          headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        final response = await UsersService.fetchUserByIdRaw(
+          storedUid,
+          token: (token != null && token.isNotEmpty) ? token : null,
         );
 
         if (response.statusCode == 200) {
