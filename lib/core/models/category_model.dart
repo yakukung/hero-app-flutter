@@ -16,10 +16,12 @@ class CategoryModel {
   factory CategoryModel.fromJson(Map<String, dynamic> json) {
     // Handle nested flag object if present
     final flagData = json['flag'] is Map<String, dynamic> ? json['flag'] : null;
+    final String name = json['name']?.toString() ?? '';
+    final String id = json['id']?.toString() ?? name;
 
     return CategoryModel(
-      id: json['id'] ?? '',
-      name: json['name'] ?? '',
+      id: id,
+      name: name,
       visibleFlag:
           json['visible_flag'] == true ||
           json['visible_flag'] == 1 ||

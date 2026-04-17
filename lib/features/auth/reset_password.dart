@@ -1,10 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/services/auth_service.dart';
 import 'package:flutter_application_1/core/utils/api_utils.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_fonts.dart';
 
@@ -48,11 +45,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await http.post(
-        Uri.parse('$apiEndpoint/auth/forgot-password'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'base_url': apiEndpoint}),
-      );
+      final response = await AuthService.requestPasswordReset(email: email);
 
       if (response.statusCode == 200) {
         showCustomDialog(

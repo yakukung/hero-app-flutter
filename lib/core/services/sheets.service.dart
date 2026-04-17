@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/models/category_model.dart';
 import 'package:flutter_application_1/core/models/sheet_model.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
@@ -31,45 +32,246 @@ class SheetActionResult {
 }
 
 class SheetsService {
-  static Future<bool> paymentSheet({required SheetPaymentData data}) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token');
+  static Uri _buildUri(String path) => Uri.parse('$apiEndpoint$path');
+
+  static String? _resolveToken(String? token) {
+    if (token != null && token.isNotEmpty) return token;
+    return GetStorage().read('token')?.toString();
+  }
+
+  static Map<String, String> _jsonHeaders({
+    String? token,
+    bool disableCache = false,
+  }) {
+    return {
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+      if (disableCache) 'Cache-Control': 'no-cache',
+    };
+  }
+
+  static Future<http.Response> _withClient(
+    Future<http.Response> Function(http.Client client) action, {
+    http.Client? client,
+  }) async {
+    final http.Client httpClient = client ?? http.Client();
+    try {
+      return await action(httpClient);
+    } finally {
+      if (client == null) {
+        httpClient.close();
+      }
+    }
+  }
+
+  static Future<List<SheetModel>> fetchFavorites({
+    String? token,
+    http.Client? client,
+  }) async {
+    final String? resolvedToken = _resolveToken(token);
+    if (resolvedToken == null || resolvedToken.isEmpty) {
+      return [];
+    }
 
     try {
-      if (token == null) {
-        return false;
-      }
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('$apiEndpoint/sheets/payment'),
+      final response = await _withClient(
+        (httpClient) => httpClient.get(
+          _buildUri('/sheets/favorites'),
+          headers: _jsonHeaders(token: resolvedToken),
+        ),
+        client: client,
       );
 
-      request.headers['Authorization'] = 'Bearer $token';
-
-      request.fields['sheetId'] = data.sheetId;
-      request.fields['sheetTable'] = data.sheetTable;
-      request.fields['paymentMethod'] = data.paymentMethod;
-      request.fields['amount'] = data.amount.toString();
-      request.fields['currency'] = data.currency;
-
-      for (var file in data.slipImage) {
-        request.files.add(
-          await http.MultipartFile.fromPath('slipImage', file.path),
-        );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        final List<dynamic> data = jsonResponse['data']?['sheets'] ?? [];
+        return data
+            .whereType<Map>()
+            .map(
+              (item) => SheetModel.fromJson(
+                _withCurrentUserPurchaseFlag(Map<String, dynamic>.from(item)),
+              ),
+            )
+            .toList();
       }
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 204) {
-        return true;
-      } else {
-        return false;
+      if (response.statusCode == 404) {
+        return [];
       }
     } catch (e) {
-      debugPrint('Error processing sheet payment: $e');
+      debugPrint('Error fetching favorites: $e');
+    }
+
+    return [];
+  }
+
+  static Future<List<SheetModel>> fetchSheets({
+    String? token,
+    http.Client? client,
+  }) async {
+    final String? resolvedToken = _resolveToken(token);
+
+    try {
+      final response = await _withClient(
+        (httpClient) => httpClient.get(
+          _buildUri('/sheets'),
+          headers: _jsonHeaders(token: resolvedToken, disableCache: true),
+        ),
+        client: client,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        final List<dynamic> data = jsonResponse['data']?['sheets'] ?? [];
+        return data
+            .whereType<Map>()
+            .map(
+              (item) => SheetModel.fromJson(
+                _withCurrentUserPurchaseFlag(Map<String, dynamic>.from(item)),
+              ),
+            )
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error fetching sheets: $e');
+    }
+
+    return [];
+  }
+
+  static Future<List<CategoryModel>> fetchCategories({
+    String? token,
+    http.Client? client,
+  }) async {
+    final String? resolvedToken = _resolveToken(token);
+
+    try {
+      final response = await _withClient(
+        (httpClient) => httpClient.get(
+          _buildUri('/categories'),
+          headers: _jsonHeaders(token: resolvedToken),
+        ),
+        client: client,
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+        final List<dynamic> data = jsonResponse['data']?['categories'] ?? [];
+        return data
+            .whereType<Map>()
+            .map(
+              (item) => CategoryModel.fromJson(Map<String, dynamic>.from(item)),
+            )
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error fetching categories: $e');
+    }
+
+    return [];
+  }
+
+  static Future<bool> addFavorite(
+    String sheetId, {
+    String? token,
+    http.Client? client,
+  }) async {
+    final String? resolvedToken = _resolveToken(token);
+    if (resolvedToken == null || resolvedToken.isEmpty) {
       return false;
     }
+
+    try {
+      final response = await _withClient(
+        (httpClient) => httpClient.post(
+          _buildUri('/sheets/sheet-favorites'),
+          headers: _jsonHeaders(token: resolvedToken),
+          body: jsonEncode({'sheet_id': sheetId}),
+        ),
+        client: client,
+      );
+
+      return response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204;
+    } catch (e) {
+      debugPrint('Error adding favorite: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> removeFavorite(
+    String sheetId, {
+    String? token,
+    http.Client? client,
+  }) async {
+    final String? resolvedToken = _resolveToken(token);
+    if (resolvedToken == null || resolvedToken.isEmpty) {
+      return false;
+    }
+
+    try {
+      final response = await _withClient(
+        (httpClient) => httpClient.post(
+          _buildUri('/sheets/sheet-unfavorites'),
+          headers: _jsonHeaders(token: resolvedToken),
+          body: jsonEncode({'sheet_id': sheetId}),
+        ),
+        client: client,
+      );
+
+      return response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204;
+    } catch (e) {
+      debugPrint('Error removing favorite: $e');
+      return false;
+    }
+  }
+
+  static Future<SheetModel?> fetchSheetById(
+    String sheetId, {
+    String? token,
+    http.Client? client,
+  }) async {
+    final String? resolvedToken = _resolveToken(token);
+
+    try {
+      final response = await _withClient(
+        (httpClient) => httpClient.get(
+          _buildUri('/sheets/$sheetId'),
+          headers: {
+            if (resolvedToken != null && resolvedToken.isNotEmpty)
+              'Authorization': 'Bearer $resolvedToken',
+          },
+        ),
+        client: client,
+      );
+
+      if (response.statusCode != 200) {
+        return null;
+      }
+
+      final dynamic jsonResponse = jsonDecode(response.body);
+      final Map<String, dynamic>? sheetMap = _extractSingleSheetMap(
+        jsonResponse,
+      );
+      if (sheetMap == null) {
+        return null;
+      }
+
+      return SheetModel.fromJson(_withCurrentUserPurchaseFlag(sheetMap));
+    } catch (e) {
+      debugPrint('Error fetching sheet by id: $e');
+      return null;
+    }
+  }
+
+  static Future<bool> paymentSheet({required SheetPaymentData data}) async {
+    debugPrint(
+      'paymentSheet is not supported by current backend routes: ${data.sheetId}',
+    );
+    return false;
   }
 
   static Future<List<SheetModel>> fetchSheetsByUserId(String userId) async {
@@ -82,7 +284,7 @@ class SheetsService {
 
     try {
       final response = await http.get(
-        Uri.parse('$apiEndpoint/sheets/user/$userId'),
+        _buildUri('/sheets/user/$userId'),
         headers: {
           if (token != null && token.isNotEmpty)
             'Authorization': 'Bearer $token',
@@ -95,7 +297,11 @@ class SheetsService {
 
         return rawSheets
             .whereType<Map>()
-            .map((item) => SheetModel.fromJson(Map<String, dynamic>.from(item)))
+            .map(
+              (item) => SheetModel.fromJson(
+                _withCurrentUserPurchaseFlag(Map<String, dynamic>.from(item)),
+              ),
+            )
             .toList();
       }
 
@@ -116,62 +322,13 @@ class SheetsService {
     required String description,
     required double price,
   }) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token')?.toString();
-
-    if (token == null || token.isEmpty) {
-      return const SheetActionResult(
-        success: false,
-        message: 'ไม่พบ token สำหรับยืนยันตัวตน',
-      );
-    }
-
-    try {
-      final headers = {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
-      final payload = jsonEncode({
-        'title': title,
-        'description': description,
-        'price': price,
-      });
-
-      var response = await http.patch(
-        Uri.parse('$apiEndpoint/sheets/$sheetId'),
-        headers: headers,
-        body: payload,
-      );
-
-      if (response.statusCode == 404 || response.statusCode == 405) {
-        response = await http.patch(
-          Uri.parse('$apiEndpoint/sheets/update/$sheetId'),
-          headers: headers,
-          body: payload,
-        );
-      }
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        return const SheetActionResult(
-          success: true,
-          message: 'แก้ไขชีตสำเร็จ',
-        );
-      }
-
-      return SheetActionResult(
-        success: false,
-        message: _extractApiErrorMessage(
-          response,
-          fallbackMessage: 'ไม่สามารถแก้ไขชีตได้',
-        ),
-      );
-    } catch (e) {
-      debugPrint('Error updating sheet: $e');
-      return const SheetActionResult(
-        success: false,
-        message: 'เกิดข้อผิดพลาดระหว่างแก้ไขชีต',
-      );
-    }
+    debugPrint(
+      'updateSheet is not supported by current backend routes: $sheetId',
+    );
+    return const SheetActionResult(
+      success: false,
+      message: 'แบ็กเอนด์เวอร์ชันปัจจุบันยังไม่รองรับการแก้ไขชีต',
+    );
   }
 
   static Future<SheetActionResult> deleteSheet({
@@ -199,7 +356,7 @@ class SheetsService {
       final headers = {'Authorization': 'Bearer $token'};
 
       final response = await http.delete(
-        Uri.parse('$apiEndpoint/sheets/$sheetId'),
+        _buildUri('/sheets/$sheetId'),
         headers: headers,
       );
 
@@ -239,6 +396,34 @@ class SheetsService {
       );
     }
   }
+}
+
+Map<String, dynamic> _withCurrentUserPurchaseFlag(Map<String, dynamic> source) {
+  if (source['is_purchased'] != null) {
+    return source;
+  }
+
+  final String currentUid = GetStorage().read('uid')?.toString() ?? '';
+  if (currentUid.isEmpty) {
+    return source;
+  }
+
+  bool isPurchased = false;
+  final dynamic buyers = source['buyers'];
+
+  if (buyers is List) {
+    isPurchased = buyers.whereType<Map>().any((buyer) {
+      final map = Map<String, dynamic>.from(buyer);
+      final String? buyerId =
+          map['id']?.toString() ?? map['user_id']?.toString();
+      return buyerId != null && buyerId == currentUid;
+    });
+  } else if (buyers is Map && buyers['uid'] is List) {
+    final buyerUids = (buyers['uid'] as List).map((e) => e.toString()).toList();
+    isPurchased = buyerUids.contains(currentUid);
+  }
+
+  return <String, dynamic>{...source, 'is_purchased': isPurchased};
 }
 
 String _extractApiErrorMessage(
@@ -303,4 +488,45 @@ List<dynamic> _extractSheetsList(dynamic responseBody) {
   }
 
   return [];
+}
+
+Map<String, dynamic>? _extractSingleSheetMap(dynamic responseBody) {
+  if (responseBody is! Map<String, dynamic>) {
+    return null;
+  }
+
+  final dynamic data = responseBody['data'];
+
+  if (data is Map<String, dynamic>) {
+    if (data['sheet'] is Map<String, dynamic>) {
+      return Map<String, dynamic>.from(data['sheet']);
+    }
+    if (data['sheet'] is List && (data['sheet'] as List).isNotEmpty) {
+      return Map<String, dynamic>.from((data['sheet'] as List).first as Map);
+    }
+    if (data['id'] != null) {
+      return Map<String, dynamic>.from(data);
+    }
+  }
+
+  if (data is List && data.isNotEmpty) {
+    return Map<String, dynamic>.from(data.first as Map);
+  }
+
+  if (responseBody['sheet'] is Map<String, dynamic>) {
+    return Map<String, dynamic>.from(responseBody['sheet']);
+  }
+
+  if (responseBody['sheet'] is List &&
+      (responseBody['sheet'] as List).isNotEmpty) {
+    return Map<String, dynamic>.from(
+      (responseBody['sheet'] as List).first as Map,
+    );
+  }
+
+  if (responseBody['id'] != null) {
+    return Map<String, dynamic>.from(responseBody);
+  }
+
+  return null;
 }

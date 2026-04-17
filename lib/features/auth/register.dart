@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/app/app.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/controllers/admin_controller.dart';
 import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
@@ -12,7 +11,6 @@ import 'package:flutter_application_1/core/services/auth_service.dart';
 import 'package:flutter_application_1/features/auth/reset_password.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:http/http.dart' as http;
 import 'login.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/core/utils/api_utils.dart';
@@ -298,10 +296,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
         if (response.statusCode != 200) {
           final String errorMsg = getErrorMessage(response);
-          showCustomDialog(
-            title: 'เข้าสู่ระบบไม่สำเร็จ',
-            message: errorMsg,
-          );
+          showCustomDialog(title: 'เข้าสู่ระบบไม่สำเร็จ', message: errorMsg);
           return;
         }
 
@@ -338,7 +333,8 @@ class _RegisterPageState extends State<RegisterPage> {
       debugPrint('Google Sign-In error: $e');
       showCustomDialog(
         title: 'เกิดข้อผิดพลาด',
-        message: 'ไม่สามารถเข้าสู่ระบบด้วย Google ได้\nกรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่อีกครั้ง',
+        message:
+            'ไม่สามารถเข้าสู่ระบบด้วย Google ได้\nกรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่อีกครั้ง',
       );
     } finally {
       if (mounted) {
@@ -471,16 +467,11 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse('$apiEndpoint/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'email': email,
-          'password': password,
-          'confirmPassword': cfPassword,
-          'base_url': apiEndpoint,
-        }),
+      final response = await AuthService.register(
+        username: username,
+        email: email,
+        password: password,
+        confirmPassword: cfPassword,
       );
 
       if (response.statusCode == 201) {

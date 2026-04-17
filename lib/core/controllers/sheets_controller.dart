@@ -1,12 +1,9 @@
-import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/models/sheet_model.dart';
 import 'package:flutter_application_1/core/models/category_model.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_application_1/core/services/sheets.service.dart';
 
 class SheetsController extends GetxController {
   SheetsController({GetStorage? storage}) : _storage = storage ?? GetStorage();
@@ -20,14 +17,14 @@ class SheetsController extends GetxController {
   final GetStorage _storage;
 
   Future<void> fetchFavorites({bool showLoading = false}) async {
-    final String? token = _storage.read('token');
+    final String? token = _storage.read('token')?.toString();
 
     if (showLoading) {
       isLoading.value = true;
       errorMessage.value = '';
     }
 
-    if (token == null) {
+    if (token == null || token.isEmpty) {
       favoriteSheets.assignAll([]);
       _syncFavoriteFlags();
       if (showLoading) {
@@ -37,20 +34,8 @@ class SheetsController extends GetxController {
     }
 
     try {
-      final response = await http.get(
-        Uri.parse('$apiEndpoint/sheets/favorites'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        final List<dynamic> data = jsonResponse['data']['sheets'];
-        favoriteSheets.assignAll(
-          data.map((item) => SheetModel.fromJson(item)).toList(),
-        );
-      } else if (response.statusCode == 404) {
-        favoriteSheets.assignAll([]);
-      }
+      final favorites = await SheetsService.fetchFavorites(token: token);
+      favoriteSheets.assignAll(favorites);
     } catch (e) {
       debugPrint('Error fetching favorites: $e');
       favoriteSheets.assignAll([]);
@@ -70,27 +55,16 @@ class SheetsController extends GetxController {
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      final String? token = _storage.read('token');
+      final String? token = _storage.read('token')?.toString();
 
-      if (token != null) {
+      if (token != null && token.isNotEmpty) {
         await fetchFavorites();
       }
 
-      final response = await http.get(
-        Uri.parse('$apiEndpoint/sheets'),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      final List<SheetModel> newSheets = await SheetsService.fetchSheets(
+        token: token,
       );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        final List<dynamic> data = jsonResponse['data']['sheets'];
-        final List<SheetModel> newSheets = data
-            .map((item) => SheetModel.fromJson(item))
-            .toList();
-        sheets.assignAll(_mergeFavorites(newSheets));
-      } else {
-        throw Exception('Failed to load sheets: ${response.statusCode}');
-      }
+      sheets.assignAll(_mergeFavorites(newSheets));
     } catch (e) {
       debugPrint('Error fetching sheets: $e');
       errorMessage.value = 'เกิดข้อผิดพลาด: ${e.toString()}';
@@ -104,18 +78,14 @@ class SheetsController extends GetxController {
   }
 
   Future<bool> addFavorite(String sheetId) async {
-    final String? token = _storage.read('token');
-    if (token == null) return false;
+    final String? token = _storage.read('token')?.toString();
+    if (token == null || token.isEmpty) return false;
     try {
-      final response = await http.post(
-        Uri.parse('$apiEndpoint/sheets/sheet-favorites'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'sheet_id': sheetId}),
+      final bool success = await SheetsService.addFavorite(
+        sheetId,
+        token: token,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (success) {
         _updateFavoriteState(sheetId, isFavorite: true);
         return true;
       }
@@ -127,18 +97,14 @@ class SheetsController extends GetxController {
   }
 
   Future<bool> removeFavorite(String sheetId) async {
-    final String? token = _storage.read('token');
-    if (token == null) return false;
+    final String? token = _storage.read('token')?.toString();
+    if (token == null || token.isEmpty) return false;
     try {
-      final response = await http.post(
-        Uri.parse('$apiEndpoint/sheets/sheet-unfavorites'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'sheet_id': sheetId}),
+      final bool success = await SheetsService.removeFavorite(
+        sheetId,
+        token: token,
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      if (success) {
         _updateFavoriteState(sheetId, isFavorite: false);
         return true;
       }
@@ -155,18 +121,11 @@ class SheetsController extends GetxController {
     }
 
     try {
-      final String? token = _storage.read('token');
-      final response = await http.get(
-        Uri.parse('$apiEndpoint/categories'),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      final String? token = _storage.read('token')?.toString();
+      final fetchedCategories = await SheetsService.fetchCategories(
+        token: token,
       );
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-        final List<dynamic> data = jsonResponse['data']['categories'];
-        categories.assignAll(
-          data.map((item) => CategoryModel.fromJson(item)).toList(),
-        );
-      }
+      categories.assignAll(fetchedCategories);
     } catch (e) {
       debugPrint('Error fetching categories: $e');
       return;
@@ -176,14 +135,17 @@ class SheetsController extends GetxController {
   List<SheetModel> searchSheets(String query) {
     if (query.isEmpty) return sheets.toList();
     final lowerQuery = query.toLowerCase();
-    final matchingCategoryIds = categories
+    final matchingCategoryKeys = categories
         .where((cat) => cat.name.toLowerCase().contains(lowerQuery))
-        .map((cat) => cat.id)
+        .expand((cat) => [cat.id, cat.name])
+        .map((key) => key.toLowerCase())
         .toSet();
     return sheets.where((sheet) {
       final titleMatches = sheet.title.toLowerCase().contains(lowerQuery);
       final categoryMatches =
-          sheet.categoryIds?.any((id) => matchingCategoryIds.contains(id)) ??
+          sheet.categoryIds?.any(
+            (id) => matchingCategoryKeys.contains(id.toLowerCase()),
+          ) ??
           false;
       return titleMatches || categoryMatches;
     }).toList();

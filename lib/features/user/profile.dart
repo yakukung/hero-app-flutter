@@ -1,11 +1,9 @@
-import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:flutter_application_1/core/models/upload_state.dart';
+import 'package:flutter_application_1/core/services/users_service.dart';
 import 'package:flutter_application_1/features/auth/intro.dart';
 import 'package:flutter_application_1/features/user/edit_profile.dart';
 import 'package:flutter_application_1/features/user/user_sheets.dart';
@@ -13,8 +11,6 @@ import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dial
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_assets.dart';
@@ -53,48 +49,21 @@ class _ProfilePageState extends State<ProfilePage> {
           throw Exception('ไฟล์รูปภาพใหญ่เกิน 5MB');
         }
 
-        final uri = Uri.parse('$apiEndpoint/users/update-profile-image');
-        final request = ProgressMultipartRequest(
-          'PUT',
-          uri,
-          onProgress: (int bytes, int total) {
-            final progress = bytes / total;
+        final result = await UsersService.updateProfileImage(
+          uid: _appController.uid,
+          imageFile: file,
+          onProgress: (bytes, total) {
             stateNotifier.value = stateNotifier.value.copyWith(
-              progress: progress,
+              progress: total == 0 ? 0 : bytes / total,
             );
           },
         );
 
-        request.fields['uid'] = _appController.uid;
-
-        String mimeType = 'image/jpeg';
-        if (file.path.endsWith('.png')) {
-          mimeType = 'image/png';
-        } else if (file.path.endsWith('.jpg') || file.path.endsWith('.jpeg')) {
-          mimeType = 'image/jpeg';
-        }
-
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'profile_image',
-            file.path,
-            contentType: MediaType.parse(mimeType),
-          ),
-        );
-
-        final streamedResponse = await request.send();
-        final response = await http.Response.fromStream(streamedResponse);
-
-        if (response.statusCode == 200 || response.statusCode == 204) {
-          if (response.body.isNotEmpty) {
-            final jsonResponse = _tryParseJsonMap(response.body);
-            final profileImage = jsonResponse?['profile_image'];
-            if (profileImage is String && profileImage.isNotEmpty) {
-              _appController.setProfileImage(profileImage);
-            }
+        if (result.success) {
+          if (result.profileImage != null && result.profileImage!.isNotEmpty) {
+            _appController.setProfileImage(result.profileImage!);
           } else {
             await _appController.fetchUserData();
-            _appController.setProfileImage(_appController.profileImage);
           }
 
           stateNotifier.value = stateNotifier.value.copyWith(
@@ -103,8 +72,10 @@ class _ProfilePageState extends State<ProfilePage> {
             progress: 1.0,
           );
         } else {
-          throw Exception(
-            'Failed to update profile: ${response.statusCode} ${response.body}',
+          stateNotifier.value = stateNotifier.value.copyWith(
+            isUploading: false,
+            isSuccess: false,
+            errorMessage: result.message,
           );
         }
       } catch (e) {
@@ -393,19 +364,6 @@ class _ProfilePageState extends State<ProfilePage> {
     Get.to(() => UserSheetsPage(userId: userId));
   }
 
-  Map<String, dynamic>? _tryParseJsonMap(String source) {
-    try {
-      final dynamic decoded = jsonDecode(source);
-      if (decoded is Map<String, dynamic>) {
-        return decoded;
-      }
-    } catch (e) {
-      debugPrint('Error parsing profile image response JSON: $e');
-      return null;
-    }
-    return null;
-  }
-
   void _showSubscriptionPackages(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -565,28 +523,5 @@ class _ProfilePageState extends State<ProfilePage> {
         Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
       ],
     );
-  }
-}
-
-class ProgressMultipartRequest extends http.MultipartRequest {
-  final void Function(int bytes, int total) onProgress;
-
-  ProgressMultipartRequest(super.method, super.url, {required this.onProgress});
-
-  @override
-  http.ByteStream finalize() {
-    final byteStream = super.finalize();
-    final total = contentLength;
-    int bytes = 0;
-
-    final t = StreamTransformer.fromHandlers(
-      handleData: (List<int> data, EventSink<List<int>> sink) {
-        bytes += data.length;
-        onProgress(bytes, total);
-        sink.add(data);
-      },
-    );
-    final stream = byteStream.transform(t);
-    return http.ByteStream(stream);
   }
 }

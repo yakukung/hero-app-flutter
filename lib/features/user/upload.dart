@@ -1,9 +1,8 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/models/category_model.dart';
 import 'package:flutter_application_1/core/services/sheet_upload_service.dart';
+import 'package:flutter_application_1/core/services/sheets.service.dart';
 import 'package:flutter_application_1/shared/widgets/upload/image_upload_section.dart';
 import 'package:flutter_application_1/shared/widgets/upload/keyword_section.dart';
 import 'package:flutter_application_1/shared/widgets/upload/price_selector.dart';
@@ -12,9 +11,7 @@ import 'package:flutter_application_1/shared/widgets/upload/subject_selector.dar
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/validations/validation_error.dart';
 import 'package:flutter_application_1/validations/upload_validators.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter_application_1/constants/app_colors.dart';
 
 class UploadPage extends StatefulWidget {
@@ -80,27 +77,12 @@ class _UploadPageState extends State<UploadPage> {
 
   Future<void> _fetchCategories() async {
     try {
-      final gs = GetStorage();
-      final String? token = gs.read('token')?.toString();
-
-      final response = await http.get(
-        Uri.parse('$apiEndpoint/categories'),
-        headers: {if (token != null) 'Authorization': 'Bearer $token'},
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> categoryList = data['data']['categories'];
-        if (!mounted) return;
-        setState(() {
-          _categories = categoryList
-              .map((json) => CategoryModel.fromJson(json))
-              .toList();
-          _isLoadingCategories = false;
-        });
-      } else {
-        if (!mounted) return;
-        setState(() => _isLoadingCategories = false);
-      }
+      final categories = await SheetsService.fetchCategories();
+      if (!mounted) return;
+      setState(() {
+        _categories = categories;
+        _isLoadingCategories = false;
+      });
     } catch (e) {
       debugPrint('Error fetching categories: $e');
       if (!mounted) return;

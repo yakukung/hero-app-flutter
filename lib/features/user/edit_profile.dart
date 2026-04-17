@@ -1,15 +1,13 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:flutter_application_1/core/models/upload_state.dart';
+import 'package:flutter_application_1/core/services/users_service.dart';
 import 'package:flutter_application_1/features/user/change_email.dart';
 import 'package:flutter_application_1/features/user/change_password.dart';
 import 'package:flutter_application_1/features/user/change_username.dart';
 import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
@@ -47,28 +45,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
 
     try {
-      final uri = Uri.parse('$apiEndpoint/users/update-profile-image');
-      final request = http.MultipartRequest('PUT', uri);
-
-      request.fields['uid'] = _appController.uid;
-
-      final mediaType = imageFile.path.endsWith('.png')
-          ? MediaType('image', 'png')
-          : MediaType('image', 'jpeg');
-
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'profile_image',
-          imageFile.path,
-          contentType: mediaType,
-        ),
+      final result = await UsersService.updateProfileImage(
+        uid: _appController.uid,
+        imageFile: imageFile,
+        onProgress: (bytes, total) {
+          stateNotifier.value = stateNotifier.value.copyWith(
+            progress: total == 0 ? 0 : bytes / total,
+          );
+        },
       );
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200 || response.statusCode == 204) {
-        await _appController.fetchUserData();
+      if (result.success) {
+        if (result.profileImage != null && result.profileImage!.isNotEmpty) {
+          _appController.setProfileImage(result.profileImage!);
+        } else {
+          await _appController.fetchUserData();
+        }
         stateNotifier.value = stateNotifier.value.copyWith(
           isUploading: false,
           isSuccess: true,
@@ -78,7 +70,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
           _pickedImage = imageFile;
         });
       } else {
-        throw Exception('Failed to update profile image: ${response.body}');
+        stateNotifier.value = stateNotifier.value.copyWith(
+          isUploading: false,
+          isSuccess: false,
+          errorMessage: result.message,
+        );
       }
     } catch (e) {
       debugPrint('Error updating profile image: $e');
