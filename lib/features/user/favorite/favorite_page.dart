@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/core/models/product_model.dart';
-import 'package:flutter_application_1/features/user/sheet/preview_sheet.dart';
+import 'package:flutter_application_1/features/user/sheet/preview_sheet_page.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/shared/widgets/product/product_card.dart';
 import 'package:get/get.dart';

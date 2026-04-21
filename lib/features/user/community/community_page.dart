@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/core/models/post_model.dart';
 import 'package:flutter_application_1/core/models/user_model.dart';
-import 'package:flutter_application_1/features/user/community/comment_sheet.dart';
-import 'package:flutter_application_1/features/user/community/community_post_card.dart';
-import 'package:flutter_application_1/features/user/create_post.dart';
-import 'package:flutter_application_1/features/user/profile.dart';
-import 'package:flutter_application_1/features/user/sheet/preview_sheet.dart';
-import 'package:flutter_application_1/features/user/user_profile_view.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/services/posts_service.dart';
+import 'package:flutter_application_1/features/user/community/widgets/comment_sheet.dart';
+import 'package:flutter_application_1/features/user/community/widgets/community_post_card.dart';
+import 'package:flutter_application_1/features/user/community/create_post_page.dart';
+import 'package:flutter_application_1/features/user/profile/profile_page.dart';
+import 'package:flutter_application_1/features/user/profile/user_profile_view_page.dart';
+import 'package:flutter_application_1/features/user/sheet/preview_sheet_page.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({super.key});

@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/core/models/sheet_model.dart';
 import 'package:flutter_application_1/core/services/sheets.service.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
-import 'dart:ui';
-import 'sheet_reader.dart';
-import 'quiz_page.dart';
-import 'package:get/get.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
+import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
+import 'package:get/get.dart';
+import 'package:flutter_application_1/features/user/sheet/quiz_page.dart';
+import 'package:flutter_application_1/features/user/sheet/sheet_preview_reader.dart';
 
 class PreviewSheetPage extends StatefulWidget {
   final String sheetId;

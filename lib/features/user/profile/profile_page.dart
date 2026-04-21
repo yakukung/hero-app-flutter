@@ -1,19 +1,19 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/constants/app_assets.dart';
+import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:flutter_application_1/core/models/upload_state.dart';
+import 'package:flutter_application_1/core/session/session_store.dart';
 import 'package:flutter_application_1/core/services/users_service.dart';
 import 'package:flutter_application_1/features/auth/intro.dart';
-import 'package:flutter_application_1/features/user/edit_profile.dart';
-import 'package:flutter_application_1/features/user/user_sheets.dart';
-import 'package:flutter_application_1/core/session/session_store.dart';
-import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
+import 'package:flutter_application_1/features/user/profile/edit_profile_page.dart';
+import 'package:flutter_application_1/features/user/profile/user_sheets_page.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
+import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
-import 'package:flutter_application_1/constants/app_assets.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
