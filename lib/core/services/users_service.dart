@@ -2,11 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:async';
 
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_application_1/core/network/api_client.dart';
 import 'package:flutter_application_1/core/models/user_model.dart';
 import 'package:flutter_application_1/core/utils/api_utils.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
@@ -25,70 +24,21 @@ class UserProfileImageUploadResult {
 }
 
 class UsersService {
-  static Uri _buildUri(String path) => Uri.parse('$apiEndpoint$path');
-
-  static String? _resolveToken(String? token) {
-    if (token != null && token.isNotEmpty) return token;
-    return GetStorage().read('token')?.toString();
-  }
-
-  static Map<String, String> _jsonHeaders({String? token}) {
-    return {
-      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-  }
-
-  static Future<http.Response> _patchJson({
-    required String path,
-    required Map<String, dynamic> body,
-    String? token,
-    http.Client? client,
-  }) async {
-    final String? resolvedToken = _resolveToken(token);
-    final http.Client httpClient = client ?? http.Client();
-    try {
-      return await httpClient.patch(
-        _buildUri(path),
-        headers: _jsonHeaders(token: resolvedToken),
-        body: jsonEncode(body),
-      );
-    } finally {
-      if (client == null) {
-        httpClient.close();
-      }
-    }
-  }
+  static final ApiClient _api = ApiClient();
 
   static Future<http.Response> fetchUserByIdRaw(
     String userId, {
     String? token,
     http.Client? client,
   }) async {
-    final String? resolvedToken = _resolveToken(token);
-    final http.Client httpClient = client ?? http.Client();
-
-    try {
-      return await httpClient.get(
-        _buildUri('/users/$userId'),
-        headers: _jsonHeaders(token: resolvedToken),
-      );
-    } finally {
-      if (client == null) {
-        httpClient.close();
-      }
-    }
+    return _api.get(path: '/users/$userId', token: token, client: client);
   }
 
   static Future<bool> followUser(String userId) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token')?.toString();
-
     try {
-      final url = _buildUri('/users/$userId/follow');
-      final response = await http.post(
-        url,
-        headers: _jsonHeaders(token: token),
+      final response = await _api.post(
+        path: '/users/$userId/follow',
+        includeJsonContentType: false,
       );
 
       if (response.statusCode == 200 ||
@@ -104,14 +54,10 @@ class UsersService {
   }
 
   static Future<bool> unfollowUser(String userId) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token')?.toString();
-
     try {
-      final url = _buildUri('/users/$userId/follow');
-      final response = await http.delete(
-        url,
-        headers: _jsonHeaders(token: token),
+      final response = await _api.delete(
+        path: '/users/$userId/follow',
+        includeJsonContentType: false,
       );
 
       if (response.statusCode == 200 ||
@@ -146,7 +92,7 @@ class UsersService {
     String? token,
     http.Client? client,
   }) async {
-    return _patchJson(
+    return _api.patchJson(
       path: '/users/update-username',
       body: {'uid': uid, 'username': username},
       token: token,
@@ -161,7 +107,7 @@ class UsersService {
     String? token,
     http.Client? client,
   }) async {
-    return _patchJson(
+    return _api.patchJson(
       path: '/users/update-email',
       body: {'uid': uid, 'email': email, 'password': password},
       token: token,
@@ -176,7 +122,7 @@ class UsersService {
     String? token,
     http.Client? client,
   }) async {
-    return _patchJson(
+    return _api.patchJson(
       path: '/users/update-password',
       body: {
         'uid': uid,
@@ -194,18 +140,18 @@ class UsersService {
     String? token,
     void Function(int bytes, int total)? onProgress,
   }) async {
-    final String? resolvedToken = _resolveToken(token);
+    final String? resolvedToken = _api.resolveToken(token);
 
     try {
       final request = onProgress != null
           ? _ProgressMultipartRequest(
               'PUT',
-              _buildUri('/users/update-profile-image'),
+              _api.buildUri('/users/update-profile-image'),
               onProgress: onProgress,
             )
           : http.MultipartRequest(
               'PUT',
-              _buildUri('/users/update-profile-image'),
+              _api.buildUri('/users/update-profile-image'),
             );
 
       request.fields['uid'] = uid;

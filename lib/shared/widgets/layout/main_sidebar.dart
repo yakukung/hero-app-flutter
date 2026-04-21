@@ -5,10 +5,10 @@ import 'package:flutter_application_1/core/controllers/admin_controller.dart';
 import 'package:flutter_application_1/core/controllers/app_controller.dart';
 import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
 import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
+import 'package:flutter_application_1/core/session/session_store.dart';
 import 'package:flutter_application_1/features/auth/intro.dart';
 import 'package:flutter_application_1/features/user/search/search_results_page.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:flutter_application_1/shared/widgets/layout/sidebar_menu_item.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_fonts.dart';
@@ -113,8 +113,8 @@ class _SideBarState extends State<SideBar> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {
-                        GetStorage().erase();
+                      onPressed: () async {
+                        await SessionStore().eraseAll();
                         appController.clearUserData();
                         sheetsController.resetState();
                         adminController.resetState();

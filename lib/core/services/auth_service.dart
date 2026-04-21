@@ -2,35 +2,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-import 'dart:convert';
 import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/network/api_client.dart';
 import 'package:http/http.dart' as http;
 
 class AuthService {
+  static final ApiClient _api = ApiClient();
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
-
-  static Uri _buildUri(String path) => Uri.parse('$apiEndpoint$path');
-
-  static Future<http.Response> _postJson({
-    required String path,
-    required Map<String, dynamic> body,
-    Map<String, String>? headers,
-    http.Client? client,
-  }) async {
-    final http.Client httpClient = client ?? http.Client();
-    try {
-      return await httpClient.post(
-        _buildUri(path),
-        headers: {'Content-Type': 'application/json', ...?headers},
-        body: jsonEncode(body),
-      );
-    } finally {
-      if (client == null) {
-        httpClient.close();
-      }
-    }
-  }
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
@@ -61,7 +41,7 @@ class AuthService {
     required String providerEmail,
     required String providerAvatar,
   }) async {
-    return await _postJson(
+    return _api.postJson(
       path: '/auth/loginByGoogle',
       body: {
         'provider_user_id': providerUserId,
@@ -70,6 +50,7 @@ class AuthService {
         'provider_email': providerEmail,
         'provider_avatar': providerAvatar,
       },
+      useSessionToken: false,
     );
   }
 
@@ -78,9 +59,10 @@ class AuthService {
     required String password,
     http.Client? client,
   }) async {
-    return _postJson(
+    return _api.postJson(
       path: '/auth/login',
       body: {'usernameOrEmail': usernameOrEmail, 'password': password},
+      useSessionToken: false,
       client: client,
     );
   }
@@ -92,7 +74,7 @@ class AuthService {
     required String confirmPassword,
     http.Client? client,
   }) async {
-    return _postJson(
+    return _api.postJson(
       path: '/auth/register',
       body: {
         'username': username,
@@ -101,6 +83,7 @@ class AuthService {
         'confirmPassword': confirmPassword,
         'base_url': apiEndpoint,
       },
+      useSessionToken: false,
       client: client,
     );
   }
@@ -109,9 +92,10 @@ class AuthService {
     required String email,
     http.Client? client,
   }) async {
-    return _postJson(
+    return _api.postJson(
       path: '/auth/forgot-password',
       body: {'email': email, 'base_url': apiEndpoint},
+      useSessionToken: false,
       client: client,
     );
   }
