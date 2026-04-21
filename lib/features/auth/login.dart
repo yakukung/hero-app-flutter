@@ -10,7 +10,6 @@ import 'package:flutter_application_1/core/controllers/navigation_controller.dar
 import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
 import 'package:flutter_application_1/core/services/auth_service.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/features/admin/home.dart';
 import 'package:flutter_application_1/validations/auth_validators.dart';
@@ -437,16 +436,13 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _completeLogin(String uid, Map<String, dynamic> userData) async {
-    final storage = GetStorage();
-    storage.write('uid', uid);
-
     if (!mounted) return;
     final AppController appCtrl = Get.find<AppController>();
     final SheetsController sheetsCtrl = Get.find<SheetsController>();
     final AdminController adminCtrl = Get.find<AdminController>();
     final NavigationController navCtrl = Get.find<NavigationController>();
 
-    appCtrl.updateFromMap(userData);
+    appCtrl.updateFromMap({...userData, 'uid': uid});
     sheetsCtrl.resetState();
     adminCtrl.resetState();
 

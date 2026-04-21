@@ -3,24 +3,28 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_application_1/core/models/user_model.dart';
+import 'package:flutter_application_1/core/session/session_store.dart';
 import 'package:flutter_application_1/core/services/admin_service.dart';
 
 class AdminController extends GetxController {
-  AdminController({GetStorage? storage}) : _storage = storage ?? GetStorage();
+  AdminController({GetStorage? storage, SessionStore? sessionStore})
+    : _sessionStore = sessionStore ?? SessionStore(storage: storage);
 
   var users = <UserModel>[].obs;
   var totalItems = 0.obs;
   var isLoading = false.obs;
   var errorMessage = ''.obs;
 
-  final GetStorage _storage;
+  final SessionStore _sessionStore;
 
   Future<void> fetchUsers() async {
-    final String? token = _storage.read('token');
+    final String token = _sessionStore.token;
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      final response = await AdminService.fetchUsers(token: token?.toString());
+      final response = await AdminService.fetchUsers(
+        token: token.isNotEmpty ? token : null,
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
@@ -39,11 +43,11 @@ class AdminController extends GetxController {
   }
 
   Future<UserModel?> fetchUserById(String userId) async {
-    final String? token = _storage.read('token');
+    final String token = _sessionStore.token;
     try {
       final response = await AdminService.fetchUserById(
         userId,
-        token: token?.toString(),
+        token: token.isNotEmpty ? token : null,
       );
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
@@ -56,12 +60,12 @@ class AdminController extends GetxController {
   }
 
   Future<bool> updateUserStatus(String userId, String statusFlag) async {
-    final String? token = _storage.read('token');
+    final String token = _sessionStore.token;
     try {
       final response = await AdminService.updateUserStatus(
         userId: userId,
         statusFlag: statusFlag,
-        token: token?.toString(),
+        token: token.isNotEmpty ? token : null,
       );
       return response.statusCode == 204;
     } catch (e) {
@@ -71,8 +75,8 @@ class AdminController extends GetxController {
   }
 
   Future<bool> updateUserUsername(String userId, String newUsername) async {
-    final String? token = _storage.read('token');
-    final String currentUserId = _storage.read('uid')?.toString() ?? '';
+    final String token = _sessionStore.token;
+    final String currentUserId = _sessionStore.uid;
 
     if (currentUserId.isEmpty || currentUserId != userId) {
       errorMessage.value =
@@ -84,7 +88,7 @@ class AdminController extends GetxController {
       final response = await AdminService.updateUserUsername(
         userId: userId,
         username: newUsername,
-        token: token?.toString(),
+        token: token.isNotEmpty ? token : null,
       );
       return response.statusCode == 204;
     } catch (e) {

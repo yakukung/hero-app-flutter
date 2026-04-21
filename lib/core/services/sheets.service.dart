@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/models/category_model.dart';
 import 'package:flutter_application_1/core/models/sheet_model.dart';
-import 'package:get_storage/get_storage.dart';
+import 'package:flutter_application_1/core/network/api_client.dart';
+import 'package:flutter_application_1/core/session/session_store.dart';
 import 'package:http/http.dart' as http;
 
 class SheetPaymentData {
@@ -32,53 +32,22 @@ class SheetActionResult {
 }
 
 class SheetsService {
-  static Uri _buildUri(String path) => Uri.parse('$apiEndpoint$path');
-
-  static String? _resolveToken(String? token) {
-    if (token != null && token.isNotEmpty) return token;
-    return GetStorage().read('token')?.toString();
-  }
-
-  static Map<String, String> _jsonHeaders({
-    String? token,
-    bool disableCache = false,
-  }) {
-    return {
-      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-      if (disableCache) 'Cache-Control': 'no-cache',
-    };
-  }
-
-  static Future<http.Response> _withClient(
-    Future<http.Response> Function(http.Client client) action, {
-    http.Client? client,
-  }) async {
-    final http.Client httpClient = client ?? http.Client();
-    try {
-      return await action(httpClient);
-    } finally {
-      if (client == null) {
-        httpClient.close();
-      }
-    }
-  }
+  static final SessionStore _sessionStore = SessionStore();
+  static final ApiClient _api = ApiClient(sessionStore: _sessionStore);
 
   static Future<List<SheetModel>> fetchFavorites({
     String? token,
     http.Client? client,
   }) async {
-    final String? resolvedToken = _resolveToken(token);
+    final String? resolvedToken = _api.resolveToken(token);
     if (resolvedToken == null || resolvedToken.isEmpty) {
       return [];
     }
 
     try {
-      final response = await _withClient(
-        (httpClient) => httpClient.get(
-          _buildUri('/sheets/favorites'),
-          headers: _jsonHeaders(token: resolvedToken),
-        ),
+      final response = await _api.get(
+        path: '/sheets/favorites',
+        token: resolvedToken,
         client: client,
       );
 
@@ -109,14 +78,13 @@ class SheetsService {
     String? token,
     http.Client? client,
   }) async {
-    final String? resolvedToken = _resolveToken(token);
+    final String? resolvedToken = _api.resolveToken(token);
 
     try {
-      final response = await _withClient(
-        (httpClient) => httpClient.get(
-          _buildUri('/sheets'),
-          headers: _jsonHeaders(token: resolvedToken, disableCache: true),
-        ),
+      final response = await _api.get(
+        path: '/sheets',
+        token: resolvedToken,
+        disableCache: true,
         client: client,
       );
 
@@ -143,14 +111,12 @@ class SheetsService {
     String? token,
     http.Client? client,
   }) async {
-    final String? resolvedToken = _resolveToken(token);
+    final String? resolvedToken = _api.resolveToken(token);
 
     try {
-      final response = await _withClient(
-        (httpClient) => httpClient.get(
-          _buildUri('/categories'),
-          headers: _jsonHeaders(token: resolvedToken),
-        ),
+      final response = await _api.get(
+        path: '/categories',
+        token: resolvedToken,
         client: client,
       );
 
@@ -176,18 +142,16 @@ class SheetsService {
     String? token,
     http.Client? client,
   }) async {
-    final String? resolvedToken = _resolveToken(token);
+    final String? resolvedToken = _api.resolveToken(token);
     if (resolvedToken == null || resolvedToken.isEmpty) {
       return false;
     }
 
     try {
-      final response = await _withClient(
-        (httpClient) => httpClient.post(
-          _buildUri('/sheets/sheet-favorites'),
-          headers: _jsonHeaders(token: resolvedToken),
-          body: jsonEncode({'sheet_id': sheetId}),
-        ),
+      final response = await _api.postJson(
+        path: '/sheets/sheet-favorites',
+        body: {'sheet_id': sheetId},
+        token: resolvedToken,
         client: client,
       );
 
@@ -205,18 +169,16 @@ class SheetsService {
     String? token,
     http.Client? client,
   }) async {
-    final String? resolvedToken = _resolveToken(token);
+    final String? resolvedToken = _api.resolveToken(token);
     if (resolvedToken == null || resolvedToken.isEmpty) {
       return false;
     }
 
     try {
-      final response = await _withClient(
-        (httpClient) => httpClient.post(
-          _buildUri('/sheets/sheet-unfavorites'),
-          headers: _jsonHeaders(token: resolvedToken),
-          body: jsonEncode({'sheet_id': sheetId}),
-        ),
+      final response = await _api.postJson(
+        path: '/sheets/sheet-unfavorites',
+        body: {'sheet_id': sheetId},
+        token: resolvedToken,
         client: client,
       );
 
@@ -234,17 +196,13 @@ class SheetsService {
     String? token,
     http.Client? client,
   }) async {
-    final String? resolvedToken = _resolveToken(token);
+    final String? resolvedToken = _api.resolveToken(token);
 
     try {
-      final response = await _withClient(
-        (httpClient) => httpClient.get(
-          _buildUri('/sheets/$sheetId'),
-          headers: {
-            if (resolvedToken != null && resolvedToken.isNotEmpty)
-              'Authorization': 'Bearer $resolvedToken',
-          },
-        ),
+      final response = await _api.get(
+        path: '/sheets/$sheetId',
+        token: resolvedToken,
+        includeJsonContentType: false,
         client: client,
       );
 
@@ -279,16 +237,13 @@ class SheetsService {
       return [];
     }
 
-    final storage = GetStorage();
-    final String? token = storage.read('token')?.toString();
+    final String token = _sessionStore.token;
 
     try {
-      final response = await http.get(
-        _buildUri('/sheets/user/$userId'),
-        headers: {
-          if (token != null && token.isNotEmpty)
-            'Authorization': 'Bearer $token',
-        },
+      final response = await _api.get(
+        path: '/sheets/user/$userId',
+        token: token.isNotEmpty ? token : null,
+        includeJsonContentType: false,
       );
 
       if (response.statusCode == 200) {
@@ -342,10 +297,9 @@ class SheetsService {
       );
     }
 
-    final storage = GetStorage();
-    final String? token = storage.read('token')?.toString();
+    final String token = _sessionStore.token;
 
-    if (token == null || token.isEmpty) {
+    if (token.isEmpty) {
       return const SheetActionResult(
         success: false,
         message: 'ไม่พบ token สำหรับยืนยันตัวตน',
@@ -353,11 +307,10 @@ class SheetsService {
     }
 
     try {
-      final headers = {'Authorization': 'Bearer $token'};
-
-      final response = await http.delete(
-        _buildUri('/sheets/$sheetId'),
-        headers: headers,
+      final response = await _api.delete(
+        path: '/sheets/$sheetId',
+        token: token,
+        includeJsonContentType: false,
       );
 
       if (response.statusCode == 204) {
@@ -403,7 +356,7 @@ Map<String, dynamic> _withCurrentUserPurchaseFlag(Map<String, dynamic> source) {
     return source;
   }
 
-  final String currentUid = GetStorage().read('uid')?.toString() ?? '';
+  final String currentUid = SheetsService._sessionStore.uid;
   if (currentUid.isEmpty) {
     return source;
   }

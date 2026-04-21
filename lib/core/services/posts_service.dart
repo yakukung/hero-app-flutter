@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter/foundation.dart';
-import 'package:get_storage/get_storage.dart';
+import 'package:flutter_application_1/core/network/api_client.dart';
 import 'package:flutter_application_1/core/models/post_model.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_application_1/core/session/session_store.dart';
 
 class ShareActionResult {
   final bool success;
@@ -18,22 +17,18 @@ class ShareActionResult {
 }
 
 class PostsService {
-  static Future<List<PostModel>> getPosts() async {
-    final storage = GetStorage();
-    final String? token = storage.read('token')?.toString();
+  static final SessionStore _sessionStore = SessionStore();
+  static final ApiClient _api = ApiClient(sessionStore: _sessionStore);
 
-    final String? currentUserId = storage.read('uid')?.toString();
+  static Future<List<PostModel>> getPosts() async {
+    final String token = _sessionStore.token;
+    final String currentUserId = _sessionStore.uid;
 
     try {
-      final url = Uri.parse('$apiEndpoint/posts');
-      final response = await http.get(
-        url,
-        headers: {
-          if (token != null && token.isNotEmpty)
-            'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        },
+      final response = await _api.get(
+        path: '/posts',
+        token: token.isNotEmpty ? token : null,
+        disableCache: true,
       );
 
       if (response.statusCode == 200) {
@@ -63,19 +58,14 @@ class PostsService {
   }
 
   static Future<PostModel?> getPostById(String postId) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token')?.toString();
-    final String? currentUserId = storage.read('uid')?.toString();
+    final String token = _sessionStore.token;
+    final String currentUserId = _sessionStore.uid;
 
     try {
-      final url = Uri.parse('$apiEndpoint/posts/$postId');
-      final response = await http.get(
-        url,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        },
+      final response = await _api.get(
+        path: '/posts/$postId',
+        token: token.isNotEmpty ? token : null,
+        disableCache: true,
       );
 
       if (response.statusCode == 200) {
@@ -110,17 +100,12 @@ class PostsService {
   }
 
   static Future<bool> likePost(String postId) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token');
+    final String token = _sessionStore.token;
 
     try {
-      final url = Uri.parse('$apiEndpoint/posts/$postId/like');
-      final response = await http.post(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await _api.post(
+        path: '/posts/$postId/like',
+        token: token.isNotEmpty ? token : null,
       );
 
       if (response.statusCode == 204 || response.statusCode == 409) {
@@ -134,17 +119,12 @@ class PostsService {
   }
 
   static Future<bool> unlikePost(String postId) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token');
+    final String token = _sessionStore.token;
 
     try {
-      final url = Uri.parse('$apiEndpoint/posts/$postId/like');
-      final response = await http.delete(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+      final response = await _api.delete(
+        path: '/posts/$postId/like',
+        token: token.isNotEmpty ? token : null,
       );
 
       if (response.statusCode == 204) {
@@ -161,23 +141,17 @@ class PostsService {
     required String postId,
     required String content,
   }) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token');
+    final String token = _sessionStore.token;
 
-    if (token == null || token.isEmpty) {
+    if (token.isEmpty) {
       return null;
     }
 
-    final headers = {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-
     try {
-      final response = await http.post(
-        Uri.parse('$apiEndpoint/posts/$postId/comment'),
-        headers: headers,
-        body: jsonEncode({'content': content}),
+      final response = await _api.postJson(
+        path: '/posts/$postId/comment',
+        body: {'content': content},
+        token: token,
       );
 
       if (response.statusCode == 200 ||
@@ -188,7 +162,7 @@ class PostsService {
             PostCommentModel(
               id: 'gen-$postId-${DateTime.now().millisecondsSinceEpoch}',
               postId: postId,
-              userId: storage.read('uid')?.toString() ?? '',
+              userId: _sessionStore.uid,
               content: content,
               createdAt: DateTime.now(),
             );
@@ -201,19 +175,13 @@ class PostsService {
   }
 
   static Future<List<PostCommentModel>> getComments(String postId) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token');
-
-    final headers = {
-      if (token != null) 'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache',
-    };
+    final String token = _sessionStore.token;
 
     try {
-      final response = await http.get(
-        Uri.parse('$apiEndpoint/posts/$postId/comments'),
-        headers: headers,
+      final response = await _api.get(
+        path: '/posts/$postId/comments',
+        token: token.isNotEmpty ? token : null,
+        disableCache: true,
       );
       if (response.statusCode == 200) {
         final dynamic data = jsonDecode(response.body);
@@ -287,43 +255,33 @@ class PostsService {
     required String postId,
     required String commentId,
   }) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token');
+    final String token = _sessionStore.token;
 
-    if (token == null || token.isEmpty) return false;
+    if (token.isEmpty) return false;
 
-    final headers = {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-
-    final url = Uri.parse('$apiEndpoint/posts/$postId/comment/$commentId');
     try {
-      final response = await http.delete(url, headers: headers);
+      final response = await _api.delete(
+        path: '/posts/$postId/comment/$commentId',
+        token: token,
+      );
       return _isDeleteSuccess(response.statusCode);
     } catch (e) {
-      debugPrint('Error deleting comment ($url): $e');
+      debugPrint('Error deleting comment ($postId/$commentId): $e');
       return false;
     }
   }
 
   static Future<ShareActionResult> sharePost(String postId) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token');
+    final String token = _sessionStore.token;
 
-    if (token == null || token.isEmpty) {
+    if (token.isEmpty) {
       return const ShareActionResult(success: false);
     }
 
-    final headers = {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    };
-
     try {
-      final response = await http.post(
-        Uri.parse('$apiEndpoint/posts/$postId/share'),
-        headers: headers,
+      final response = await _api.post(
+        path: '/posts/$postId/share',
+        token: token,
       );
 
       if (response.statusCode == 200 ||
@@ -352,24 +310,22 @@ class PostsService {
     required String content,
     String? sheetId,
   }) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token');
+    final String token = _sessionStore.token;
 
-    if (token == null) {
+    if (token.isEmpty) {
       return false;
     }
 
     try {
-      final url = Uri.parse('$apiEndpoint/posts/create');
-      final body = {'content': content, 'sheet_id': ?sheetId};
+      final body = <String, dynamic>{
+        'content': content,
+        if (sheetId != null && sheetId.isNotEmpty) 'sheet_id': sheetId,
+      };
 
-      final response = await http.post(
-        url,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(body),
+      final response = await _api.postJson(
+        path: '/posts/create',
+        body: body,
+        token: token,
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {

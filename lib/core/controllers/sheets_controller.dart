@@ -3,10 +3,12 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_application_1/core/models/sheet_model.dart';
 import 'package:flutter_application_1/core/models/category_model.dart';
+import 'package:flutter_application_1/core/session/session_store.dart';
 import 'package:flutter_application_1/core/services/sheets.service.dart';
 
 class SheetsController extends GetxController {
-  SheetsController({GetStorage? storage}) : _storage = storage ?? GetStorage();
+  SheetsController({GetStorage? storage, SessionStore? sessionStore})
+    : _sessionStore = sessionStore ?? SessionStore(storage: storage);
 
   var sheets = <SheetModel>[].obs;
   var favoriteSheets = <SheetModel>[].obs;
@@ -14,17 +16,17 @@ class SheetsController extends GetxController {
   var isLoading = false.obs;
   var errorMessage = ''.obs;
 
-  final GetStorage _storage;
+  final SessionStore _sessionStore;
 
   Future<void> fetchFavorites({bool showLoading = false}) async {
-    final String? token = _storage.read('token')?.toString();
+    final String token = _sessionStore.token;
 
     if (showLoading) {
       isLoading.value = true;
       errorMessage.value = '';
     }
 
-    if (token == null || token.isEmpty) {
+    if (token.isEmpty) {
       favoriteSheets.assignAll([]);
       _syncFavoriteFlags();
       if (showLoading) {
@@ -55,14 +57,14 @@ class SheetsController extends GetxController {
     isLoading.value = true;
     errorMessage.value = '';
     try {
-      final String? token = _storage.read('token')?.toString();
+      final String token = _sessionStore.token;
 
-      if (token != null && token.isNotEmpty) {
+      if (token.isNotEmpty) {
         await fetchFavorites();
       }
 
       final List<SheetModel> newSheets = await SheetsService.fetchSheets(
-        token: token,
+        token: token.isNotEmpty ? token : null,
       );
       sheets.assignAll(_mergeFavorites(newSheets));
     } catch (e) {
@@ -78,8 +80,8 @@ class SheetsController extends GetxController {
   }
 
   Future<bool> addFavorite(String sheetId) async {
-    final String? token = _storage.read('token')?.toString();
-    if (token == null || token.isEmpty) return false;
+    final String token = _sessionStore.token;
+    if (token.isEmpty) return false;
     try {
       final bool success = await SheetsService.addFavorite(
         sheetId,
@@ -97,8 +99,8 @@ class SheetsController extends GetxController {
   }
 
   Future<bool> removeFavorite(String sheetId) async {
-    final String? token = _storage.read('token')?.toString();
-    if (token == null || token.isEmpty) return false;
+    final String token = _sessionStore.token;
+    if (token.isEmpty) return false;
     try {
       final bool success = await SheetsService.removeFavorite(
         sheetId,
@@ -121,9 +123,9 @@ class SheetsController extends GetxController {
     }
 
     try {
-      final String? token = _storage.read('token')?.toString();
+      final String token = _sessionStore.token;
       final fetchedCategories = await SheetsService.fetchCategories(
-        token: token,
+        token: token.isNotEmpty ? token : null,
       );
       categories.assignAll(fetchedCategories);
     } catch (e) {

@@ -7,10 +7,10 @@ import 'package:flutter_application_1/core/services/users_service.dart';
 import 'package:flutter_application_1/features/auth/intro.dart';
 import 'package:flutter_application_1/features/user/edit_profile.dart';
 import 'package:flutter_application_1/features/user/user_sheets.dart';
+import 'package:flutter_application_1/core/session/session_store.dart';
 import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_application_1/constants/app_colors.dart';
 import 'package:flutter_application_1/constants/app_assets.dart';
@@ -345,8 +345,8 @@ class _ProfilePageState extends State<ProfilePage> {
       title: 'ยืนยันออกจากระบบ',
       message: 'คุณต้องการออกจากระบบใช่ไหม?',
       isConfirm: true,
-      onOk: () {
-        GetStorage().erase();
+      onOk: () async {
+        await SessionStore().eraseAll();
         Get.offAll(() => const IntroPage());
       },
     );

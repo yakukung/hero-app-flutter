@@ -4,17 +4,19 @@ import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:flutter_application_1/core/config/api_connect.dart';
 import 'package:flutter_application_1/core/models/user_model.dart';
+import 'package:flutter_application_1/core/session/session_store.dart';
 import 'package:flutter_application_1/core/services/users_service.dart';
 
 class AppController extends GetxController {
-  AppController({GetStorage? storage}) : _storage = storage ?? GetStorage();
+  AppController({GetStorage? storage, SessionStore? sessionStore})
+    : _sessionStore = sessionStore ?? SessionStore(storage: storage);
 
   final Rxn<UserModel> user = Rxn<UserModel>();
   final RxBool isLoading = false.obs;
   final RxBool isReady = false.obs;
   final RxString errorMessage = ''.obs;
 
-  final GetStorage _storage;
+  final SessionStore _sessionStore;
 
   String get uid => user.value?.id ?? '';
   String get username => user.value?.username ?? '';
@@ -39,7 +41,7 @@ class AppController extends GetxController {
   }
 
   Future<void> _hydrateSession() async {
-    final String storedUid = _storage.read('uid')?.toString() ?? '';
+    final String storedUid = _sessionStore.uid;
     if (storedUid.isEmpty) {
       isReady.value = true;
       return;
@@ -55,15 +57,15 @@ class AppController extends GetxController {
   }
 
   Future<void> fetchUserData() async {
-    final String? storedUid = _storage.read('uid')?.toString();
+    final String storedUid = _sessionStore.uid;
     isLoading.value = true;
 
     try {
-      if (storedUid != null && storedUid.isNotEmpty) {
-        final String? token = _storage.read('token')?.toString();
+      if (storedUid.isNotEmpty) {
+        final String token = _sessionStore.token;
         final response = await UsersService.fetchUserByIdRaw(
           storedUid,
-          token: (token != null && token.isNotEmpty) ? token : null,
+          token: token.isNotEmpty ? token : null,
         );
 
         if (response.statusCode == 200) {
@@ -120,38 +122,21 @@ class AppController extends GetxController {
         if (user.value?.roleName != null && user.value!.roleName!.isNotEmpty) {
           resolvedRole = user.value!.roleName;
         } else {
-          resolvedRole = _storage.read('role_name')?.toString();
+          resolvedRole = _sessionStore.roleName;
         }
       }
 
       if (resolvedRole != null && resolvedRole.isNotEmpty) {
         user.value = newUser.copyWith(roleName: resolvedRole);
-        _storage.write('role_name', resolvedRole);
+        _sessionStore.writeRoleName(resolvedRole);
       } else {
         user.value = newUser;
       }
 
-      _storage.write('uid', user.value!.id);
+      _sessionStore.writeUid(user.value!.id);
 
       if (userData['tokens'] is Map<String, dynamic>) {
-        final tokens = userData['tokens'] as Map<String, dynamic>;
-        final accessToken = tokens['access_token']?.toString();
-        final refreshToken = tokens['refresh_token']?.toString();
-        final accessTokenExpiresAt = tokens['access_token_expires_at'];
-        final refreshTokenExpiresAt = tokens['refresh_token_expires_at'];
-
-        if (accessToken != null) {
-          _storage.write('token', accessToken);
-        }
-        if (refreshToken != null) {
-          _storage.write('refresh_token', refreshToken);
-        }
-        if (accessTokenExpiresAt != null) {
-          _storage.write('access_token_expires_at', accessTokenExpiresAt);
-        }
-        if (refreshTokenExpiresAt != null) {
-          _storage.write('refresh_token_expires_at', refreshTokenExpiresAt);
-        }
+        _sessionStore.persistTokens(userData['tokens'] as Map<String, dynamic>);
       }
     } catch (e) {
       debugPrint('Error parsing user data: $e');
@@ -166,13 +151,7 @@ class AppController extends GetxController {
   void clearUserData() {
     user.value = null;
     errorMessage.value = '';
-
-    _storage.remove('token');
-    _storage.remove('refresh_token');
-    _storage.remove('access_token_expires_at');
-    _storage.remove('refresh_token_expires_at');
-    _storage.remove('uid');
-    _storage.remove('role_name');
+    _sessionStore.clearSession();
     isReady.value = true;
   }
 }

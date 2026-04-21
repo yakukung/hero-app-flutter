@@ -10,7 +10,6 @@ import 'package:flutter_application_1/features/admin/home.dart';
 import 'package:flutter_application_1/core/services/auth_service.dart';
 import 'package:flutter_application_1/features/auth/reset_password.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'login.dart';
 import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
 import 'package:flutter_application_1/core/utils/api_utils.dart';
@@ -375,16 +374,13 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _completeLogin(String uid, Map<String, dynamic> userData) async {
-    final storage = GetStorage();
-    storage.write('uid', uid);
-
     if (!mounted) return;
     final appController = Get.find<AppController>();
     final sheetsController = Get.find<SheetsController>();
     final adminController = Get.find<AdminController>();
     final navigationController = Get.find<NavigationController>();
 
-    appController.updateFromMap(userData);
+    appController.updateFromMap({...userData, 'uid': uid});
     sheetsController.resetState();
     adminController.resetState();
     navigationController.reset();

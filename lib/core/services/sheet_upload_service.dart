@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:flutter_application_1/core/network/api_client.dart';
 import 'package:flutter_application_1/core/models/upload_state.dart';
+import 'package:flutter_application_1/core/session/session_store.dart';
 import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:get/get.dart';
@@ -32,19 +32,21 @@ class SheetUploadData {
 }
 
 class SheetUploadService {
+  static final SessionStore _sessionStore = SessionStore();
+  static final ApiClient _api = ApiClient(sessionStore: _sessionStore);
+
   static Future<bool> uploadSheet({
     required BuildContext context,
     required SheetUploadData data,
   }) async {
-    final storage = GetStorage();
-    final String? token = storage.read('token');
+    final String token = _sessionStore.token;
 
-    final uri = Uri.parse('$apiEndpoint/sheets/create');
+    final uri = _api.buildUri('/sheets/create');
     final request = http.MultipartRequest('POST', uri);
 
     request.headers.addAll({
       'Content-Type': 'multipart/form-data',
-      if (token != null) 'Authorization': 'Bearer $token',
+      if (token.isNotEmpty) 'Authorization': 'Bearer $token',
     });
 
     request.fields['title'] = data.title;
