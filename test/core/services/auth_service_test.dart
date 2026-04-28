@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter_application_1/core/services/auth_service.dart';
+import 'package:hero_app_flutter/core/services/auth_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;

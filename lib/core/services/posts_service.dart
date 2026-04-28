@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_application_1/core/network/api_client.dart';
-import 'package:flutter_application_1/core/models/post_model.dart';
-import 'package:flutter_application_1/core/session/session_store.dart';
+import 'package:hero_app_flutter/core/network/api_client.dart';
+import 'package:hero_app_flutter/core/models/post_model.dart';
+import 'package:hero_app_flutter/core/session/session_store.dart';
 
 class ShareActionResult {
   final bool success;

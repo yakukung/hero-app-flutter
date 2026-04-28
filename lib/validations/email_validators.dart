@@ -1,5 +1,5 @@
-import 'package:flutter_application_1/validations/validation_error.dart';
-import 'package:flutter_application_1/validations/validation_messages.dart';
+import 'package:hero_app_flutter/validations/validation_error.dart';
+import 'package:hero_app_flutter/validations/validation_messages.dart';
 
 final RegExp _basicEmailRegExp = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/models/category_model.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
+import 'package:hero_app_flutter/core/models/category_model.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
 
 /// Horizontal scrollable subject/category selector
 class SubjectSelector extends StatelessWidget {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/controllers/app_controller.dart';
-import 'package:flutter_application_1/core/models/question_model.dart';
-import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
+import 'package:hero_app_flutter/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/core/models/question_model.dart';
+import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:get/get.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
 
 class QuizPage extends StatefulWidget {
   final String id;

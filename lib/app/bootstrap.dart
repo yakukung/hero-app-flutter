@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get_storage/get_storage.dart';
 
-import 'package:flutter_application_1/firebase_options.dart';
+import 'package:hero_app_flutter/firebase_options.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();

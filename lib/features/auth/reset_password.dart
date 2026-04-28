@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/services/auth_service.dart';
-import 'package:flutter_application_1/core/utils/api_utils.dart';
-import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
-import 'package:flutter_application_1/constants/app_fonts.dart';
+import 'package:hero_app_flutter/core/services/auth_service.dart';
+import 'package:hero_app_flutter/core/utils/api_utils.dart';
+import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/constants/app_fonts.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});

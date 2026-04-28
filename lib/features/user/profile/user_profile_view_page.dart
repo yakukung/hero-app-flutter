@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/models/user_model.dart';
-import 'package:flutter_application_1/core/services/users_service.dart';
-import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
+import 'package:hero_app_flutter/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/models/user_model.dart';
+import 'package:hero_app_flutter/core/services/users_service.dart';
+import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
-import 'package:flutter_application_1/constants/app_assets.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/constants/app_assets.dart';
 
 class UserProfileViewPage extends StatefulWidget {
   final String userId;

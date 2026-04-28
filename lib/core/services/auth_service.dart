@@ -2,8 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
-import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/network/api_client.dart';
+import 'package:hero_app_flutter/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/network/api_client.dart';
 import 'package:http/http.dart' as http;
 
 class AuthService {

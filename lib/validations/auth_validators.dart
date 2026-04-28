@@ -1,4 +1,4 @@
-import 'package:flutter_application_1/validations/validation_messages.dart';
+import 'package:hero_app_flutter/validations/validation_messages.dart';
 
 String? validateUsernameOrEmail(String? value) {
   if (value == null || value.trim().isEmpty) {

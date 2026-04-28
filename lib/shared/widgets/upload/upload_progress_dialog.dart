@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/models/upload_state.dart';
+import 'package:hero_app_flutter/core/models/upload_state.dart';
 import 'package:get/get.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
 
 /// Upload progress dialog widget with premium design
 class UploadProgressDialog extends StatelessWidget {

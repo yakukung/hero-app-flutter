@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_application_1/features/user/search/search_results_page.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
+import 'package:hero_app_flutter/features/user/search/search_results_page.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
 
 class SearchSheetBox extends StatefulWidget {
   const SearchSheetBox({super.key});
