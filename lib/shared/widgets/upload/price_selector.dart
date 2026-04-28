@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
 
 /// Circular price selector widget
 class PriceSelector extends StatelessWidget {

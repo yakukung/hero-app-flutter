@@ -1,15 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/network/api_client.dart';
-import 'package:flutter_application_1/core/models/upload_state.dart';
-import 'package:flutter_application_1/core/session/session_store.dart';
-import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
+
+import 'package:flutter/foundation.dart';
+import 'package:hero_app_flutter/core/network/api_client.dart';
+import 'package:hero_app_flutter/core/session/session_store.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:get/get.dart';
-import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
 
 class SheetUploadData {
   final String title;
@@ -31,18 +28,36 @@ class SheetUploadData {
   });
 }
 
+class SheetUploadResult {
+  const SheetUploadResult({
+    required this.success,
+    required this.statusCode,
+    required this.message,
+  });
+
+  final bool success;
+  final int statusCode;
+  final String message;
+}
+
+typedef SendSheetUploadRequest =
+    Future<http.Response> Function(http.MultipartRequest request);
+
 class SheetUploadService {
   static final SessionStore _sessionStore = SessionStore();
   static final ApiClient _api = ApiClient(sessionStore: _sessionStore);
 
-  static Future<bool> uploadSheet({
-    required BuildContext context,
+  static Future<SheetUploadResult> uploadSheet({
     required SheetUploadData data,
+    void Function(int bytes, int total)? onProgress,
+    SendSheetUploadRequest? sendRequest,
   }) async {
     final String token = _sessionStore.token;
 
     final uri = _api.buildUri('/sheets/create');
-    final request = http.MultipartRequest('POST', uri);
+    final request = onProgress != null
+        ? ProgressMultipartRequest('POST', uri, onProgress: onProgress)
+        : http.MultipartRequest('POST', uri);
 
     request.headers.addAll({
       'Content-Type': 'multipart/form-data',
@@ -78,64 +93,37 @@ class SheetUploadService {
       );
     }
 
-    final stateNotifier = ValueNotifier(const UploadState(isUploading: true));
-    // ignore: use_build_context_synchronously
-    UploadProgressDialog.show(
-      stateNotifier: stateNotifier,
-      onComplete: () {
-        try {
-          final navigationController = Get.find<NavigationController>();
-          navigationController.changeIndex(0);
-        } catch (e) {
-          debugPrint('Error changing navigation index after upload: $e');
-          return;
-        }
-      },
-    );
-
     try {
-      final progressRequest = ProgressMultipartRequest(
-        'POST',
-        uri,
-        onProgress: (int bytes, int total) {
-          final progress = bytes / total;
-          stateNotifier.value = stateNotifier.value.copyWith(
-            progress: progress,
-          );
-        },
-      );
-
-      progressRequest.headers.addAll(request.headers);
-      progressRequest.fields.addAll(request.fields);
-      progressRequest.files.addAll(request.files);
-
-      final streamedResponse = await progressRequest.send();
-      final response = await http.Response.fromStream(streamedResponse);
+      final response = await (sendRequest ?? _sendRequest)(request);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        stateNotifier.value = stateNotifier.value.copyWith(
-          isUploading: false,
-          isSuccess: true,
-          progress: 1.0,
+        return SheetUploadResult(
+          success: true,
+          statusCode: response.statusCode,
+          message: 'อัปโหลดชีตสำเร็จ',
         );
-        return true;
-      } else {
-        stateNotifier.value = stateNotifier.value.copyWith(
-          isUploading: false,
-          isSuccess: false,
-          errorMessage: 'อัปโหลดล้มเหลว: ${response.statusCode}',
-        );
-        return false;
       }
+
+      return SheetUploadResult(
+        success: false,
+        statusCode: response.statusCode,
+        message: 'อัปโหลดล้มเหลว: ${response.statusCode}',
+      );
     } catch (e) {
       debugPrint('Error uploading sheet: $e');
-      stateNotifier.value = stateNotifier.value.copyWith(
-        isUploading: false,
-        isSuccess: false,
-        errorMessage: 'เกิดข้อผิดพลาด: $e',
+      return SheetUploadResult(
+        success: false,
+        statusCode: 0,
+        message: 'เกิดข้อผิดพลาด: $e',
       );
-      return false;
     }
+  }
+
+  static Future<http.Response> _sendRequest(
+    http.MultipartRequest request,
+  ) async {
+    final streamedResponse = await request.send();
+    return http.Response.fromStream(streamedResponse);
   }
 }
 

@@ -1,17 +1,19 @@
-# flutter_application_1
+# Hero App Flutter
 
-A new Flutter project.
+Flutter client for the Hero App project.
+
+## Structure
+
+- `lib/app`: app bootstrap, bindings, and root shell
+- `lib/core`: shared controllers, network, models, services, and session flow
+- `lib/features`: feature-first pages, page controllers, and widgets
+- `lib/shared`: reusable UI building blocks
+- `test`: unit and widget coverage for core and high-risk UI flows
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# hero-app-flutter
+1. Run `flutter pub get`
+2. Ensure the local `.env` matches the target backend
+3. Run `flutter test`
+4. Run `flutter analyze`
+5. Start the app with `flutter run`

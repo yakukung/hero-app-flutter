@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/controllers/app_controller.dart';
-import 'package:flutter_application_1/core/services/users_service.dart';
-import 'package:flutter_application_1/core/utils/api_utils.dart';
-import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
+import 'package:hero_app_flutter/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/core/services/users_service.dart';
+import 'package:hero_app_flutter/core/utils/api_utils.dart';
+import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
-import 'package:flutter_application_1/validations/auth_validators.dart';
-import 'package:flutter_application_1/validations/email_validators.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
+import 'package:hero_app_flutter/validations/auth_validators.dart';
+import 'package:hero_app_flutter/validations/email_validators.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
 
 class ChangeEmailPage extends StatefulWidget {
   const ChangeEmailPage({super.key});

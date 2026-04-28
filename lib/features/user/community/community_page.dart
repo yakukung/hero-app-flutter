@@ -1,64 +1,49 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
-import 'package:flutter_application_1/core/models/post_model.dart';
-import 'package:flutter_application_1/core/models/user_model.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/services/posts_service.dart';
-import 'package:flutter_application_1/features/user/community/widgets/comment_sheet.dart';
-import 'package:flutter_application_1/features/user/community/widgets/community_post_card.dart';
-import 'package:flutter_application_1/features/user/community/create_post_page.dart';
-import 'package:flutter_application_1/features/user/profile/profile_page.dart';
-import 'package:flutter_application_1/features/user/profile/user_profile_view_page.dart';
-import 'package:flutter_application_1/features/user/sheet/preview_sheet_page.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:hero_app_flutter/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/models/post_model.dart';
+import 'package:hero_app_flutter/core/models/user_model.dart';
+import 'package:hero_app_flutter/features/user/community/controllers/community_page_controller.dart';
+import 'package:hero_app_flutter/features/user/community/create_post_page.dart';
+import 'package:hero_app_flutter/features/user/community/widgets/comment_sheet.dart';
+import 'package:hero_app_flutter/features/user/community/widgets/community_page_header.dart';
+import 'package:hero_app_flutter/features/user/community/widgets/community_post_card.dart';
+import 'package:hero_app_flutter/features/user/community/widgets/create_post_prompt.dart';
+import 'package:hero_app_flutter/features/user/profile/profile_page.dart';
+import 'package:hero_app_flutter/features/user/profile/user_profile_view_page.dart';
+import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
+
 class CommunityPage extends StatefulWidget {
-  const CommunityPage({super.key});
+  const CommunityPage({super.key, this.controller});
+
+  final CommunityPageController? controller;
 
   @override
   State<CommunityPage> createState() => _CommunityPageState();
 }
 
 class _CommunityPageState extends State<CommunityPage> {
-  List<PostModel> _posts = [];
-  bool _isLoading = true;
-  String? _error;
-  String? _currentUserId;
-  final storage = GetStorage();
+  late final CommunityPageController _controller;
+
+  bool get _ownsController => widget.controller == null;
 
   @override
   void initState() {
     super.initState();
-    _currentUserId = storage.read('uid')?.toString();
-    _refreshPosts();
+    _controller = widget.controller ?? CommunityPageController();
+    unawaited(_controller.loadPosts());
   }
 
-  Future<void> _refreshPosts() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final posts = await PostsService.getPosts();
-      if (!mounted) return;
-      setState(() {
-        _posts = posts;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+  @override
+  void dispose() {
+    if (_ownsController) {
+      _controller.dispose();
     }
+    super.dispose();
   }
 
   @override
@@ -67,108 +52,67 @@ class _CommunityPageState extends State<CommunityPage> {
       backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
-        child: RefreshIndicator(
-          onRefresh: () async {
-            await _refreshPosts();
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            return RefreshIndicator(
+              onRefresh: _controller.refreshPosts,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const CommunityPageHeader(),
+                      const SizedBox(height: 24),
+                      CreatePostPrompt(onTap: _openCreatePostPage),
+                      const SizedBox(height: 32),
+                      _buildBody(),
+                      const SizedBox(height: 140),
+                    ],
+                  ),
+                ),
+              ),
+            );
           },
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 16,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 24),
-                  _buildCreatePostInput(),
-                  const SizedBox(height: 32),
-                  if (_isLoading)
-                    const Center(child: CircularProgressIndicator())
-                  else if (_error != null)
-                    Center(child: Text('Error: $_error'))
-                  else if (_posts.isEmpty)
-                    const Center(child: Text('ไม่พบโพสต์'))
-                  else
-                    ListView.builder(
-                      padding: EdgeInsets.zero,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _posts.length,
-                      itemBuilder: (context, index) {
-                        return _buildPostCard(_posts[index]);
-                      },
-                    ),
-                  const SizedBox(height: 140), // Bottom padding
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'คอมมูนิตี้',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'สามารถโพสถามหรือแสดงความคิดเห็นกับผู้ใช้คนอื่นได้',
-          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-        ),
-        const SizedBox(height: 16),
-        Divider(color: Colors.grey[200], thickness: 1),
-      ],
-    );
-  }
+  Widget _buildBody() {
+    if (_controller.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-  Widget _buildCreatePostInput() {
-    return GestureDetector(
-      onTap: () async {
-        final result = await Get.to(() => const CreatePostPage());
-        if (result == true) {
-          _refreshPosts();
-        }
+    if (_controller.errorMessage != null) {
+      return Center(child: Text('Error: ${_controller.errorMessage}'));
+    }
+
+    if (_controller.posts.isEmpty) {
+      return const Center(child: Text('ไม่พบโพสต์'));
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _controller.posts.length,
+      itemBuilder: (context, index) {
+        return _buildPostCard(_controller.posts[index]);
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                'สร้างโพสของคุณที่นี่',
-                style: TextStyle(color: Colors.grey[500]),
-              ),
-            ),
-            Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.edit, color: Colors.white, size: 20),
-            ),
-          ],
-        ),
-      ),
     );
+  }
+
+  Future<void> _openCreatePostPage() async {
+    final result = await Get.to(() => const CreatePostPage());
+    if (result == true) {
+      await _controller.refreshPosts();
+    }
   }
 
   Widget _buildPostCard(PostModel post) {
@@ -185,24 +129,7 @@ class _CommunityPageState extends State<CommunityPage> {
           ? null
           : () => Get.to(() => PreviewSheetPage(sheetId: post.sheetId!)),
       onLikeTap: () async {
-        final success = post.isLiked
-            ? await PostsService.unlikePost(post.id)
-            : await PostsService.likePost(post.id);
-
-        if (success && mounted) {
-          setState(() {
-            _posts = _posts.map((p) {
-              if (p.id == post.id) {
-                final increment = p.isLiked ? -1 : 1;
-                return p.copyWith(
-                  isLiked: !p.isLiked,
-                  likeCount: p.likeCount + increment,
-                );
-              }
-              return p;
-            }).toList();
-          });
-        }
+        await _controller.toggleLike(post);
       },
       onCommentTap: () => _openComments(post),
       onShareTap: () => _sharePost(post),
@@ -210,17 +137,17 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   void _openUserProfile(UserModel author) {
-    final currentUserId = _currentUserId;
-    if (currentUserId != null && currentUserId == author.id) {
+    final currentUserId = _controller.currentUserId;
+    if (currentUserId.isNotEmpty && currentUserId == author.id) {
       Get.to(() => const ProfilePage());
       return;
     }
+
     Get.to(() => UserProfileViewPage(userId: author.id, initialUser: author));
   }
 
   Future<void> _openComments(PostModel post) async {
-    final token = GetStorage().read('token')?.toString();
-    if (token == null || token.isEmpty) {
+    if (!_controller.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('กรุณาเข้าสู่ระบบเพื่อแสดงความคิดเห็น')),
       );
@@ -237,16 +164,12 @@ class _CommunityPageState extends State<CommunityPage> {
       builder: (context) {
         return CommentSheet(
           post: post,
+          currentUserId: _controller.currentUserId,
           onCommentCountChanged: (count) {
-            if (!mounted) return;
-            setState(() {
-              _posts = _posts.map((p) {
-                if (p.id == post.id) {
-                  return p.copyWith(commentCount: count);
-                }
-                return p;
-              }).toList();
-            });
+            _controller.updateCommentCount(
+              postId: post.id,
+              commentCount: count,
+            );
           },
         );
       },
@@ -254,8 +177,7 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   Future<void> _sharePost(PostModel post) async {
-    final token = GetStorage().read('token')?.toString();
-    if (token == null || token.isEmpty) {
+    if (!_controller.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('กรุณาเข้าสู่ระบบก่อนแชร์โพสต์')),
       );
@@ -272,32 +194,29 @@ class _CommunityPageState extends State<CommunityPage> {
         subject: 'แชร์โพสต์จากคอมมูนิตี้',
         sharePositionOrigin: _shareOrigin(context),
       );
-    } catch (e) {
-      debugPrint('Error opening share sheet: $e');
+    } catch (error) {
+      debugPrint('Error opening share sheet: $error');
     }
 
-    final result = await PostsService.sharePost(post.id);
-    if (!mounted) return;
+    final result = await _controller.registerShare(post);
+    if (!mounted) {
+      return;
+    }
 
     if (result.success && !result.alreadyShared) {
-      setState(() {
-        _posts = _posts.map((p) {
-          if (p.id == post.id) {
-            final newCount = result.shareCount ?? (p.shareCount + 1);
-            return p.copyWith(shareCount: newCount);
-          }
-          return p;
-        }).toList();
-      });
-    } else if (result.alreadyShared) {
+      return;
+    }
+
+    if (result.alreadyShared) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('คุณแชร์โพสต์นี้ไปแล้ว')));
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('แชร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')),
-      );
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('แชร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')),
+    );
   }
 
   Rect _shareOrigin(BuildContext context) {
@@ -375,24 +294,30 @@ class _CommunityPageState extends State<CommunityPage> {
       title: Text(reason),
       onTap: () async {
         Get.back();
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'ส่งรายงานของคุณเรียบร้อยแล้ว ขอบคุณที่ช่วยแจ้งให้เราทราบ',
-              ),
-            ),
-          );
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        if (!mounted) {
+          return;
         }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'ส่งรายงานของคุณเรียบร้อยแล้ว ขอบคุณที่ช่วยแจ้งให้เราทราบ',
+            ),
+          ),
+        );
       },
     );
   }
 
   ImageProvider? _resolveAvatar(String? profileImage) {
-    if (profileImage == null || profileImage.isEmpty) return null;
-    final isFullUrl = profileImage.startsWith('http');
-    final url = isFullUrl ? profileImage : '$apiEndpoint/$profileImage';
+    if (profileImage == null || profileImage.isEmpty) {
+      return null;
+    }
+
+    final url = profileImage.startsWith('http')
+        ? profileImage
+        : '$apiEndpoint/$profileImage';
     return NetworkImage(url);
   }
 }

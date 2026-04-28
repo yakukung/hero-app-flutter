@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/constants/app_assets.dart';
-import 'package:flutter_application_1/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/constants/app_assets.dart';
+import 'package:hero_app_flutter/core/controllers/app_controller.dart';
 import 'package:get/get.dart';
 
 class AdminNavbar extends GetView<AppController>

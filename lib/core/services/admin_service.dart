@@ -1,4 +1,4 @@
-import 'package:flutter_application_1/core/network/api_client.dart';
+import 'package:hero_app_flutter/core/network/api_client.dart';
 import 'package:http/http.dart' as http;
 
 class AdminService {

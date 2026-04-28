@@ -1,21 +1,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/models/post_model.dart';
-import 'package:flutter_application_1/core/services/posts_service.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/models/post_model.dart';
+import 'package:hero_app_flutter/core/services/posts_service.dart';
 import 'package:get/get.dart';
-import 'package:get_storage/get_storage.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
 
 class CommentSheet extends StatefulWidget {
   final PostModel post;
   final ValueChanged<int>? onCommentCountChanged;
+  final String? currentUserId;
 
   const CommentSheet({
     super.key,
     required this.post,
     this.onCommentCountChanged,
+    this.currentUserId,
   });
 
   @override
@@ -33,7 +34,7 @@ class _CommentSheetState extends State<CommentSheet> {
   @override
   void initState() {
     super.initState();
-    _currentUserId = GetStorage().read('uid')?.toString();
+    _currentUserId = widget.currentUserId;
     _comments = widget.post.comments;
     _loadComments();
   }

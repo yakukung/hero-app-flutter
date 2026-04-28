@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
-import 'package:flutter_application_1/core/models/sheet_model.dart';
-import 'package:flutter_application_1/core/services/sheets.service.dart';
-import 'package:flutter_application_1/features/user/sheet/preview_sheet_page.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/core/models/sheet_model.dart';
+import 'package:hero_app_flutter/core/services/sheets_service.dart';
+import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/session/session_store.dart';
+import 'package:hero_app_flutter/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/session/session_store.dart';
 import 'package:http/http.dart' as http;
 
 class ApiClient {

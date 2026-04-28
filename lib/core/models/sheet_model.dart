@@ -1,6 +1,6 @@
 import 'enums.dart';
 import 'question_model.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/config/api_connect.dart';
 
 class SheetModel {
   final String id;

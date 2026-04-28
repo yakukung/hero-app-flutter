@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:flutter_application_1/core/config/api_connect.dart';
-import 'package:flutter_application_1/core/models/user_model.dart';
-import 'package:flutter_application_1/core/session/session_store.dart';
-import 'package:flutter_application_1/core/services/users_service.dart';
+import 'package:hero_app_flutter/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/models/user_model.dart';
+import 'package:hero_app_flutter/core/session/session_store.dart';
+import 'package:hero_app_flutter/core/services/users_service.dart';
 
 class AppController extends GetxController {
   AppController({GetStorage? storage, SessionStore? sessionStore})

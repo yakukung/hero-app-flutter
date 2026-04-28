@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/validations/validation_error.dart';
-import 'package:flutter_application_1/validations/validation_messages.dart';
+import 'package:hero_app_flutter/validations/validation_error.dart';
+import 'package:hero_app_flutter/validations/validation_messages.dart';
 
 ValidationError? validateSheetUpload({
   required List<File> images,

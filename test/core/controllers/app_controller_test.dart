@@ -1,4 +1,4 @@
-import 'package:flutter_application_1/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/core/controllers/app_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';

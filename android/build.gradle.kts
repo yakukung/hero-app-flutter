@@ -25,7 +25,7 @@ fun Project.setNamespaceIfMissing() {
     if (android.namespace == null) {
         android.namespace =
             if (group.toString().isNotEmpty()) group.toString()
-            else "com.example.${name.replace("-", "_")}"
+            else "com.heroapp.${name.replace("-", "_")}"
     }
 }
 

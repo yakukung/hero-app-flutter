@@ -1,8 +1,8 @@
 import 'package:get/get.dart';
-import 'package:flutter_application_1/core/controllers/app_controller.dart';
-import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
-import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
-import 'package:flutter_application_1/core/controllers/admin_controller.dart';
+import 'package:hero_app_flutter/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/core/controllers/sheets_controller.dart';
+import 'package:hero_app_flutter/core/controllers/navigation_controller.dart';
+import 'package:hero_app_flutter/core/controllers/admin_controller.dart';
 
 class AppBindings extends Bindings {
   @override

@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:flutter_application_1/core/models/sheet_model.dart';
-import 'package:flutter_application_1/core/models/category_model.dart';
-import 'package:flutter_application_1/core/session/session_store.dart';
-import 'package:flutter_application_1/core/services/sheets.service.dart';
+import 'package:hero_app_flutter/core/models/sheet_model.dart';
+import 'package:hero_app_flutter/core/models/category_model.dart';
+import 'package:hero_app_flutter/core/session/session_store.dart';
+import 'package:hero_app_flutter/core/services/sheets_service.dart';
 
 class SheetsController extends GetxController {
   SheetsController({GetStorage? storage, SessionStore? sessionStore})

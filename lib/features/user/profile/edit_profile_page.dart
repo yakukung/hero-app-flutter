@@ -1,15 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/constants/app_assets.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
-import 'package:flutter_application_1/core/controllers/app_controller.dart';
-import 'package:flutter_application_1/core/models/upload_state.dart';
-import 'package:flutter_application_1/core/services/users_service.dart';
-import 'package:flutter_application_1/features/user/profile/change_email_page.dart';
-import 'package:flutter_application_1/features/user/profile/change_password_page.dart';
-import 'package:flutter_application_1/features/user/profile/change_username_page.dart';
-import 'package:flutter_application_1/shared/widgets/upload/upload_progress_dialog.dart';
+import 'package:hero_app_flutter/constants/app_assets.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/core/models/upload_state.dart';
+import 'package:hero_app_flutter/core/services/users_service.dart';
+import 'package:hero_app_flutter/features/user/profile/change_email_page.dart';
+import 'package:hero_app_flutter/features/user/profile/change_password_page.dart';
+import 'package:hero_app_flutter/features/user/profile/change_username_page.dart';
+import 'package:hero_app_flutter/shared/widgets/upload/upload_progress_dialog.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
 

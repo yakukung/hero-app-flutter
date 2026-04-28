@@ -1,28 +1,35 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/core/controllers/admin_controller.dart';
-import 'package:flutter_application_1/core/controllers/app_controller.dart';
-import 'package:flutter_application_1/core/controllers/navigation_controller.dart';
-import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
-import 'package:flutter_application_1/core/session/session_store.dart';
-import 'package:flutter_application_1/features/auth/intro.dart';
-import 'package:flutter_application_1/features/user/search/search_results_page.dart';
+import 'package:hero_app_flutter/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/core/controllers/navigation_controller.dart';
+import 'package:hero_app_flutter/core/session/app_session_coordinator.dart';
+import 'package:hero_app_flutter/features/auth/intro_page.dart';
+import 'package:hero_app_flutter/features/user/search/search_results_page.dart';
 import 'package:get/get.dart';
-import 'package:flutter_application_1/shared/widgets/layout/sidebar_menu_item.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
-import 'package:flutter_application_1/constants/app_fonts.dart';
-import 'package:flutter_application_1/constants/app_assets.dart';
+import 'package:hero_app_flutter/shared/widgets/layout/sidebar_menu_item.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/constants/app_fonts.dart';
+import 'package:hero_app_flutter/constants/app_assets.dart';
 
-class SideBar extends StatefulWidget {
-  const SideBar({super.key});
+class MainSidebar extends StatefulWidget {
+  const MainSidebar({super.key, this.sessionCoordinator});
+
+  final AppSessionCoordinator? sessionCoordinator;
 
   @override
-  State<SideBar> createState() => _SideBarState();
+  State<MainSidebar> createState() => _MainSidebarState();
 }
 
-class _SideBarState extends State<SideBar> {
+class _MainSidebarState extends State<MainSidebar> {
   final TextEditingController _searchController = TextEditingController();
+  late final AppSessionCoordinator _sessionCoordinator;
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionCoordinator = widget.sessionCoordinator ?? AppSessionCoordinator();
+  }
 
   @override
   void dispose() {
@@ -40,11 +47,6 @@ class _SideBarState extends State<SideBar> {
   }
 
   void _showLogoutConfirmation(BuildContext context) {
-    final appController = Get.find<AppController>();
-    final sheetsController = Get.find<SheetsController>();
-    final adminController = Get.find<AdminController>();
-    final navigationController = Get.find<NavigationController>();
-
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -114,11 +116,7 @@ class _SideBarState extends State<SideBar> {
                     ),
                     TextButton(
                       onPressed: () async {
-                        await SessionStore().eraseAll();
-                        appController.clearUserData();
-                        sheetsController.resetState();
-                        adminController.resetState();
-                        navigationController.reset();
+                        await _sessionCoordinator.logout();
                         Get.offAll(() => IntroPage());
                       },
                       child: const Padding(

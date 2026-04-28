@@ -1,7 +1,7 @@
-import 'package:flutter_application_1/core/controllers/sheets_controller.dart';
-import 'package:flutter_application_1/core/models/category_model.dart';
-import 'package:flutter_application_1/core/models/enums.dart';
-import 'package:flutter_application_1/core/models/sheet_model.dart';
+import 'package:hero_app_flutter/core/controllers/sheets_controller.dart';
+import 'package:hero_app_flutter/core/models/category_model.dart';
+import 'package:hero_app_flutter/core/models/enums.dart';
+import 'package:hero_app_flutter/core/models/sheet_model.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';

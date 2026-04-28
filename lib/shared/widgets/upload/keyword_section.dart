@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/shared/widgets/custom_dialog.dart';
-import 'package:flutter_application_1/constants/app_colors.dart';
+import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
+import 'package:hero_app_flutter/constants/app_colors.dart';
 
 /// Keyword input and display widget with add/remove functionality
 class KeywordSection extends StatelessWidget {
