@@ -126,8 +126,9 @@ class CommunityPostCard extends StatelessWidget {
               _ActionButton(
                 icon: Icons.share,
                 label: '${post.shareCount}',
-                color: Colors.white,
-                isActive: false,
+                color: post.isShared ? AppColors.primary : Colors.white,
+                textColor: post.isShared ? Colors.white : Colors.black54,
+                isActive: post.isShared,
                 onTap: onShareTap,
               ),
             ],

@@ -1,13 +1,28 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/session/session_store.dart';
 import 'package:http/http.dart' as http;
 
+typedef SessionExpiredHandler = FutureOr<void> Function();
+
 class ApiClient {
-  ApiClient({SessionStore? sessionStore}) : _sessionStore = sessionStore;
+  ApiClient({
+    SessionStore? sessionStore,
+    SessionExpiredHandler? onSessionExpired,
+  }) : _sessionStore = sessionStore,
+       _onSessionExpired = onSessionExpired;
+
+  static SessionExpiredHandler? _sessionExpiredHandler;
+  static bool _isHandlingSessionExpiration = false;
+
+  static void configureSessionExpiredHandler(SessionExpiredHandler? handler) {
+    _sessionExpiredHandler = handler;
+  }
 
   SessionStore? _sessionStore;
+  final SessionExpiredHandler? _onSessionExpired;
 
   Uri buildUri(String path) => Uri.parse('$apiEndpoint$path');
 
@@ -37,6 +52,38 @@ class ApiClient {
   }) {
     final resolvedToken = resolveToken(token, useSessionToken: useSessionToken);
 
+    return _buildHeadersForToken(
+      resolvedToken: resolvedToken,
+      contentType: contentType,
+      disableCache: disableCache,
+      extraHeaders: extraHeaders,
+    );
+  }
+
+  Future<http.Response?> responseIfSessionExpired({
+    String? token,
+    bool useSessionToken = true,
+  }) async {
+    final resolvedToken = resolveToken(token, useSessionToken: useSessionToken);
+    return _expiredSessionResponseForToken(resolvedToken);
+  }
+
+  Future<void> handleResponse(http.Response response, {String? token}) async {
+    if (token == null || token.isEmpty) {
+      return;
+    }
+    if (!_isUnauthorizedStatus(response.statusCode)) {
+      return;
+    }
+    await _notifySessionExpired();
+  }
+
+  Map<String, String> _buildHeadersForToken({
+    required String? resolvedToken,
+    String? contentType = 'application/json',
+    bool disableCache = false,
+    Map<String, String>? extraHeaders,
+  }) {
     return {
       if (resolvedToken != null && resolvedToken.isNotEmpty)
         'Authorization': 'Bearer $resolvedToken',
@@ -47,6 +94,53 @@ class ApiClient {
   }
 
   SessionStore _getSessionStore() => _sessionStore ??= SessionStore();
+
+  Future<http.Response?> _expiredSessionResponseForToken(
+    String? resolvedToken,
+  ) async {
+    if (!_isExpiredSessionToken(resolvedToken)) {
+      return null;
+    }
+
+    await _notifySessionExpired();
+    return http.Response('{"message":"SESSION_EXPIRED"}', 401);
+  }
+
+  bool _isExpiredSessionToken(String? resolvedToken) {
+    if (resolvedToken == null || resolvedToken.isEmpty) {
+      return false;
+    }
+    if (_sessionStore == null) {
+      return false;
+    }
+
+    final sessionStore = _sessionStore!;
+    return resolvedToken == sessionStore.token &&
+        sessionStore.isAccessTokenExpired;
+  }
+
+  bool _isUnauthorizedStatus(int statusCode) {
+    return statusCode == 401 || statusCode == 403;
+  }
+
+  Future<void> _notifySessionExpired() async {
+    final handler = _onSessionExpired ?? _sessionExpiredHandler;
+
+    if (_isHandlingSessionExpiration) {
+      return;
+    }
+
+    _isHandlingSessionExpiration = true;
+    try {
+      if (handler != null) {
+        await handler();
+      } else {
+        _getSessionStore().clearSession();
+      }
+    } finally {
+      _isHandlingSessionExpiration = false;
+    }
+  }
 
   Future<T> withClient<T>(
     Future<T> Function(http.Client client) action, {
@@ -71,18 +165,15 @@ class ApiClient {
     Map<String, String>? headers,
     http.Client? client,
   }) {
-    return withClient(
-      (httpClient) => httpClient.get(
-        buildUri(path),
-        headers: buildHeaders(
-          token: token,
-          contentType: includeJsonContentType ? 'application/json' : null,
-          disableCache: disableCache,
-          useSessionToken: useSessionToken,
-          extraHeaders: headers,
-        ),
-      ),
+    return _send(
+      token: token,
+      contentType: includeJsonContentType ? 'application/json' : null,
+      disableCache: disableCache,
+      useSessionToken: useSessionToken,
+      extraHeaders: headers,
       client: client,
+      request: (httpClient, requestHeaders) =>
+          httpClient.get(buildUri(path), headers: requestHeaders),
     );
   }
 
@@ -96,19 +187,15 @@ class ApiClient {
     Map<String, String>? headers,
     http.Client? client,
   }) {
-    return withClient(
-      (httpClient) => httpClient.post(
-        buildUri(path),
-        headers: buildHeaders(
-          token: token,
-          contentType: includeJsonContentType ? 'application/json' : null,
-          disableCache: disableCache,
-          useSessionToken: useSessionToken,
-          extraHeaders: headers,
-        ),
-        body: body,
-      ),
+    return _send(
+      token: token,
+      contentType: includeJsonContentType ? 'application/json' : null,
+      disableCache: disableCache,
+      useSessionToken: useSessionToken,
+      extraHeaders: headers,
       client: client,
+      request: (httpClient, requestHeaders) =>
+          httpClient.post(buildUri(path), headers: requestHeaders, body: body),
     );
   }
 
@@ -121,18 +208,14 @@ class ApiClient {
     Map<String, String>? headers,
     http.Client? client,
   }) {
-    return withClient(
-      (httpClient) => httpClient.patch(
-        buildUri(path),
-        headers: buildHeaders(
-          token: token,
-          contentType: includeJsonContentType ? 'application/json' : null,
-          useSessionToken: useSessionToken,
-          extraHeaders: headers,
-        ),
-        body: body,
-      ),
+    return _send(
+      token: token,
+      contentType: includeJsonContentType ? 'application/json' : null,
+      useSessionToken: useSessionToken,
+      extraHeaders: headers,
       client: client,
+      request: (httpClient, requestHeaders) =>
+          httpClient.patch(buildUri(path), headers: requestHeaders, body: body),
     );
   }
 
@@ -145,19 +228,54 @@ class ApiClient {
     Map<String, String>? headers,
     http.Client? client,
   }) {
-    return withClient(
-      (httpClient) => httpClient.delete(
+    return _send(
+      token: token,
+      contentType: includeJsonContentType ? 'application/json' : null,
+      useSessionToken: useSessionToken,
+      extraHeaders: headers,
+      client: client,
+      request: (httpClient, requestHeaders) => httpClient.delete(
         buildUri(path),
-        headers: buildHeaders(
-          token: token,
-          contentType: includeJsonContentType ? 'application/json' : null,
-          useSessionToken: useSessionToken,
-          extraHeaders: headers,
-        ),
+        headers: requestHeaders,
         body: body,
       ),
-      client: client,
     );
+  }
+
+  Future<http.Response> _send({
+    required String? token,
+    required bool useSessionToken,
+    required String? contentType,
+    bool disableCache = false,
+    Map<String, String>? extraHeaders,
+    http.Client? client,
+    required Future<http.Response> Function(
+      http.Client client,
+      Map<String, String> headers,
+    )
+    request,
+  }) async {
+    final resolvedToken = resolveToken(token, useSessionToken: useSessionToken);
+    final expiredResponse = await _expiredSessionResponseForToken(
+      resolvedToken,
+    );
+    if (expiredResponse != null) {
+      return expiredResponse;
+    }
+
+    return withClient((httpClient) async {
+      final response = await request(
+        httpClient,
+        _buildHeadersForToken(
+          resolvedToken: resolvedToken,
+          contentType: contentType,
+          disableCache: disableCache,
+          extraHeaders: extraHeaders,
+        ),
+      );
+      await handleResponse(response, token: resolvedToken);
+      return response;
+    }, client: client);
   }
 
   Future<http.Response> postJson({

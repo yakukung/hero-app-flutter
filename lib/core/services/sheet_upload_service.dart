@@ -53,6 +53,14 @@ class SheetUploadService {
     SendSheetUploadRequest? sendRequest,
   }) async {
     final String token = _sessionStore.token;
+    final expiredResponse = await _api.responseIfSessionExpired(token: token);
+    if (expiredResponse != null) {
+      return SheetUploadResult(
+        success: false,
+        statusCode: expiredResponse.statusCode,
+        message: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
+      );
+    }
 
     final uri = _api.buildUri('/sheets/create');
     final request = onProgress != null
@@ -95,6 +103,7 @@ class SheetUploadService {
 
     try {
       final response = await (sendRequest ?? _sendRequest)(request);
+      await _api.handleResponse(response, token: token);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         return SheetUploadResult(

@@ -141,6 +141,16 @@ class UsersService {
     void Function(int bytes, int total)? onProgress,
   }) async {
     final String? resolvedToken = _api.resolveToken(token);
+    final expiredResponse = await _api.responseIfSessionExpired(
+      token: resolvedToken,
+    );
+    if (expiredResponse != null) {
+      return UserProfileImageUploadResult(
+        success: false,
+        statusCode: expiredResponse.statusCode,
+        message: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่',
+      );
+    }
 
     try {
       final request = onProgress != null
@@ -173,6 +183,7 @@ class UsersService {
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
+      await _api.handleResponse(response, token: resolvedToken);
 
       final bool success =
           response.statusCode == 200 || response.statusCode == 204;

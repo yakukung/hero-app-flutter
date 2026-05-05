@@ -15,6 +15,7 @@ class PostModel {
   final DateTime createdAt;
   final String createdBy; // Added createdBy from operation
   final bool isLiked; // Added to track user's like status
+  final bool isShared;
   final List<PostLikeModel> likes;
   final List<PostCommentModel> comments;
   final List<PostShareModel> shares;
@@ -33,6 +34,7 @@ class PostModel {
     required this.createdAt,
     required this.createdBy,
     this.isLiked = false,
+    this.isShared = false,
     this.likes = const [],
     this.comments = const [],
     this.shares = const [],
@@ -107,24 +109,45 @@ class PostModel {
                 final likeId = like['id']?.toString();
                 return likeUserId == currentUserId || likeId == currentUserId;
               })),
+      isShared:
+          (json['is_shared'] == true || json['is_shared'] == 1) ||
+          (json['shares'] != null &&
+              json['shares']['data'] is List &&
+              currentUserId != null &&
+              (json['shares']['data'] as List).any((share) {
+                if (share is! Map) return false;
+                final shareUserId = share['user_id']?.toString();
+                final shareId = share['id']?.toString();
+                return shareUserId == currentUserId || shareId == currentUserId;
+              })),
       likes: json['likes'] != null && json['likes']['data'] is List
           ? (json['likes']['data'] as List)
                 .where((e) => e is Map<String, dynamic> || e is Map)
-                .map((e) => PostLikeModel.fromJson(e as Map<String, dynamic>))
+                .map(
+                  (e) => PostLikeModel.fromJson(
+                    Map<String, dynamic>.from(e as Map),
+                  ),
+                )
                 .toList()
           : [],
       comments: json['comments'] != null && json['comments']['data'] is List
           ? (json['comments']['data'] as List)
                 .where((e) => e is Map<String, dynamic> || e is Map)
                 .map(
-                  (e) => PostCommentModel.fromJson(e as Map<String, dynamic>),
+                  (e) => PostCommentModel.fromJson(
+                    Map<String, dynamic>.from(e as Map),
+                  ),
                 )
                 .toList()
           : [],
       shares: json['shares'] != null && json['shares']['data'] is List
           ? (json['shares']['data'] as List)
                 .where((e) => e is Map<String, dynamic> || e is Map)
-                .map((e) => PostShareModel.fromJson(e as Map<String, dynamic>))
+                .map(
+                  (e) => PostShareModel.fromJson(
+                    Map<String, dynamic>.from(e as Map),
+                  ),
+                )
                 .toList()
           : [],
     );
@@ -144,6 +167,7 @@ class PostModel {
     DateTime? createdAt,
     String? createdBy,
     bool? isLiked,
+    bool? isShared,
     List<PostLikeModel>? likes,
     List<PostCommentModel>? comments,
     List<PostShareModel>? shares,
@@ -162,6 +186,7 @@ class PostModel {
       createdAt: createdAt ?? this.createdAt,
       createdBy: createdBy ?? this.createdBy,
       isLiked: isLiked ?? this.isLiked,
+      isShared: isShared ?? this.isShared,
       likes: likes ?? this.likes,
       comments: comments ?? this.comments,
       shares: shares ?? this.shares,

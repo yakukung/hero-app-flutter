@@ -7,11 +7,13 @@ import 'package:hero_app_flutter/core/session/session_store.dart';
 class ShareActionResult {
   final bool success;
   final bool alreadyShared;
+  final bool removed;
   final int? shareCount;
 
   const ShareActionResult({
     required this.success,
     this.alreadyShared = false,
+    this.removed = false,
     this.shareCount,
   });
 }
@@ -284,9 +286,7 @@ class PostsService {
         token: token,
       );
 
-      if (response.statusCode == 200 ||
-          response.statusCode == 201 ||
-          response.statusCode == 204) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final shareCount = _extractShareCount(response.body);
         return ShareActionResult(success: true, shareCount: shareCount);
       }
@@ -301,6 +301,34 @@ class PostsService {
       }
     } catch (e) {
       debugPrint('Error sharing post: $e');
+    }
+
+    return const ShareActionResult(success: false);
+  }
+
+  static Future<ShareActionResult> unsharePost(String postId) async {
+    final String token = _sessionStore.token;
+
+    if (token.isEmpty) {
+      return const ShareActionResult(success: false);
+    }
+
+    try {
+      final response = await _api.delete(
+        path: '/posts/$postId/share',
+        token: token,
+      );
+
+      if (_isDeleteSuccess(response.statusCode) || response.statusCode == 404) {
+        final shareCount = _extractShareCount(response.body);
+        return ShareActionResult(
+          success: true,
+          removed: true,
+          shareCount: shareCount,
+        );
+      }
+    } catch (e) {
+      debugPrint('Error unsharing post: $e');
     }
 
     return const ShareActionResult(success: false);

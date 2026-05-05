@@ -14,6 +14,7 @@ class AppController extends GetxController {
   final Rxn<UserModel> user = Rxn<UserModel>();
   final RxBool isLoading = false.obs;
   final RxBool isReady = false.obs;
+  final RxBool wasSessionExpired = false.obs;
   final RxString errorMessage = ''.obs;
 
   final SessionStore _sessionStore;
@@ -80,9 +81,9 @@ class AppController extends GetxController {
           _handleUserError(
             'ไม่สามารถดึงข้อมูลผู้ใช้ได้: ${response.statusCode}',
           );
-          if (response.statusCode == 401 ||
-              response.statusCode == 403 ||
-              response.statusCode == 404) {
+          if (response.statusCode == 401 || response.statusCode == 403) {
+            clearUserData(tokenExpired: true);
+          } else if (response.statusCode == 404) {
             clearUserData();
           }
         }
@@ -100,6 +101,7 @@ class AppController extends GetxController {
 
   void updateFromMap(Map<String, dynamic> userData) {
     _applyUserData(userData);
+    wasSessionExpired.value = false;
     isReady.value = true;
   }
 
@@ -148,9 +150,10 @@ class AppController extends GetxController {
     errorMessage.value = message;
   }
 
-  void clearUserData() {
+  void clearUserData({bool tokenExpired = false}) {
     user.value = null;
     errorMessage.value = '';
+    wasSessionExpired.value = tokenExpired;
     _sessionStore.clearSession();
     isReady.value = true;
   }

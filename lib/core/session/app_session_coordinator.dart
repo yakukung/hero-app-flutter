@@ -50,10 +50,19 @@ class AppSessionCoordinator {
 
   Future<SessionDestination> logout() async {
     await _sessionStore.eraseAll();
-    _appController.clearUserData();
+    _resetAppState(tokenExpired: false);
+    return SessionDestination.intro;
+  }
+
+  Future<void> expireSession() async {
+    _sessionStore.clearSession();
+    _resetAppState(tokenExpired: true);
+  }
+
+  void _resetAppState({required bool tokenExpired}) {
+    _appController.clearUserData(tokenExpired: tokenExpired);
     _sheetsController.resetState();
     _adminController.resetState();
     _navigationController.reset();
-    return SessionDestination.intro;
   }
 }
