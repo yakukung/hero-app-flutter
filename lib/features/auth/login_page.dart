@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import 'package:hero_app_flutter/app/app.dart';
+import 'package:hero_app_flutter/app/main_page.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/constants/app_fonts.dart';
 import 'package:hero_app_flutter/core/session/app_session_coordinator.dart';

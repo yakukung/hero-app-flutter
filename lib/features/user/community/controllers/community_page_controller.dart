@@ -15,17 +15,20 @@ class CommunityPageController extends ChangeNotifier {
     TogglePostLike? likePost,
     TogglePostLike? unlikePost,
     SharePost? sharePost,
+    SharePost? unsharePost,
   }) : _sessionCoordinator = sessionCoordinator ?? AppSessionCoordinator(),
        _loadPosts = loadPosts ?? PostsService.getPosts,
        _likePost = likePost ?? PostsService.likePost,
        _unlikePost = unlikePost ?? PostsService.unlikePost,
-       _sharePost = sharePost ?? PostsService.sharePost;
+       _sharePost = sharePost ?? PostsService.sharePost,
+       _unsharePost = unsharePost ?? PostsService.unsharePost;
 
   final AppSessionCoordinator _sessionCoordinator;
   final LoadPosts _loadPosts;
   final TogglePostLike _likePost;
   final TogglePostLike _unlikePost;
   final SharePost _sharePost;
+  final SharePost _unsharePost;
 
   List<PostModel> _posts = const [];
   bool _isLoading = true;
@@ -88,15 +91,27 @@ class CommunityPageController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<ShareActionResult> registerShare(PostModel post) async {
-    final result = await _sharePost(post.id);
-    if (result.success && !result.alreadyShared) {
+  Future<ShareActionResult> toggleShare(PostModel post) async {
+    final result = post.isShared
+        ? await _unsharePost(post.id)
+        : await _sharePost(post.id);
+
+    if (result.success) {
       _posts = _posts.map((current) {
         if (current.id != post.id) {
           return current;
         }
+
+        final nextIsShared = result.removed ? false : true;
+        final fallbackShareCount = result.removed
+            ? (current.shareCount - 1).clamp(0, current.shareCount)
+            : result.alreadyShared
+            ? current.shareCount
+            : current.shareCount + 1;
+
         return current.copyWith(
-          shareCount: result.shareCount ?? (current.shareCount + 1),
+          isShared: nextIsShared,
+          shareCount: result.shareCount ?? fallbackShareCount,
         );
       }).toList();
       notifyListeners();

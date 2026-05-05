@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:share_plus/share_plus.dart';
 
 import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/models/post_model.dart';
@@ -132,7 +131,7 @@ class _CommunityPageState extends State<CommunityPage> {
         await _controller.toggleLike(post);
       },
       onCommentTap: () => _openComments(post),
-      onShareTap: () => _sharePost(post),
+      onShareTap: () => _toggleSharePost(post),
     );
   }
 
@@ -176,7 +175,7 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
-  Future<void> _sharePost(PostModel post) async {
+  Future<void> _toggleSharePost(PostModel post) async {
     if (!_controller.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('กรุณาเข้าสู่ระบบก่อนแชร์โพสต์')),
@@ -184,61 +183,18 @@ class _CommunityPageState extends State<CommunityPage> {
       return;
     }
 
-    final shareText = post.content.isNotEmpty
-        ? post.content
-        : 'แชร์โพสต์จากผู้ใช้ ${post.author.username ?? ''}';
-
-    try {
-      await Share.share(
-        shareText,
-        subject: 'แชร์โพสต์จากคอมมูนิตี้',
-        sharePositionOrigin: _shareOrigin(context),
-      );
-    } catch (error) {
-      debugPrint('Error opening share sheet: $error');
-    }
-
-    final result = await _controller.registerShare(post);
+    final result = await _controller.toggleShare(post);
     if (!mounted) {
       return;
     }
 
-    if (result.success && !result.alreadyShared) {
-      return;
-    }
-
-    if (result.alreadyShared) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('คุณแชร์โพสต์นี้ไปแล้ว')));
+    if (result.success) {
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('แชร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง')),
     );
-  }
-
-  Rect _shareOrigin(BuildContext context) {
-    final renderObject = context.findRenderObject();
-    if (renderObject is RenderBox) {
-      final origin = renderObject.localToGlobal(Offset.zero);
-      final size = renderObject.size;
-      if (size.width > 0 && size.height > 0) {
-        return origin & size;
-      }
-    }
-
-    final overlay = Overlay.of(context).context.findRenderObject();
-    if (overlay is RenderBox) {
-      final origin = overlay.localToGlobal(Offset.zero);
-      final size = overlay.size;
-      if (size.width > 0 && size.height > 0) {
-        return origin & size;
-      }
-    }
-
-    return const Rect.fromLTWH(0, 0, 1, 1);
   }
 
   void _showReportOptions(PostModel post) {

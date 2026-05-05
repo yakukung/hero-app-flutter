@@ -15,7 +15,11 @@ class SessionStore {
   String get uid => _readString(uidKey);
   String get token => _readString(tokenKey);
   String get refreshToken => _readString(refreshTokenKey);
+  String get accessTokenExpiresAt => _readString(accessTokenExpiresAtKey);
+  String get refreshTokenExpiresAt => _readString(refreshTokenExpiresAtKey);
   String get roleName => _readString(roleNameKey);
+  bool get isAccessTokenExpired => _isExpired(read(accessTokenExpiresAtKey));
+  bool get isRefreshTokenExpired => _isExpired(read(refreshTokenExpiresAtKey));
 
   dynamic read(String key) => _storage.read(key);
 
@@ -59,5 +63,44 @@ class SessionStore {
     }
 
     _storage.write(key, value);
+  }
+
+  bool _isExpired(dynamic value) {
+    final expiresAt = _parseExpiresAt(value);
+    if (expiresAt == null) {
+      return false;
+    }
+    return !DateTime.now().toUtc().isBefore(expiresAt.toUtc());
+  }
+
+  DateTime? _parseExpiresAt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    if (value is num) {
+      return _parseEpoch(value);
+    }
+
+    final text = value.toString().trim();
+    if (text.isEmpty) {
+      return null;
+    }
+
+    final numericValue = num.tryParse(text);
+    if (numericValue != null) {
+      return _parseEpoch(numericValue);
+    }
+
+    return DateTime.tryParse(text);
+  }
+
+  DateTime _parseEpoch(num value) {
+    final milliseconds = value > 100000000000
+        ? value.toInt()
+        : (value * 1000).toInt();
+    return DateTime.fromMillisecondsSinceEpoch(milliseconds, isUtc: true);
   }
 }

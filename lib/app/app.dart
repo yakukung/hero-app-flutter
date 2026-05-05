@@ -2,19 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:hero_app_flutter/app/bindings.dart';
+import 'package:hero_app_flutter/app/main_page.dart';
 import 'package:hero_app_flutter/constants/app_fonts.dart';
 import 'package:hero_app_flutter/core/controllers/app_controller.dart';
-import 'package:hero_app_flutter/core/controllers/navigation_controller.dart';
 import 'package:hero_app_flutter/features/admin/admin_home_page.dart';
 import 'package:hero_app_flutter/features/auth/intro_page.dart';
-import 'package:hero_app_flutter/features/user/community/community_page.dart';
-import 'package:hero_app_flutter/features/user/favorite/favorite_page.dart';
-import 'package:hero_app_flutter/features/user/home/home_page.dart';
-import 'package:hero_app_flutter/features/user/profile/profile_page.dart';
-import 'package:hero_app_flutter/features/user/upload/upload_page.dart';
-import 'package:hero_app_flutter/shared/widgets/layout/main_sidebar.dart';
-import 'package:hero_app_flutter/shared/widgets/navigation/navbottom.dart';
-import 'package:hero_app_flutter/shared/widgets/navigation/navbar.dart';
+import 'package:hero_app_flutter/features/auth/login_page.dart';
 
 class HeroApp extends StatelessWidget {
   const HeroApp({super.key});
@@ -46,6 +39,9 @@ class AuthWrapper extends GetView<AppController> {
         return const Scaffold(body: Center(child: CircularProgressIndicator()));
       }
       if (controller.uid.isEmpty || !controller.hasUser) {
+        if (controller.wasSessionExpired.value) {
+          return const LoginPage();
+        }
         return const IntroPage();
       }
       if (roleName == 'ADMIN') {
@@ -53,30 +49,5 @@ class AuthWrapper extends GetView<AppController> {
       }
       return const MainPage();
     });
-  }
-}
-
-class MainPage extends GetView<NavigationController> {
-  const MainPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> pages = const [
-      HomePage(),
-      FavoritePage(),
-      UploadPage(),
-      CommunityPage(),
-      ProfilePage(),
-    ];
-
-    return Obx(
-      () => Scaffold(
-        appBar: const NavbarUser(),
-        drawer: const MainSidebar(),
-        extendBody: true,
-        body: pages[controller.currentIndex.value],
-        bottomNavigationBar: const NavBottom(),
-      ),
-    );
   }
 }
