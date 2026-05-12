@@ -7,6 +7,8 @@ class ProfileActionGrid extends StatelessWidget {
     required this.onEditProfile,
     required this.onShowSubscriptions,
     required this.onOpenUserSheets,
+    required this.onOpenPayments,
+    required this.onOpenWallet,
     this.fontButtonSize = 14,
   });
 
@@ -14,6 +16,8 @@ class ProfileActionGrid extends StatelessWidget {
   final VoidCallback onEditProfile;
   final VoidCallback onShowSubscriptions;
   final VoidCallback onOpenUserSheets;
+  final VoidCallback onOpenPayments;
+  final VoidCallback onOpenWallet;
   final int fontButtonSize;
 
   @override
@@ -48,18 +52,27 @@ class ProfileActionGrid extends StatelessWidget {
                 child: _ProfileActionButton(
                   label: 'ยอดเงินคงเหลือ\n${wallet.toStringAsFixed(0)} บาท',
                   fontButtonSize: fontButtonSize,
-                  onPressed: () {},
+                  onPressed: onOpenWallet,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _ProfileActionButton(
-                  label: 'รายการชีต\nทั้งหมดของคุณ',
+                  label: 'จัดการชีตของคุณ',
                   fontButtonSize: fontButtonSize,
                   onPressed: onOpenUserSheets,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: _ProfileActionButton(
+              label: 'รายการชำระเงิน\nทั้งหมดของคุณ',
+              fontButtonSize: fontButtonSize,
+              onPressed: onOpenPayments,
+            ),
           ),
         ],
       ),

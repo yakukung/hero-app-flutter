@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:hero_app_flutter/core/models/enums.dart';
+import 'package:hero_app_flutter/features/user/profile/profile_payment_status_page.dart';
 
 typedef PickSlipImage = Future<XFile?> Function();
+typedef PaymentConfirmed = Future<void> Function(PaymentStatus status);
 
-class ProfileSubscriptionSheet extends StatelessWidget {
-  const ProfileSubscriptionSheet({super.key, this.pickSlipImage});
+class ProfileSubscription extends StatelessWidget {
+  const ProfileSubscription({super.key, this.pickSlipImage});
 
   final PickSlipImage? pickSlipImage;
 
@@ -26,9 +28,20 @@ class ProfileSubscriptionSheet extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          Container(
+            key: const Key('subscription_drag_handle'),
+            width: 52,
+            height: 5,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0E0E0),
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+          const SizedBox(height: 26),
           const Text(
             'แพ็กเกจสมาชิกพรีเมียม',
+            textAlign: TextAlign.center,
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 20),
@@ -96,18 +109,53 @@ class ProfileSubscriptionSheet extends StatelessWidget {
     required String price,
     required String amount,
   }) {
+    final subscriptionContext = context;
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
+      builder: (_) {
         return ProfilePaymentSheet(
           packageTitle: packageTitle,
           price: price,
           amount: amount,
           pickSlipImage: pickSlipImage,
+          onPaymentConfirmed: (status) => _completePaymentFlow(
+            subscriptionContext,
+            status: status,
+            packageTitle: packageTitle,
+            price: price,
+            amount: amount,
+          ),
         );
       },
+    );
+  }
+
+  Future<void> _completePaymentFlow(
+    BuildContext context, {
+    required PaymentStatus status,
+    required String packageTitle,
+    required String price,
+    required String amount,
+  }) async {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+
+    await navigator.push<void>(
+      MaterialPageRoute(
+        builder: (_) => ProfilePaymentStatusPage(
+          status: status,
+          packageTitle: packageTitle,
+          price: price,
+          amount: amount,
+        ),
+      ),
     );
   }
 }
@@ -204,12 +252,14 @@ class ProfilePaymentSheet extends StatefulWidget {
     required this.price,
     required this.amount,
     this.pickSlipImage,
+    this.onPaymentConfirmed,
   });
 
   final String packageTitle;
   final String price;
   final String amount;
   final PickSlipImage? pickSlipImage;
+  final PaymentConfirmed? onPaymentConfirmed;
 
   @override
   State<ProfilePaymentSheet> createState() => _ProfilePaymentSheetState();
@@ -265,12 +315,22 @@ class _ProfilePaymentSheetState extends State<ProfilePaymentSheet> {
       return;
     }
 
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return const ProfilePaymentStatusDialog(status: PaymentStatus.PENDING);
-      },
+    const status = PaymentStatus.PENDING;
+    final onPaymentConfirmed = widget.onPaymentConfirmed;
+    if (onPaymentConfirmed != null) {
+      await onPaymentConfirmed(status);
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ProfilePaymentStatusPage(
+          status: status,
+          packageTitle: widget.packageTitle,
+          price: widget.price,
+          amount: widget.amount,
+        ),
+      ),
     );
   }
 
@@ -636,118 +696,5 @@ class _SlipAttachmentBox extends StatelessWidget {
         ],
       ],
     );
-  }
-}
-
-class ProfilePaymentStatusDialog extends StatelessWidget {
-  const ProfilePaymentStatusDialog({super.key, required this.status});
-
-  final PaymentStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final viewData = _PaymentStatusViewData.fromStatus(status);
-    return Dialog(
-      backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 44, 28, 28),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: viewData.color.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(viewData.icon, color: viewData.color, size: 52),
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'สถานะการชำระเงิน',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  status.name,
-                  key: Key('payment_status_${status.name}'),
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: viewData.color,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  viewData.message,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: Color(0xFF6B6B6B),
-                    height: 1.4,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: IconButton(
-              key: const Key('payment_status_close_button'),
-              tooltip: 'ปิด',
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PaymentStatusViewData {
-  const _PaymentStatusViewData({
-    required this.color,
-    required this.icon,
-    required this.message,
-  });
-
-  final Color color;
-  final IconData icon;
-  final String message;
-
-  factory _PaymentStatusViewData.fromStatus(PaymentStatus status) {
-    switch (status) {
-      case PaymentStatus.PENDING:
-        return const _PaymentStatusViewData(
-          color: Color(0xFFE6A700),
-          icon: Icons.schedule,
-          message: 'ระบบได้รับข้อมูลแล้ว กรุณารอการตรวจสอบสลิป',
-        );
-      case PaymentStatus.SUCCESSFUL:
-        return const _PaymentStatusViewData(
-          color: Color(0xFF2AB950),
-          icon: Icons.check_circle_outline,
-          message: 'ชำระเงินสำเร็จ แพ็กเกจของคุณพร้อมใช้งาน',
-        );
-      case PaymentStatus.FAILED:
-        return const _PaymentStatusViewData(
-          color: Color(0xFFF92A47),
-          icon: Icons.error_outline,
-          message: 'ชำระเงินไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง',
-        );
-      case PaymentStatus.REFUNDED:
-        return const _PaymentStatusViewData(
-          color: Color(0xFF2A5DB9),
-          icon: Icons.replay_circle_filled_outlined,
-          message: 'รายการนี้ได้รับการคืนเงินแล้ว',
-        );
-    }
   }
 }

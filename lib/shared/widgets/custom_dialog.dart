@@ -1,6 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/constants/app_fonts.dart';
 
 Future<void> showCustomDialog({
@@ -9,141 +10,156 @@ Future<void> showCustomDialog({
   Widget? content,
   bool isSuccess = false,
   bool isConfirm = false,
+  bool isDanger = false,
+  String? okButtonLabel,
   VoidCallback? onOk,
   VoidCallback? onCancel,
 }) async {
-  await Get.defaultDialog(
-    title: '',
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
+  final buttonLabel = okButtonLabel ?? (isConfirm ? title : 'ตกลง');
+  final actionColor = isDanger
+      ? const Color(0xFFF92A47)
+      : isSuccess
+          ? const Color(0xFF2AB950)
+          : const Color(0xFF2A5DB9);
+
+  final context = Get.overlayContext;
+  if (context == null) return;
+
+  await showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (context) => Stack(
       children: [
+        // ── Backdrop blur ──
+        Positioned.fill(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+            child: const SizedBox(),
+          ),
+        ),
+
+        // ── Sheet content ──
         Container(
-          decoration: BoxDecoration(
-            color: isSuccess
-                ? const Color(0xFFE7F9EE)
-                : isConfirm
-                ? const Color(0xFFE7F0F9)
-                : const Color(0xFFFDEEEF),
-            shape: BoxShape.circle,
+          height: content != null ? 420 : 350,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
           ),
-          padding: const EdgeInsets.all(18),
-          child: Icon(
-            isSuccess
-                ? Icons.check_circle_outline
-                : isConfirm
-                ? Icons.help_outline
-                : Icons.error_outline,
-            color: isSuccess
-                ? const Color(0xFF2AB950)
-                : isConfirm
-                ? AppColors.primary
-                : const Color(0xFFF92A47),
-            size: 48,
-          ),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          title,
-          style: const TextStyle(
-            fontFamily: AppFonts.sukhumvit,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            color: Colors.black,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 10),
-        Text(
-          message,
-          style: const TextStyle(
-            fontFamily: AppFonts.sukhumvit,
-            fontWeight: FontWeight.normal,
-            fontSize: 16,
-            color: Colors.black87,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        if (content != null) ...[const SizedBox(height: 20), content],
-        const SizedBox(height: 28),
-        if (isConfirm)
-          Row(
+          padding: const EdgeInsets.all(20),
+          child: Column(
             children: [
-              Expanded(
-                child: TextButton(
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(45),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    textStyle: const TextStyle(
-                      fontFamily: AppFonts.sukhumvit,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  onPressed: () {
-                    Get.back();
-                    onCancel?.call();
-                  },
-                  child: const Text('ยกเลิก'),
+              // ── Drag handle ──
+              Container(
+                width: 80,
+                height: 6,
+                margin: const EdgeInsets.only(bottom: 60),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(5),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(45),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    elevation: 0,
-                    textStyle: const TextStyle(
-                      fontFamily: AppFonts.sukhumvit,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  onPressed: () {
-                    Get.back();
-                    onOk?.call();
-                  },
-                  child: const Text('ตกลง'),
-                ),
-              ),
-            ],
-          )
-        else
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: isSuccess
-                    ? const Color(0xFF2AB950)
-                    : const Color(0xFFF92A47),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(45),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                textStyle: const TextStyle(
+
+              // ── Title ──
+              Text(
+                title,
+                style: const TextStyle(
                   fontFamily: AppFonts.sukhumvit,
                   fontWeight: FontWeight.bold,
-                  fontSize: 18,
+                  fontSize: 30,
+                  color: Colors.black,
                 ),
+                textAlign: TextAlign.center,
               ),
-              onPressed: () {
-                Get.back();
-                onOk?.call();
-              },
-              child: const Text('ตกลง'),
-            ),
+              const SizedBox(height: 10),
+
+              // ── Message ──
+              Text(
+                message,
+                style: const TextStyle(
+                  fontFamily: AppFonts.sukhumvit,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Color(0xFF6E6E6E),
+                ),
+                textAlign: TextAlign.center,
+              ),
+
+              // ── Optional content widget ──
+              if (content != null) ...[
+                const SizedBox(height: 20),
+                content,
+              ],
+
+              const SizedBox(height: 50),
+
+              // ── Buttons ──
+              if (isConfirm)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Get.back();
+                        onCancel?.call();
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text(
+                          'ยกเลิก',
+                          style: TextStyle(
+                            fontFamily: AppFonts.sukhumvit,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Get.back();
+                        onOk?.call();
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          buttonLabel,
+                          style: TextStyle(
+                            fontFamily: AppFonts.sukhumvit,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: actionColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Center(
+                  child: TextButton(
+                    onPressed: () {
+                      Get.back();
+                      onOk?.call();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        buttonLabel,
+                        style: TextStyle(
+                          fontFamily: AppFonts.sukhumvit,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: actionColor,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
+        ),
       ],
     ),
-    radius: 45,
-    backgroundColor: Colors.white,
-    barrierDismissible: false,
   );
 }

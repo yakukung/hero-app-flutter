@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/core/models/sheet_model.dart';
 import 'package:hero_app_flutter/core/services/sheets_service.dart';
+import 'package:hero_app_flutter/features/user/profile/sheet_earnings_page.dart';
 import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
@@ -61,12 +62,49 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('รายการชีตทั้งหมดของคุณ'),
+        title: const Text('จัดการชีตของคุณ'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          _buildEarningsButton(),
+          Expanded(child: _buildBody()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEarningsButton() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: SizedBox(
+        width: double.infinity,
+        height: 54,
+        child: ElevatedButton.icon(
+          key: const Key('sheet_earnings_button'),
+          icon: const Icon(Icons.bar_chart_rounded, size: 22),
+          label: const Text(
+            'แสดงรายได้ของชีต',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 0,
+          ),
+          onPressed: () {
+            Get.to(() => const SheetEarningsPage());
+          },
+        ),
+      ),
     );
   }
 
