@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import 'package:hero_app_flutter/constants/app_assets.dart';
 import 'package:hero_app_flutter/core/controllers/app_controller.dart';
 import 'package:hero_app_flutter/core/controllers/navigation_controller.dart';
+import 'package:hero_app_flutter/core/session/app_session_coordinator.dart';
+import 'package:hero_app_flutter/features/auth/intro_page.dart';
+import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 
 class NavbarUser extends GetView<AppController> implements PreferredSizeWidget {
   const NavbarUser({super.key});
@@ -54,10 +57,64 @@ class NavbarUser extends GetView<AppController> implements PreferredSizeWidget {
                 ),
               ],
             ),
-            GestureDetector(
-              onTap: () {
-                navCtrl.changeIndex(4);
+            PopupMenuButton<String>(
+              offset: const Offset(0, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              color: Colors.white,
+              elevation: 8,
+              onSelected: (value) {
+                if (value == 'profile') {
+                  navCtrl.changeIndex(4);
+                } else if (value == 'logout') {
+                  _showLogoutConfirmation();
+                }
               },
+              itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.person_outline_rounded,
+                        color: Colors.grey[700],
+                        size: 22,
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'หน้าโปรไฟล์',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(height: 1),
+                PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.logout_rounded,
+                        color: Colors.red[400],
+                        size: 22,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'ออกจากระบบ',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: Colors.red[400],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               child: CircleAvatar(
                 radius: 20,
                 backgroundColor: Colors.grey[200],
@@ -83,4 +140,20 @@ class NavbarUser extends GetView<AppController> implements PreferredSizeWidget {
       );
     });
   }
+
+  Future<void> _showLogoutConfirmation() async {
+    await showCustomDialog(
+      title: 'ยืนยันออกจากระบบ',
+      message: 'คุณต้องการออกจากระบบใช่ไหม?',
+      isConfirm: true,
+      isDanger: true,
+      okButtonLabel: 'ออกจากระบบ',
+      onOk: () async {
+        final sessionCoordinator = AppSessionCoordinator();
+        await sessionCoordinator.logout();
+        Get.offAll(() => const IntroPage());
+      },
+    );
+  }
 }
+

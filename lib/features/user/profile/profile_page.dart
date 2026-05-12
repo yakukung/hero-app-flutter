@@ -7,10 +7,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:hero_app_flutter/features/auth/intro_page.dart';
 import 'package:hero_app_flutter/features/user/profile/controllers/profile_page_controller.dart';
 import 'package:hero_app_flutter/features/user/profile/edit_profile_page.dart';
+import 'package:hero_app_flutter/features/user/profile/profile_payments_page.dart';
+import 'package:hero_app_flutter/features/user/profile/profile_wallet_page.dart';
 import 'package:hero_app_flutter/features/user/profile/user_sheets_page.dart';
 import 'package:hero_app_flutter/features/user/profile/widgets/profile_action_grid.dart';
 import 'package:hero_app_flutter/features/user/profile/widgets/profile_logout_button.dart';
-import 'package:hero_app_flutter/features/user/profile/widgets/profile_subscription_sheet.dart';
+import 'package:hero_app_flutter/features/user/profile/widgets/profile_subscription.dart';
 import 'package:hero_app_flutter/features/user/profile/widgets/profile_summary_section.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:hero_app_flutter/shared/widgets/upload/upload_progress_dialog.dart';
@@ -64,6 +66,8 @@ class _ProfilePageState extends State<ProfilePage> {
       title: 'ยืนยันออกจากระบบ',
       message: 'คุณต้องการออกจากระบบใช่ไหม?',
       isConfirm: true,
+      isDanger: true,
+      okButtonLabel: 'ออกจากระบบ',
       onOk: () async {
         await _controller.logout();
         Get.offAll(() => const IntroPage());
@@ -86,7 +90,17 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const ProfileSubscriptionSheet(),
+      builder: (_) => const ProfileSubscription(),
+    );
+  }
+
+  void _openPayments() {
+    Get.to(() => const ProfilePaymentsPage());
+  }
+
+  void _openWallet() {
+    Get.to(
+      () => ProfileWalletPage(currentWallet: _controller.appController.wallet),
     );
   }
 
@@ -118,6 +132,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 },
                 onShowSubscriptions: _showSubscriptionPackages,
                 onOpenUserSheets: _openUserSheets,
+                onOpenPayments: _openPayments,
+                onOpenWallet: _openWallet,
               ),
               const SizedBox(height: 10),
               ProfileLogoutButton(onPressed: _showLogoutConfirmation),
