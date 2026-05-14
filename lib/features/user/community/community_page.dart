@@ -12,7 +12,7 @@ import 'package:hero_app_flutter/features/user/community/widgets/comment_sheet.d
 import 'package:hero_app_flutter/features/user/community/widgets/community_page_header.dart';
 import 'package:hero_app_flutter/features/user/community/widgets/community_post_card.dart';
 import 'package:hero_app_flutter/features/user/community/widgets/create_post_prompt.dart';
-import 'package:hero_app_flutter/features/user/profile/profile_page.dart';
+import 'package:hero_app_flutter/core/controllers/navigation_controller.dart';
 import 'package:hero_app_flutter/features/user/profile/user_profile_view_page.dart';
 import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
 
@@ -138,7 +138,8 @@ class _CommunityPageState extends State<CommunityPage> {
   void _openUserProfile(UserModel author) {
     final currentUserId = _controller.currentUserId;
     if (currentUserId.isNotEmpty && currentUserId == author.id) {
-      Get.to(() => const ProfilePage());
+      final navigationController = Get.find<NavigationController>();
+      navigationController.changeIndex(4);
       return;
     }
 
