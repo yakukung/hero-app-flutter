@@ -237,6 +237,9 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    print(result.title);
+    print(result.message);
+
     if (result.shouldShowDialog) {
       await showCustomDialog(title: result.title, message: result.message);
     }

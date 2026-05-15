@@ -7,6 +7,8 @@ import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+enum _SheetTab { mySheets, purchasedSheets }
+
 class UserSheetsPage extends StatefulWidget {
   final String userId;
 
@@ -17,19 +19,23 @@ class UserSheetsPage extends StatefulWidget {
 }
 
 class _UserSheetsPageState extends State<UserSheetsPage> {
+  _SheetTab _selectedTab = _SheetTab.mySheets;
+
   bool _isLoading = false;
   String _errorMessage = '';
-  List<SheetModel> _sheets = [];
+  List<SheetModel> _mySheets = [];
+  List<SheetModel> _purchasedSheets = [];
+  bool _purchasedLoaded = false;
   String _currentUserId = '';
 
   @override
   void initState() {
     super.initState();
     _currentUserId = GetStorage().read('uid')?.toString() ?? '';
-    _fetchUserSheets();
+    _fetchMySheets();
   }
 
-  Future<void> _fetchUserSheets() async {
+  Future<void> _fetchMySheets() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -38,22 +44,51 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
     try {
       final sheets = await SheetsService.fetchSheetsByUserId(widget.userId);
       if (!mounted) return;
-
-      setState(() {
-        _sheets = sheets;
-      });
+      setState(() => _mySheets = sheets);
     } catch (e) {
       debugPrint('Error fetching user sheets: $e');
       if (!mounted) return;
-      setState(() {
-        _errorMessage = 'ไม่สามารถดึงข้อมูลชีตของคุณได้';
-      });
+      setState(() => _errorMessage = 'ไม่สามารถดึงข้อมูลชีตของคุณได้');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _fetchPurchasedSheets() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final sheets = await SheetsService.fetchPurchasedSheets();
+      if (!mounted) return;
+      setState(() {
+        _purchasedSheets = sheets;
+        _purchasedLoaded = true;
+      });
+    } catch (e) {
+      debugPrint('Error fetching purchased sheets: $e');
+      if (!mounted) return;
+      setState(() => _errorMessage = 'ไม่สามารถดึงข้อมูลชีตที่ซื้อได้');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _refreshCurrentTab() async {
+    if (_selectedTab == _SheetTab.mySheets) {
+      await _fetchMySheets();
+    } else {
+      await _fetchPurchasedSheets();
+    }
+  }
+
+  void _onTabSelected(_SheetTab tab) {
+    if (tab == _selectedTab) return;
+    setState(() => _selectedTab = tab);
+    if (tab == _SheetTab.purchasedSheets && !_purchasedLoaded) {
+      _fetchPurchasedSheets();
     }
   }
 
@@ -70,8 +105,69 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
       body: Column(
         children: [
           _buildEarningsButton(),
+          _buildTabButtons(),
           Expanded(child: _buildBody()),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTabButtons() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF1F3F8),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            _buildTabItem(
+              label: 'ชีตของฉัน',
+              tab: _SheetTab.mySheets,
+            ),
+            _buildTabItem(
+              label: 'ชีตที่ซื้อแล้ว',
+              tab: _SheetTab.purchasedSheets,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabItem({required String label, required _SheetTab tab}) {
+    final bool isSelected = _selectedTab == tab;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onTabSelected(tab),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? AppColors.primary : Colors.black45,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -131,7 +227,7 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _fetchUserSheets,
+                onPressed: _refreshCurrentTab,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   shape: RoundedRectangleBorder(
@@ -149,17 +245,25 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
       );
     }
 
+    final sheets = _selectedTab == _SheetTab.mySheets
+        ? _mySheets
+        : _purchasedSheets;
+
+    final emptyText = _selectedTab == _SheetTab.mySheets
+        ? 'คุณยังไม่มีชีตที่สร้างไว้'
+        : 'คุณยังไม่มีชีตที่ซื้อ';
+
     return RefreshIndicator(
-      onRefresh: _fetchUserSheets,
-      child: _sheets.isEmpty
+      onRefresh: _refreshCurrentTab,
+      child: sheets.isEmpty
           ? ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              children: const [
-                SizedBox(height: 220),
+              children: [
+                const SizedBox(height: 220),
                 Center(
                   child: Text(
-                    'คุณยังไม่มีชีตที่สร้างไว้',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                    emptyText,
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ),
               ],
@@ -167,13 +271,13 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
           : ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              itemCount: _sheets.length + 1,
+              itemCount: sheets.length + 1,
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Text(
-                      'ทั้งหมด ${_sheets.length} รายการ',
+                      'ทั้งหมด ${sheets.length} รายการ',
                       style: const TextStyle(
                         fontSize: 16,
                         color: Colors.black54,
@@ -183,7 +287,7 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
                   );
                 }
 
-                final sheet = _sheets[index - 1];
+                final sheet = sheets[index - 1];
                 return _buildSheetCard(sheet);
               },
             ),
@@ -191,8 +295,10 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
   }
 
   Widget _buildSheetCard(SheetModel sheet) {
-    final bool canManageSheet =
-        _currentUserId.isNotEmpty && sheet.authorId == _currentUserId;
+    final bool isMyTab = _selectedTab == _SheetTab.mySheets;
+    final bool canManageSheet = isMyTab &&
+        _currentUserId.isNotEmpty &&
+        sheet.authorId == _currentUserId;
 
     return GestureDetector(
       onTap: () => Get.to(() => PreviewSheetPage(sheetId: sheet.id)),
@@ -261,13 +367,22 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (sheet.buyerCount > 0)
+                  if (isMyTab && sheet.buyerCount > 0)
                     Text(
                       'มีผู้ซื้อแล้ว ${sheet.buyerCount} คน',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.deepOrange,
                         fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  if (!isMyTab && sheet.authorName != null)
+                    Text(
+                      'โดย ${sheet.authorName}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black45,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                 ],
@@ -354,7 +469,7 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
 
     _showSnackBar(result.message, isError: !result.success);
     if (result.success) {
-      await _fetchUserSheets();
+      await _fetchMySheets();
     }
   }
 
