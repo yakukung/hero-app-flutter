@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/core/models/upload_state.dart';
 import 'package:get/get.dart';
@@ -201,28 +203,66 @@ class UploadProgressDialog extends StatelessWidget {
     required ValueNotifier<UploadState> stateNotifier,
     VoidCallback? onComplete,
   }) {
-    Get.dialog(
-      Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ValueListenableBuilder<UploadState>(
-            valueListenable: stateNotifier,
-            builder: (context, state, child) {
-              return UploadProgressDialog(
-                state: state,
-                onClose: () {
-                  Get.back();
-                  if (state.isSuccess && onComplete != null) {
-                    onComplete();
-                  }
-                },
-              );
-            },
-          ),
-        ),
-      ),
-      barrierDismissible: false,
+    final context = Get.overlayContext;
+    if (context == null) {
+      return;
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Stack(
+          children: [
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                child: const SizedBox(),
+              ),
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(45)),
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 6,
+                      margin: const EdgeInsets.only(bottom: 32),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+                    ValueListenableBuilder<UploadState>(
+                      valueListenable: stateNotifier,
+                      builder: (context, state, child) {
+                        return UploadProgressDialog(
+                          state: state,
+                          onClose: () {
+                            Navigator.of(context).pop();
+                            if (state.isSuccess && onComplete != null) {
+                              onComplete();
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
