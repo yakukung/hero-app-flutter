@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 class ImageUploadSection extends StatelessWidget {
   final List<File> images;
   final VoidCallback onPickImage;
+  final VoidCallback onPickPdf;
   final Function(int oldIndex, int newIndex) onReorder;
   final Function(int index) onRemove;
 
@@ -12,6 +13,7 @@ class ImageUploadSection extends StatelessWidget {
     super.key,
     required this.images,
     required this.onPickImage,
+    required this.onPickPdf,
     required this.onReorder,
     required this.onRemove,
   });
@@ -37,7 +39,7 @@ class ImageUploadSection extends StatelessWidget {
             child: child,
           );
         },
-        footer: _buildAddButton(),
+        footer: _buildAddButton(context),
         children: [
           for (int index = 0; index < images.length; index++)
             _buildImageCard(index),
@@ -46,9 +48,10 @@ class ImageUploadSection extends StatelessWidget {
     );
   }
 
-  Widget _buildAddButton() {
+  Widget _buildAddButton(BuildContext context) {
     return GestureDetector(
-      onTap: onPickImage,
+      key: const Key('add_sheet_file_button'),
+      onTap: () => _showPickFileSheet(context),
       child: Container(
         width: 140,
         height: 180,
@@ -57,10 +60,109 @@ class ImageUploadSection extends StatelessWidget {
           color: Colors.grey[300],
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Center(
-          child: Icon(Icons.add, size: 48, color: Colors.black54),
+        child: const Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_rounded, size: 48, color: Colors.black54),
+            SizedBox(height: 10),
+            Text(
+              'เพิ่มไฟล์',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: Colors.black54,
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  void _showPickFileSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                ),
+                _buildPickOption(
+                  key: const Key('pick_image_option'),
+                  icon: Icons.add_photo_alternate_outlined,
+                  title: 'รูปภาพ',
+                  subtitle: 'เลือกรูปภาพชีตจากเครื่อง',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    onPickImage();
+                  },
+                ),
+                _buildPickOption(
+                  key: const Key('pick_pdf_option'),
+                  icon: Icons.picture_as_pdf_outlined,
+                  title: 'ไฟล์ PDF',
+                  subtitle: 'แยก PDF เป็นรูปทีละหน้า',
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    onPickPdf();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPickOption({
+    required Key key,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      key: key,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: Colors.black54),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: Colors.black,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(fontSize: 13, color: Colors.black54),
+      ),
+      onTap: onTap,
     );
   }
 

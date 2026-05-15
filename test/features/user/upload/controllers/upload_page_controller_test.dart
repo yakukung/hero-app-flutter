@@ -93,4 +93,46 @@ void main() {
       await tempDir.delete(recursive: true);
     }
   });
+
+  test('submit keeps generated page files in upload order', () async {
+    final tempDir = await Directory.systemTemp.createTemp(
+      'upload_page_controller_pdf_pages_test',
+    );
+    final firstPage = File('${tempDir.path}/page_001.jpg')
+      ..writeAsBytesSync(<int>[1, 2, 3]);
+    final secondPage = File('${tempDir.path}/page_002.jpg')
+      ..writeAsBytesSync(<int>[4, 5, 6]);
+    late SheetUploadData capturedData;
+
+    final controller = UploadPageController(
+      fetchCategories: () async => const <CategoryModel>[],
+      submitUpload: ({required data, onProgress}) async {
+        capturedData = data;
+        return const SheetUploadResult(
+          success: true,
+          statusCode: 201,
+          message: 'อัปโหลดชีตสำเร็จ',
+        );
+      },
+    );
+
+    try {
+      controller.addImages([firstPage, secondPage]);
+      controller.titleController.text = 'PDF Sheet';
+      controller.descriptionController.text = 'Converted from PDF';
+      controller.setSelectedSubject('cat-1');
+      controller.setSelectedPrice('0');
+
+      final result = await controller.submit();
+
+      expect(result.isSuccess, isTrue);
+      expect(capturedData.images.map((file) => file.path), [
+        firstPage.path,
+        secondPage.path,
+      ]);
+    } finally {
+      controller.dispose();
+      await tempDir.delete(recursive: true);
+    }
+  });
 }
