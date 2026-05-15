@@ -271,6 +271,39 @@ class SheetsService {
     }
   }
 
+  static Future<List<SheetModel>> fetchPurchasedSheets() async {
+    final String token = _sessionStore.token;
+    if (token.isEmpty) return [];
+
+    try {
+      final response = await _api.get(
+        path: '/sheets/purchased',
+        token: token,
+        disableCache: true,
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic jsonResponse = jsonDecode(response.body);
+        final List<dynamic> rawSheets = _extractSheetsList(jsonResponse);
+
+        return rawSheets
+            .whereType<Map>()
+            .map(
+              (item) => SheetModel.fromJson(
+                _withCurrentUserPurchaseFlag(Map<String, dynamic>.from(item)),
+              ),
+            )
+            .toList();
+      }
+
+      if (response.statusCode == 404) return [];
+    } catch (e) {
+      debugPrint('Error fetching purchased sheets: $e');
+    }
+
+    return [];
+  }
+
   static Future<SheetActionResult> updateSheet({
     required String sheetId,
     required String title,
