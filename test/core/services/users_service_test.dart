@@ -66,5 +66,27 @@ API_PORT=3000
 
       expect(response.statusCode, 400);
     });
+
+    test('updateKeyword sends backend preference payload', () async {
+      final client = MockClient((request) async {
+        expect(request.method, 'PATCH');
+        expect(request.url.path, '/users/update-keyword/user-3');
+        expect(request.headers['authorization'], 'Bearer token-789');
+
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['keyword'], ['biology', 'exam']);
+
+        return http.Response('', 204);
+      });
+
+      final response = await UsersService.updateKeyword(
+        uid: 'user-3',
+        keywords: const ['biology', 'exam'],
+        token: 'token-789',
+        client: client,
+      );
+
+      expect(response.statusCode, 204);
+    });
   });
 }

@@ -135,4 +135,42 @@ void main() {
       await tempDir.delete(recursive: true);
     }
   });
+
+  test('submit rejects files larger than 5MB', () async {
+    final tempDir = await Directory.systemTemp.createTemp(
+      'upload_page_controller_large_file_test',
+    );
+    final imageFile = File('${tempDir.path}/large-sheet.png')
+      ..writeAsBytesSync(List<int>.filled(5 * 1024 * 1024 + 1, 1));
+
+    final controller = UploadPageController(
+      fetchCategories: () async => const <CategoryModel>[],
+      submitUpload: ({required data, onProgress}) async {
+        return const SheetUploadResult(
+          success: true,
+          statusCode: 201,
+          message: 'unexpected',
+        );
+      },
+    );
+
+    try {
+      controller.addImages([imageFile]);
+      controller.titleController.text = 'Large Sheet';
+      controller.descriptionController.text = 'Too large';
+      controller.setSelectedSubject('cat-1');
+      controller.setSelectedPrice('0');
+
+      final result = await controller.submit();
+
+      expect(result.validationError, isNotNull);
+      expect(
+        result.validationError?.message,
+        ValidationMessages.uploadFileTooLarge,
+      );
+    } finally {
+      controller.dispose();
+      await tempDir.delete(recursive: true);
+    }
+  });
 }

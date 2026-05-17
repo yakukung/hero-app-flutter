@@ -5,6 +5,8 @@ import 'package:hero_app_flutter/core/models/sheet_model.dart';
 import 'package:hero_app_flutter/core/models/category_model.dart';
 import 'package:hero_app_flutter/core/session/session_store.dart';
 import 'package:hero_app_flutter/core/services/sheets_service.dart';
+import 'package:hero_app_flutter/core/services/preferences_service.dart';
+import 'package:hero_app_flutter/core/services/recommendation_service.dart';
 
 class SheetsController extends GetxController {
   SheetsController({GetStorage? storage, SessionStore? sessionStore})
@@ -12,6 +14,7 @@ class SheetsController extends GetxController {
 
   var sheets = <SheetModel>[].obs;
   var favoriteSheets = <SheetModel>[].obs;
+  var backendRecommendedSheets = <SheetModel>[].obs;
   var categories = <CategoryModel>[].obs;
   var isLoading = false.obs;
   var errorMessage = ''.obs;
@@ -67,6 +70,7 @@ class SheetsController extends GetxController {
         token: token.isNotEmpty ? token : null,
       );
       sheets.assignAll(_mergeFavorites(newSheets));
+      await fetchBackendRecommendations();
     } catch (e) {
       debugPrint('Error fetching sheets: $e');
       errorMessage.value = 'เกิดข้อผิดพลาด: ${e.toString()}';
@@ -77,6 +81,24 @@ class SheetsController extends GetxController {
 
   Future<void> refreshSheets() async {
     await fetchSheets(forceRefresh: true);
+  }
+
+  Future<void> fetchBackendRecommendations() async {
+    try {
+      final result = await RecommendationService.fetchRecommendations();
+      final recommendations = result.data ?? const <SheetModel>[];
+      if (!result.success || recommendations.isEmpty) {
+        backendRecommendedSheets.clear();
+        return;
+      }
+
+      backendRecommendedSheets.assignAll(
+        _mergeFavorites(_hydrateRecommendedSheets(recommendations)),
+      );
+    } catch (e) {
+      debugPrint('Error fetching recommendations: $e');
+      backendRecommendedSheets.clear();
+    }
   }
 
   Future<bool> addFavorite(String sheetId) async {
@@ -144,18 +166,84 @@ class SheetsController extends GetxController {
         .toSet();
     return sheets.where((sheet) {
       final titleMatches = sheet.title.toLowerCase().contains(lowerQuery);
+      final descriptionMatches =
+          sheet.description?.toLowerCase().contains(lowerQuery) ?? false;
+      final authorMatches =
+          sheet.authorName?.toLowerCase().contains(lowerQuery) ?? false;
+      final keywordMatches =
+          sheet.keywordIds?.any(
+            (id) => id.toLowerCase().contains(lowerQuery),
+          ) ??
+          false;
       final categoryMatches =
           sheet.categoryIds?.any(
             (id) => matchingCategoryKeys.contains(id.toLowerCase()),
           ) ??
           false;
-      return titleMatches || categoryMatches;
+      return titleMatches ||
+          descriptionMatches ||
+          authorMatches ||
+          keywordMatches ||
+          categoryMatches;
     }).toList();
+  }
+
+  List<SheetModel> get popularSheets {
+    final sorted = sheets.toList()
+      ..sort((a, b) {
+        final ratingCompare = (b.rating ?? 0).compareTo(a.rating ?? 0);
+        if (ratingCompare != 0) return ratingCompare;
+        return b.buyerCount.compareTo(a.buyerCount);
+      });
+    return sorted;
+  }
+
+  List<SheetModel> get newestSheets {
+    return sheets.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  List<SheetModel> recommendedSheets({PreferencesService? preferencesService}) {
+    if (backendRecommendedSheets.isNotEmpty) {
+      return backendRecommendedSheets.toList();
+    }
+
+    final preferences = (preferencesService ?? PreferencesService()).load();
+    if (preferences.isEmpty) {
+      return popularSheets;
+    }
+
+    final keywords = preferences.keywords.map((e) => e.toLowerCase()).toSet();
+    final subjects = preferences.subjects.map((e) => e.toLowerCase()).toSet();
+    final filtered = sheets.where((sheet) {
+      final keywordMatches =
+          sheet.keywordIds?.any((keyword) {
+            final lower = keyword.toLowerCase();
+            return keywords.any((preference) => lower.contains(preference));
+          }) ??
+          false;
+      final subjectMatches =
+          sheet.categoryIds?.any((subject) {
+            final lower = subject.toLowerCase();
+            return subjects.any((preference) => lower.contains(preference));
+          }) ??
+          false;
+      return keywordMatches || subjectMatches;
+    }).toList();
+
+    if (filtered.isEmpty) {
+      return popularSheets;
+    }
+    return filtered..sort((a, b) {
+      final ratingCompare = (b.rating ?? 0).compareTo(a.rating ?? 0);
+      if (ratingCompare != 0) return ratingCompare;
+      return b.createdAt.compareTo(a.createdAt);
+    });
   }
 
   void resetState() {
     sheets.clear();
     favoriteSheets.clear();
+    backendRecommendedSheets.clear();
     categories.clear();
     isLoading.value = false;
     errorMessage.value = '';
@@ -178,6 +266,11 @@ class SheetsController extends GetxController {
     }
 
     sheets.assignAll(_mergeFavorites(sheets));
+    if (backendRecommendedSheets.isNotEmpty) {
+      backendRecommendedSheets.assignAll(
+        _mergeFavorites(backendRecommendedSheets),
+      );
+    }
   }
 
   void _updateFavoriteState(String sheetId, {required bool isFavorite}) {
@@ -201,9 +294,52 @@ class SheetsController extends GetxController {
     } else if (favoriteIndex != -1) {
       favoriteSheets.removeAt(favoriteIndex);
     }
+
+    final int recommendedIndex = backendRecommendedSheets.indexWhere(
+      (sheet) => sheet.id == sheetId,
+    );
+    if (recommendedIndex != -1) {
+      backendRecommendedSheets[recommendedIndex] = _copySheet(
+        backendRecommendedSheets[recommendedIndex],
+        isFavorite: isFavorite,
+      );
+    }
   }
 
   SheetModel _copyWithFavoriteState(SheetModel sheet, bool isFavorite) {
+    return _copySheet(sheet, isFavorite: isFavorite);
+  }
+
+  void markPurchased(String sheetId) {
+    _updatePurchaseState(sheets, sheetId);
+    _updatePurchaseState(favoriteSheets, sheetId);
+    _updatePurchaseState(backendRecommendedSheets, sheetId);
+  }
+
+  void _updatePurchaseState(RxList<SheetModel> source, String sheetId) {
+    final index = source.indexWhere((sheet) => sheet.id == sheetId);
+    if (index != -1) {
+      source[index] = _copySheet(source[index], isPurchased: true);
+    }
+  }
+
+  List<SheetModel> _hydrateRecommendedSheets(List<SheetModel> source) {
+    return source.map((recommendation) {
+      final cachedIndex = sheets.indexWhere(
+        (sheet) => sheet.id == recommendation.id,
+      );
+      if (cachedIndex == -1) {
+        return recommendation;
+      }
+      return sheets[cachedIndex];
+    }).toList();
+  }
+
+  SheetModel _copySheet(
+    SheetModel sheet, {
+    bool? isFavorite,
+    bool? isPurchased,
+  }) {
     return SheetModel(
       id: sheet.id,
       authorId: sheet.authorId,
@@ -224,8 +360,8 @@ class SheetsController extends GetxController {
       categoryIds: sheet.categoryIds,
       keywordIds: sheet.keywordIds,
       buyerCount: sheet.buyerCount,
-      isPurchased: sheet.isPurchased,
-      isFavorite: isFavorite,
+      isPurchased: isPurchased ?? sheet.isPurchased,
+      isFavorite: isFavorite ?? sheet.isFavorite,
     );
   }
 }

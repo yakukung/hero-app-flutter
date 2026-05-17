@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:hero_app_flutter/features/auth/intro_page.dart';
 import 'package:hero_app_flutter/features/user/profile/controllers/profile_page_controller.dart';
 import 'package:hero_app_flutter/features/user/profile/edit_profile_page.dart';
+import 'package:hero_app_flutter/features/user/profile/notifications_page.dart';
+import 'package:hero_app_flutter/features/user/profile/preferences_page.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_payments_page.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_wallet_page.dart';
 import 'package:hero_app_flutter/features/user/profile/user_sheets_page.dart';
@@ -14,6 +16,7 @@ import 'package:hero_app_flutter/features/user/profile/widgets/profile_action_gr
 import 'package:hero_app_flutter/features/user/profile/widgets/profile_logout_button.dart';
 import 'package:hero_app_flutter/features/user/profile/widgets/profile_subscription.dart';
 import 'package:hero_app_flutter/features/user/profile/widgets/profile_summary_section.dart';
+import 'package:hero_app_flutter/core/services/payment_service.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:hero_app_flutter/shared/widgets/upload/upload_progress_dialog.dart';
 
@@ -90,7 +93,8 @@ class _ProfilePageState extends State<ProfilePage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const ProfileSubscription(),
+      builder: (_) =>
+          ProfileSubscription(fetchPlans: () => PaymentService.fetchPlans()),
     );
   }
 
@@ -102,6 +106,14 @@ class _ProfilePageState extends State<ProfilePage> {
     Get.to(
       () => ProfileWalletPage(currentWallet: _controller.appController.wallet),
     );
+  }
+
+  void _openPreferences() {
+    Get.to(() => const PreferencesPage());
+  }
+
+  void _openNotifications() {
+    Get.to(() => const NotificationsPage());
   }
 
   @override
@@ -134,6 +146,8 @@ class _ProfilePageState extends State<ProfilePage> {
                 onOpenUserSheets: _openUserSheets,
                 onOpenPayments: _openPayments,
                 onOpenWallet: _openWallet,
+                onOpenPreferences: _openPreferences,
+                onOpenNotifications: _openNotifications,
               ),
               const SizedBox(height: 10),
               ProfileLogoutButton(onPressed: _showLogoutConfirmation),

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/core/controllers/admin_controller.dart';
+import 'package:hero_app_flutter/features/admin/admin_design.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
-import 'package:hero_app_flutter/constants/app_colors.dart';
 
 class AdminChangeUsernamePage extends StatefulWidget {
   final String userId;
@@ -97,46 +97,54 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AdminColors.background,
       appBar: AppBar(
         title: const Text(
-          'เปลี่ยนชื่อผู้ใช้ (Admin)',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+          'เปลี่ยนชื่อผู้ใช้',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AdminColors.text,
+          ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AdminColors.background,
+        surfaceTintColor: AdminColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AdminColors.text),
           onPressed: () => Get.back(),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         child: Column(
           children: [
-            TextField(
-              controller: _usernameCtl,
-              decoration: InputDecoration(
-                labelText: 'ชื่อผู้ใช้ใหม่',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
+            AdminPageHeader(
+              title: 'ชื่อผู้ใช้ใหม่',
+              subtitle: 'แก้ไขชื่อที่จะแสดงในระบบ',
+              icon: Icons.person_outline_rounded,
+            ),
+            const SizedBox(height: 16),
+            AdminCard(
+              child: TextField(
+                controller: _usernameCtl,
+                decoration: const InputDecoration(
+                  labelText: 'ชื่อผู้ใช้ใหม่',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
                 ),
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 52,
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _changeUsername,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AdminColors.primary,
+                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(24),
                   ),
                   elevation: 0,
                 ),

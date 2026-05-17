@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/validations/validation_error.dart';
 import 'package:hero_app_flutter/validations/validation_messages.dart';
 
+const int maxSheetUploadFileBytes = 5 * 1024 * 1024;
+
 ValidationError? validateSheetUpload({
   required List<File> images,
   required String title,
@@ -22,6 +24,21 @@ ValidationError? validateSheetUpload({
       title: ValidationMessages.incompleteInfoTitle,
       message: ValidationMessages.uploadImageRequired,
     );
+  }
+  for (final image in images) {
+    try {
+      if (image.lengthSync() > maxSheetUploadFileBytes) {
+        return const ValidationError(
+          title: ValidationMessages.invalidFormatTitle,
+          message: ValidationMessages.uploadFileTooLarge,
+        );
+      }
+    } on FileSystemException {
+      return const ValidationError(
+        title: ValidationMessages.invalidFormatTitle,
+        message: 'ไม่สามารถอ่านไฟล์ชีตนี้ได้',
+      );
+    }
   }
   if (title.trim().isEmpty) {
     return const ValidationError(

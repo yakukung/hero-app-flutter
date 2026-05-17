@@ -1,12 +1,20 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/models/post_model.dart';
 import 'package:hero_app_flutter/core/services/posts_service.dart';
+import 'package:hero_app_flutter/core/services/reports_service.dart';
 import 'package:hero_app_flutter/core/session/app_session_coordinator.dart';
 
 typedef LoadPosts = Future<List<PostModel>> Function();
 typedef TogglePostLike = Future<bool> Function(String postId);
 typedef SharePost = Future<ShareActionResult> Function(String postId);
+typedef ReportPost =
+    Future<bool> Function({
+      required String postId,
+      required ReportType reportType,
+      required String content,
+    });
 
 class CommunityPageController extends ChangeNotifier {
   CommunityPageController({
@@ -16,12 +24,14 @@ class CommunityPageController extends ChangeNotifier {
     TogglePostLike? unlikePost,
     SharePost? sharePost,
     SharePost? unsharePost,
+    ReportPost? reportPost,
   }) : _sessionCoordinator = sessionCoordinator ?? AppSessionCoordinator(),
        _loadPosts = loadPosts ?? PostsService.getPosts,
        _likePost = likePost ?? PostsService.likePost,
        _unlikePost = unlikePost ?? PostsService.unlikePost,
        _sharePost = sharePost ?? PostsService.sharePost,
-       _unsharePost = unsharePost ?? PostsService.unsharePost;
+       _unsharePost = unsharePost ?? PostsService.unsharePost,
+       _reportPost = reportPost ?? _defaultReportPost;
 
   final AppSessionCoordinator _sessionCoordinator;
   final LoadPosts _loadPosts;
@@ -29,6 +39,7 @@ class CommunityPageController extends ChangeNotifier {
   final TogglePostLike _unlikePost;
   final SharePost _sharePost;
   final SharePost _unsharePost;
+  final ReportPost _reportPost;
 
   List<PostModel> _posts = const [];
   bool _isLoading = true;
@@ -117,5 +128,31 @@ class CommunityPageController extends ChangeNotifier {
       notifyListeners();
     }
     return result;
+  }
+
+  Future<bool> reportPost({
+    required String postId,
+    required ReportType reportType,
+    required String content,
+  }) {
+    return _reportPost(
+      postId: postId,
+      reportType: reportType,
+      content: content,
+    );
+  }
+
+  static Future<bool> _defaultReportPost({
+    required String postId,
+    required ReportType reportType,
+    required String content,
+  }) async {
+    final result = await ReportsService.submitReport(
+      referenceId: postId,
+      referenceTable: 'posts',
+      reportType: reportType,
+      content: content,
+    );
+    return result.success;
   }
 }

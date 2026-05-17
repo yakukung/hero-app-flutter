@@ -5,15 +5,90 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:hero_app_flutter/core/models/enums.dart';
+import 'package:hero_app_flutter/core/models/payment_history_model.dart';
+import 'package:hero_app_flutter/core/models/service_result.dart';
+import 'package:hero_app_flutter/core/services/payment_service.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_payment_status_page.dart';
 
 typedef PickSlipImage = Future<XFile?> Function();
 typedef PaymentConfirmed = Future<void> Function(PaymentStatus status);
+typedef SubmitSlipPayment =
+    Future<ServiceResult<PaymentStatus>> Function(XFile slipImage);
+typedef FetchSubscriptionPlans =
+    Future<ServiceResult<List<SubscriptionPlanModel>>> Function();
 
-class ProfileSubscription extends StatelessWidget {
-  const ProfileSubscription({super.key, this.pickSlipImage});
+class ProfileSubscription extends StatefulWidget {
+  const ProfileSubscription({
+    super.key,
+    this.pickSlipImage,
+    this.submitPayment,
+    this.fetchPlans,
+    this.plans,
+  });
 
   final PickSlipImage? pickSlipImage;
+  final SubmitSlipPayment? submitPayment;
+  final FetchSubscriptionPlans? fetchPlans;
+  final List<SubscriptionPlanModel>? plans;
+
+  @override
+  State<ProfileSubscription> createState() => _ProfileSubscriptionState();
+}
+
+class _ProfileSubscriptionState extends State<ProfileSubscription> {
+  static const List<SubscriptionPlanModel> _fallbackPlans = [
+    SubscriptionPlanModel(
+      id: '',
+      title: 'รายเดือน',
+      price: 79,
+      intervalLabel: 'MONTH',
+      intervalCount: 1,
+    ),
+    SubscriptionPlanModel(
+      id: '',
+      title: 'ราย 3 เดือน',
+      price: 229,
+      intervalLabel: 'MONTH',
+      intervalCount: 3,
+      description: 'ประหยัดลง 8 บาท เมื่อเทียบกับรายเดือน',
+    ),
+    SubscriptionPlanModel(
+      id: '',
+      title: 'รายปี',
+      price: 879,
+      intervalLabel: 'YEAR',
+      intervalCount: 1,
+      description:
+          'ประหยัดลง 69 บาท เมื่อเทียบกับรายเดือน\nประหยัดลง 37 บาท เมื่อเทียบกับราย3เดือน',
+    ),
+  ];
+
+  late List<SubscriptionPlanModel> _plans;
+  bool _isLoadingPlans = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _plans = widget.plans ?? _fallbackPlans;
+    if (widget.plans == null && widget.fetchPlans != null) {
+      _loadPlans();
+    }
+  }
+
+  Future<void> _loadPlans() async {
+    setState(() => _isLoadingPlans = true);
+    final result = await widget.fetchPlans!.call();
+    if (!mounted) {
+      return;
+    }
+    final plans = result.data ?? const <SubscriptionPlanModel>[];
+    setState(() {
+      _isLoadingPlans = false;
+      if (result.success && plans.isNotEmpty) {
+        _plans = plans;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,49 +125,22 @@ class ProfileSubscription extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  _PackageCard(
-                    title: 'รายเดือน',
-                    price: '฿79.00/เดือน',
-                    amount: '฿79.00',
-                    buttonText: 'ชำระเงินในราคา ฿79.00',
-                    onPay: () => _openPaymentSheet(
-                      context,
-                      packageTitle: 'รายเดือน',
-                      price: '฿79.00/เดือน',
-                      amount: '฿79.00',
+                  if (_isLoadingPlans)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 16),
+                      child: LinearProgressIndicator(minHeight: 3),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  _PackageCard(
-                    title: 'ราย 3 เดือน',
-                    price: '฿229.00/3เดือน',
-                    amount: '฿229.00',
-                    subtitles: const ['ประหยัดลง 8 บาท เมื่อเทียบกับรายเดือน'],
-                    buttonText: 'ชำระเงินในราคา ฿229.00',
-                    onPay: () => _openPaymentSheet(
-                      context,
-                      packageTitle: 'ราย 3 เดือน',
-                      price: '฿229.00/3เดือน',
-                      amount: '฿229.00',
+                  for (final plan in _plans) ...[
+                    _PackageCard(
+                      title: plan.title,
+                      price: _formatPlanPrice(plan),
+                      amount: plan.amountLabel,
+                      subtitles: _planSubtitles(plan),
+                      buttonText: 'ชำระเงินในราคา ${plan.amountLabel}',
+                      onPay: () => _openPaymentSheet(context, plan: plan),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  _PackageCard(
-                    title: 'รายปี',
-                    price: '฿879.00/ปี',
-                    amount: '฿879.00',
-                    subtitles: const [
-                      'ประหยัดลง 69 บาท เมื่อเทียบกับรายเดือน',
-                      'ประหยัดลง 37 บาท เมื่อเทียบกับราย3เดือน',
-                    ],
-                    buttonText: 'ชำระเงินในราคา ฿879.00',
-                    onPay: () => _openPaymentSheet(
-                      context,
-                      packageTitle: 'รายปี',
-                      price: '฿879.00/ปี',
-                      amount: '฿879.00',
-                    ),
-                  ),
+                    const SizedBox(height: 16),
+                  ],
                   const SizedBox(height: 40),
                 ],
               ),
@@ -105,25 +153,33 @@ class ProfileSubscription extends StatelessWidget {
 
   Future<void> _openPaymentSheet(
     BuildContext context, {
-    required String packageTitle,
-    required String price,
-    required String amount,
+    required SubscriptionPlanModel plan,
   }) {
     final subscriptionContext = context;
+    final price = _formatPlanPrice(plan);
+    final amount = plan.amountLabel;
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) {
         return ProfilePaymentSheet(
-          packageTitle: packageTitle,
+          packageTitle: plan.title,
           price: price,
           amount: amount,
-          pickSlipImage: pickSlipImage,
+          pickSlipImage: widget.pickSlipImage,
+          submitPayment:
+              widget.submitPayment ??
+              (slipImage) => PaymentService.subscribe(
+                packageTitle: plan.title,
+                planId: plan.id,
+                amount: plan.price,
+                slipImage: File(slipImage.path),
+              ),
           onPaymentConfirmed: (status) => _completePaymentFlow(
             subscriptionContext,
             status: status,
-            packageTitle: packageTitle,
+            packageTitle: plan.title,
             price: price,
             amount: amount,
           ),
@@ -158,6 +214,39 @@ class ProfileSubscription extends StatelessWidget {
       ),
     );
   }
+}
+
+String _formatPlanPrice(SubscriptionPlanModel plan) {
+  final String interval = plan.intervalLabel.toUpperCase();
+  String suffix;
+  switch (interval) {
+    case 'DAY':
+      suffix = plan.intervalCount > 1 ? '/${plan.intervalCount} วัน' : '/วัน';
+      break;
+    case 'WEEK':
+      suffix =
+          plan.intervalCount > 1 ? '/${plan.intervalCount} สัปดาห์' : '/สัปดาห์';
+      break;
+    case 'YEAR':
+      suffix = plan.intervalCount > 1 ? '/${plan.intervalCount} ปี' : '/ปี';
+      break;
+    default:
+      suffix = plan.intervalCount > 1 ? '/${plan.intervalCount}เดือน' : '/เดือน';
+      break;
+  }
+  return '${plan.amountLabel}$suffix';
+}
+
+List<String>? _planSubtitles(SubscriptionPlanModel plan) {
+  final description = plan.description;
+  if (description == null || description.trim().isEmpty) {
+    return null;
+  }
+  return description
+      .split('\n')
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .toList();
 }
 
 class _PackageCard extends StatelessWidget {
@@ -252,6 +341,7 @@ class ProfilePaymentSheet extends StatefulWidget {
     required this.price,
     required this.amount,
     this.pickSlipImage,
+    this.submitPayment,
     this.onPaymentConfirmed,
   });
 
@@ -259,6 +349,7 @@ class ProfilePaymentSheet extends StatefulWidget {
   final String price;
   final String amount;
   final PickSlipImage? pickSlipImage;
+  final SubmitSlipPayment? submitPayment;
   final PaymentConfirmed? onPaymentConfirmed;
 
   @override
@@ -269,6 +360,7 @@ class _ProfilePaymentSheetState extends State<ProfilePaymentSheet> {
   final ImagePicker _picker = ImagePicker();
   XFile? _slipImage;
   String? _slipErrorMessage;
+  bool _isSubmitting = false;
 
   Future<void> _pickSlip() async {
     XFile? image;
@@ -311,11 +403,33 @@ class _ProfilePaymentSheetState extends State<ProfilePaymentSheet> {
   }
 
   Future<void> _confirmPayment() async {
-    if (_slipImage == null) {
+    final slipImage = _slipImage;
+    if (slipImage == null || _isSubmitting) {
       return;
     }
 
-    const status = PaymentStatus.PENDING;
+    setState(() {
+      _isSubmitting = true;
+      _slipErrorMessage = null;
+    });
+
+    var status = PaymentStatus.PENDING;
+    final submitPayment = widget.submitPayment;
+    if (submitPayment != null) {
+      final result = await submitPayment(slipImage);
+      if (!mounted) {
+        return;
+      }
+      if (!result.success) {
+        setState(() {
+          _isSubmitting = false;
+          _slipErrorMessage = result.message;
+        });
+        return;
+      }
+      status = result.data ?? PaymentStatus.PENDING;
+    }
+
     final onPaymentConfirmed = widget.onPaymentConfirmed;
     if (onPaymentConfirmed != null) {
       await onPaymentConfirmed(status);
@@ -394,10 +508,12 @@ class _ProfilePaymentSheetState extends State<ProfilePaymentSheet> {
                     ),
                     elevation: 0,
                   ),
-                  onPressed: _slipImage == null ? null : _confirmPayment,
-                  child: const Text(
-                    'ยืนยันชำระเงิน',
-                    style: TextStyle(
+                  onPressed: _slipImage == null || _isSubmitting
+                      ? null
+                      : _confirmPayment,
+                  child: Text(
+                    _isSubmitting ? 'กำลังส่งสลิป...' : 'ยืนยันชำระเงิน',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,

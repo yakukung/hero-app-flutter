@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import 'package:hero_app_flutter/core/models/enums.dart';
+import 'package:hero_app_flutter/core/services/payment_service.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_payment_status_page.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_top_ups_page.dart';
 import 'package:hero_app_flutter/features/user/profile/widgets/profile_subscription.dart';
@@ -52,6 +55,10 @@ class _ProfileWalletPageState extends State<ProfileWalletPage> {
           packageTitle: 'เติมเงินกระเป๋า',
           price: price,
           amount: amount,
+          submitPayment: (slipImage) => PaymentService.createTopUp(
+            amount: _selectedAmount.toDouble(),
+            slipImage: File(slipImage.path),
+          ),
           onPaymentConfirmed: (status) => _completePaymentFlow(
             status: status,
             price: price,

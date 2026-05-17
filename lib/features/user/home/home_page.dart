@@ -38,6 +38,9 @@ class _HomePageState extends State<HomePage> {
       final isLoading = sheetsController.isLoading.value;
       final errorMessage = sheetsController.errorMessage.value;
       final sheets = sheetsController.sheets.toList();
+      final recommendedSheets = sheetsController.recommendedSheets();
+      final popularSheets = sheetsController.popularSheets;
+      final newestSheets = sheetsController.newestSheets;
 
       return Scaffold(
         body: Container(
@@ -73,15 +76,22 @@ class _HomePageState extends State<HomePage> {
                         const SearchSheetBox(),
                         const SizedBox(height: 35),
                         HomeSheetSection(
+                          title: 'แนะนำสำหรับคุณ',
+                          sheets: recommendedSheets,
+                          onOpenSheet: _openSheet,
+                          onFavoriteTap: _confirmToggleFavorite,
+                        ),
+                        const SizedBox(height: 20),
+                        HomeSheetSection(
                           title: 'ชีตยอดนิยม',
-                          sheets: sheets,
+                          sheets: popularSheets,
                           onOpenSheet: _openSheet,
                           onFavoriteTap: _confirmToggleFavorite,
                         ),
                         const SizedBox(height: 20),
                         HomeSheetSection(
                           title: 'ชีตใหม่ล่าสุด',
-                          sheets: sheets,
+                          sheets: newestSheets,
                           onOpenSheet: _openSheet,
                           onFavoriteTap: _confirmToggleFavorite,
                         ),

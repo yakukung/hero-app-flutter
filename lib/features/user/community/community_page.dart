@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:hero_app_flutter/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/models/post_model.dart';
 import 'package:hero_app_flutter/core/models/user_model.dart';
 import 'package:hero_app_flutter/features/user/community/controllers/community_page_controller.dart';
@@ -199,11 +200,24 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   void _showReportOptions(PostModel post) {
+    if (!_controller.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณาเข้าสู่ระบบก่อนรายงานโพสต์')),
+      );
+      return;
+    }
+
+    final detailController = TextEditingController();
+    var selectedType = ReportType.SPAM;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         return Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
+          ),
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.only(
@@ -211,56 +225,101 @@ class _CommunityPageState extends State<CommunityPage> {
               topRight: Radius.circular(20),
             ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+          child: StatefulBuilder(
+            builder: (context, setSheetState) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'รายงานโพสต์',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<ReportType>(
+                      initialValue: selectedType,
+                      decoration: const InputDecoration(
+                        labelText: 'เหตุผล',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: ReportType.SPAM,
+                          child: Text('สแปม'),
+                        ),
+                        DropdownMenuItem(
+                          value: ReportType.ABUSE,
+                          child: Text('เนื้อหาไม่เหมาะสม'),
+                        ),
+                        DropdownMenuItem(
+                          value: ReportType.BUG,
+                          child: Text('ข้อมูลผิดพลาด'),
+                        ),
+                        DropdownMenuItem(
+                          value: ReportType.OTHER,
+                          child: Text('อื่นๆ'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setSheetState(() => selectedType = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: detailController,
+                      minLines: 3,
+                      maxLines: 5,
+                      decoration: const InputDecoration(
+                        labelText: 'รายละเอียดเพิ่มเติม',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final navigator = Navigator.of(context);
+                          final messenger = ScaffoldMessenger.of(this.context);
+                          final success = await _controller.reportPost(
+                            postId: post.id,
+                            reportType: selectedType,
+                            content: detailController.text.trim(),
+                          );
+                          if (!mounted) return;
+                          navigator.pop();
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                success
+                                    ? 'ส่งรายงานแล้ว'
+                                    : 'ระบบรายงานยังไม่พร้อมใช้งาน',
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text('ส่งรายงาน'),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'รายงานโพสต์',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'เลือกเหตุผลที่คุณต้องการรายงานโพสต์นี้',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              ),
-              const SizedBox(height: 20),
-              _buildReportTile('สแปม (SPAM)', post),
-              _buildReportTile('การละเมิด (ABUSE)', post),
-              _buildReportTile('พบข้อผิดพลาด (BUG)', post),
-              _buildReportTile('อื่นๆ (OTHER)', post),
-              const SizedBox(height: 40),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildReportTile(String reason, PostModel post) {
-    return ListTile(
-      title: Text(reason),
-      onTap: () async {
-        Get.back();
-        await Future<void>.delayed(const Duration(milliseconds: 500));
-        if (!mounted) {
-          return;
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'ส่งรายงานของคุณเรียบร้อยแล้ว ขอบคุณที่ช่วยแจ้งให้เราทราบ',
-            ),
+              );
+            },
           ),
         );
       },

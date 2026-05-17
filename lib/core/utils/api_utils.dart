@@ -1,13 +1,57 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-String getErrorMessage(http.Response response) {
+Map<String, dynamic>? decodeJsonMap(String source) {
   try {
-    if (response.body.trim().isEmpty) {
-      return 'เกิดข้อผิดพลาด';
+    if (source.trim().isEmpty) {
+      return null;
     }
 
-    final Map<String, dynamic> body = jsonDecode(response.body);
+    final decoded = jsonDecode(source);
+    return decoded is Map<String, dynamic> ? decoded : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+dynamic getApiData(String source) {
+  final decoded = decodeJsonMap(source);
+  if (decoded == null) {
+    return null;
+  }
+  return decoded['data'] ?? decoded;
+}
+
+List<dynamic> getApiList(String source, List<String> keys) {
+  final root = getApiData(source);
+  if (root is List) {
+    return root;
+  }
+  if (root is Map<String, dynamic>) {
+    for (final key in keys) {
+      final value = root[key];
+      if (value is List) {
+        return value;
+      }
+    }
+  }
+  return const [];
+}
+
+String getErrorMessage(
+  http.Response response, {
+  String fallback = 'เกิดข้อผิดพลาด',
+}) {
+  try {
+    if (response.body.trim().isEmpty) {
+      return fallback;
+    }
+
+    final Map<String, dynamic>? body = decodeJsonMap(response.body);
+    if (body == null) {
+      return fallback;
+    }
+
     final dynamic error = body['error'];
 
     if (error is Map<String, dynamic>) {
@@ -15,7 +59,7 @@ String getErrorMessage(http.Response response) {
       if (message is Map<String, dynamic>) {
         return message['th']?.toString() ??
             message['en']?.toString() ??
-            'เกิดข้อผิดพลาด';
+            fallback;
       }
       if (message != null && message.toString().isNotEmpty) {
         return message.toString();
@@ -27,8 +71,8 @@ String getErrorMessage(http.Response response) {
       return message.toString();
     }
 
-    return 'เกิดข้อผิดพลาด';
+    return fallback;
   } catch (e) {
-    return 'เกิดข้อผิดพลาด';
+    return fallback;
   }
 }

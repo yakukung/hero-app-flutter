@@ -3,8 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hero_app_flutter/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/models/payment_history_model.dart';
 import 'package:hero_app_flutter/core/models/user_model.dart';
 import 'package:hero_app_flutter/core/session/session_store.dart';
+import 'package:hero_app_flutter/core/services/payment_service.dart';
 import 'package:hero_app_flutter/core/services/users_service.dart';
 
 class AppController extends GetxController {
@@ -12,6 +14,8 @@ class AppController extends GetxController {
     : _sessionStore = sessionStore ?? SessionStore(storage: storage);
 
   final Rxn<UserModel> user = Rxn<UserModel>();
+  final Rxn<SubscriptionStatusModel> subscriptionStatus =
+      Rxn<SubscriptionStatusModel>();
   final RxBool isLoading = false.obs;
   final RxBool isReady = false.obs;
   final RxBool wasSessionExpired = false.obs;
@@ -34,6 +38,8 @@ class AppController extends GetxController {
   }
 
   bool get hasUser => user.value != null;
+  bool get hasPremiumSubscription =>
+      subscriptionStatus.value?.isPremium ?? false;
 
   @override
   void onInit() {
@@ -73,6 +79,7 @@ class AppController extends GetxController {
           final userData = _extractUserMap(jsonDecode(response.body));
           if (userData.isNotEmpty) {
             _applyUserData(userData);
+            await refreshSubscriptionStatus();
             errorMessage.value = '';
           } else {
             _handleUserError('ไม่พบข้อมูลผู้ใช้ในข้อมูลตอบกลับ');
@@ -103,6 +110,19 @@ class AppController extends GetxController {
     _applyUserData(userData);
     wasSessionExpired.value = false;
     isReady.value = true;
+  }
+
+  Future<void> refreshSubscriptionStatus() async {
+    final token = _sessionStore.token;
+    if (token.isEmpty || uid.isEmpty) {
+      subscriptionStatus.value = SubscriptionStatusModel.inactive();
+      return;
+    }
+
+    final result = await PaymentService.fetchSubscriptionStatus();
+    if (result.success && result.data != null) {
+      subscriptionStatus.value = result.data;
+    }
   }
 
   Map<String, dynamic> _extractUserMap(dynamic responseBody) {
@@ -152,6 +172,7 @@ class AppController extends GetxController {
 
   void clearUserData({bool tokenExpired = false}) {
     user.value = null;
+    subscriptionStatus.value = null;
     errorMessage.value = '';
     wasSessionExpired.value = tokenExpired;
     _sessionStore.clearSession();

@@ -134,6 +134,20 @@ class UsersService {
     );
   }
 
+  static Future<http.Response> updateKeyword({
+    required String uid,
+    required List<String> keywords,
+    String? token,
+    http.Client? client,
+  }) async {
+    return _api.patchJson(
+      path: '/users/update-keyword/$uid',
+      body: {'keyword': keywords},
+      token: token,
+      client: client,
+    );
+  }
+
   static Future<UserProfileImageUploadResult> updateProfileImage({
     required String uid,
     required File imageFile,

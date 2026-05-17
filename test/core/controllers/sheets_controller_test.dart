@@ -63,6 +63,9 @@ void main() {
     controller.favoriteSheets.addAll([
       _buildSheet(id: 'sheet-1', title: 'Sheet A', isFavorite: true),
     ]);
+    controller.backendRecommendedSheets.addAll([
+      _buildSheet(id: 'sheet-2', title: 'Sheet B'),
+    ]);
     controller.categories.addAll([
       CategoryModel(
         id: 'cat-1',
@@ -78,9 +81,39 @@ void main() {
 
     expect(controller.sheets, isEmpty);
     expect(controller.favoriteSheets, isEmpty);
+    expect(controller.backendRecommendedSheets, isEmpty);
     expect(controller.categories, isEmpty);
     expect(controller.errorMessage.value, isEmpty);
     expect(controller.isLoading.value, isFalse);
+  });
+
+  test('recommendedSheets prefers backend recommendations when present', () {
+    controller.sheets.addAll([
+      _buildSheet(id: 'sheet-1', title: 'Local Sheet'),
+    ]);
+    controller.backendRecommendedSheets.addAll([
+      _buildSheet(id: 'sheet-2', title: 'Backend Sheet'),
+    ]);
+
+    final recommended = controller.recommendedSheets();
+
+    expect(recommended.map((sheet) => sheet.id), ['sheet-2']);
+  });
+
+  test('markPurchased updates cached sheet lists', () {
+    controller.sheets.addAll([_buildSheet(id: 'sheet-1', title: 'Sheet A')]);
+    controller.favoriteSheets.addAll([
+      _buildSheet(id: 'sheet-1', title: 'Sheet A', isFavorite: true),
+    ]);
+    controller.backendRecommendedSheets.addAll([
+      _buildSheet(id: 'sheet-1', title: 'Sheet A'),
+    ]);
+
+    controller.markPurchased('sheet-1');
+
+    expect(controller.sheets.single.isPurchased, isTrue);
+    expect(controller.favoriteSheets.single.isPurchased, isTrue);
+    expect(controller.backendRecommendedSheets.single.isPurchased, isTrue);
   });
 }
 

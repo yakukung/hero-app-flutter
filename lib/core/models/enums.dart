@@ -8,8 +8,9 @@ enum StatusFlag {
   TERMINATED;
 
   static StatusFlag fromString(String status) {
+    final normalizedStatus = status.trim().toUpperCase();
     return StatusFlag.values.firstWhere(
-      (e) => e.name == status,
+      (e) => e.name == normalizedStatus,
       orElse: () => StatusFlag.ACTIVE,
     );
   }

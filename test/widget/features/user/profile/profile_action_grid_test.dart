@@ -21,6 +21,8 @@ void main() {
             onOpenWallet: () {
               openedWallet = true;
             },
+            onOpenPreferences: () {},
+            onOpenNotifications: () {},
           ),
         ),
       ),
@@ -48,6 +50,8 @@ void main() {
               openedPayments = true;
             },
             onOpenWallet: () {},
+            onOpenPreferences: () {},
+            onOpenNotifications: () {},
           ),
         ),
       ),

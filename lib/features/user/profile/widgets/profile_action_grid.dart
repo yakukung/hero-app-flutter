@@ -9,6 +9,8 @@ class ProfileActionGrid extends StatelessWidget {
     required this.onOpenUserSheets,
     required this.onOpenPayments,
     required this.onOpenWallet,
+    required this.onOpenPreferences,
+    required this.onOpenNotifications,
     this.fontButtonSize = 14,
   });
 
@@ -18,6 +20,8 @@ class ProfileActionGrid extends StatelessWidget {
   final VoidCallback onOpenUserSheets;
   final VoidCallback onOpenPayments;
   final VoidCallback onOpenWallet;
+  final VoidCallback onOpenPreferences;
+  final VoidCallback onOpenNotifications;
   final int fontButtonSize;
 
   @override
@@ -73,6 +77,26 @@ class ProfileActionGrid extends StatelessWidget {
               fontButtonSize: fontButtonSize,
               onPressed: onOpenPayments,
             ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _ProfileActionButton(
+                  label: 'ความสนใจ\nและการแนะนำ',
+                  fontButtonSize: fontButtonSize,
+                  onPressed: onOpenPreferences,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ProfileActionButton(
+                  label: 'การแจ้งเตือน',
+                  fontButtonSize: fontButtonSize,
+                  onPressed: onOpenNotifications,
+                ),
+              ),
+            ],
           ),
         ],
       ),

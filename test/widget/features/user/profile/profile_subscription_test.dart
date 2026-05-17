@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'package:hero_app_flutter/core/models/enums.dart';
+import 'package:hero_app_flutter/core/models/payment_history_model.dart';
+import 'package:hero_app_flutter/core/models/service_result.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_payment_status_page.dart';
 import 'package:hero_app_flutter/features/user/profile/widgets/profile_subscription.dart';
 
@@ -61,6 +63,38 @@ void main() {
     expect(find.text('ชำระเงิน'), findsOneWidget);
     expect(find.text('สแกน QR เพื่อชำระเงิน'), findsOneWidget);
     expect(find.text('แนบภาพสลิป'), findsOneWidget);
+  });
+
+  testWidgets('loads subscription plans from backend when provided', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ProfileSubscription(
+            fetchPlans: () async => const ServiceResult(
+              success: true,
+              statusCode: 200,
+              message: 'ok',
+              data: [
+                SubscriptionPlanModel(
+                  id: 'plan-week',
+                  title: 'รายสัปดาห์',
+                  price: 29,
+                  intervalLabel: 'WEEK',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('รายสัปดาห์'), findsOneWidget);
+    expect(find.text('฿29.00/สัปดาห์'), findsOneWidget);
+    expect(find.text('ชำระเงินในราคา ฿29.00'), findsOneWidget);
   });
 
   testWidgets('payment confirm button is disabled without slip', (
@@ -187,6 +221,12 @@ void main() {
                     backgroundColor: Colors.transparent,
                     builder: (_) => ProfileSubscription(
                       pickSlipImage: () async => XFile(slipFile.path),
+                      submitPayment: (_) async => const ServiceResult(
+                        success: true,
+                        statusCode: 201,
+                        message: 'ok',
+                        data: PaymentStatus.PENDING,
+                      ),
                     ),
                   );
                 },
