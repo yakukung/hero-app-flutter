@@ -66,8 +66,8 @@ class AdminNavBottom extends StatelessWidget {
                       label: 'ชุมชน',
                     ),
                     BottomNavigationBarItem(
-                      icon: Icon(Icons.report_problem_rounded, size: 32),
-                      label: 'รายงาน',
+                      icon: Icon(Icons.admin_panel_settings_rounded, size: 32),
+                      label: 'จัดการ',
                     ),
                     BottomNavigationBarItem(
                       icon: Icon(Icons.supervisor_account_rounded, size: 32),

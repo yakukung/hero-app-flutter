@@ -7,12 +7,12 @@ import 'package:hero_app_flutter/core/models/user_model.dart'; // Ensure UserMod
 import 'package:hero_app_flutter/core/models/upload_state.dart';
 import 'package:hero_app_flutter/core/services/users_service.dart';
 import 'package:hero_app_flutter/features/admin/admin_change_username_page.dart';
+import 'package:hero_app_flutter/features/admin/admin_design.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart'; // Needed for showCustomDialog if used, or standard dialogs
 import 'package:hero_app_flutter/shared/widgets/upload/upload_progress_dialog.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
-import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/constants/app_assets.dart';
 
 class AdminEditUserProfilePage extends StatefulWidget {
@@ -47,6 +47,15 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
     if (image != null) {
       await _uploadProfileImage(File(image.path));
     }
+  }
+
+  Future<void> _refreshCurrentUser() async {
+    final updatedUser = await _adminController.fetchUserById(_currentUser.id);
+    if (updatedUser == null || !mounted) return;
+    setState(() {
+      _currentUser = updatedUser;
+      _pickedImage = null;
+    });
   }
 
   Future<void> _uploadProfileImage(File imageFile) async {
@@ -112,58 +121,34 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
     required IconData icon,
     required VoidCallback onPressed,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.08),
-            spreadRadius: 0,
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+    return AdminCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      onTap: onPressed,
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AdminColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Icon(icon, color: AdminColors.primary, size: 22),
           ),
-        ],
-        border: Border.all(color: Colors.grey.shade100),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(30),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: AppColors.primary, size: 22),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 18,
-                  color: Color(0xFFC4C4C4),
-                ),
-              ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AdminColors.text,
+              ),
             ),
           ),
-        ),
+          const Icon(Icons.chevron_right, color: AdminColors.muted),
+        ],
       ),
     );
   }
@@ -171,86 +156,104 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AdminColors.background,
       appBar: AppBar(
         title: const Text(
-          'แก้ไขข้อมูลผู้ใช้ (Admin)',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+          'แก้ไขข้อมูลผู้ใช้',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AdminColors.text,
+          ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: AdminColors.background,
+        surfaceTintColor: AdminColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AdminColors.text),
           onPressed: () =>
               Get.back(result: _currentUser), // Return updated user
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         child: Column(
           children: [
-            GestureDetector(
-              onTap: _pickImage,
-              child: Stack(
-                alignment: Alignment.bottomRight,
+            AdminCard(
+              padding: const EdgeInsets.all(18),
+              child: Column(
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: AdminColors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Image(
+                            image: _pickedImage != null
+                                ? FileImage(_pickedImage!)
+                                : (_currentUser.profileImage != null &&
+                                              _currentUser
+                                                  .profileImage!
+                                                  .isNotEmpty
+                                          ? NetworkImage(
+                                              _currentUser.profileImage!
+                                                      .startsWith('http')
+                                                  ? _currentUser.profileImage!
+                                                  : '$apiEndpoint/${_currentUser.profileImage}',
+                                            )
+                                          : const AssetImage(
+                                              AppAssets.defaultAvatar,
+                                            ))
+                                      as ImageProvider,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AdminColors.primary,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.edit,
+                            color: Colors.white,
+                            size: 18,
+                          ),
                         ),
                       ],
                     ),
-                    child: CircleAvatar(
-                      radius: 65,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: _pickedImage != null
-                          ? FileImage(_pickedImage!)
-                          : (_currentUser.profileImage != null &&
-                                        _currentUser.profileImage!.isNotEmpty
-                                    ? NetworkImage(
-                                        _currentUser.profileImage!.startsWith(
-                                              'http',
-                                            )
-                                            ? _currentUser.profileImage!
-                                            : '$apiEndpoint/${_currentUser.profileImage}',
-                                      )
-                                    : const AssetImage(AppAssets.defaultAvatar))
-                                as ImageProvider,
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    _currentUser.username ?? 'ไม่ระบุชื่อ',
+                    style: const TextStyle(
+                      color: AdminColors.text,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                    ),
-                    child: const Icon(
-                      Icons.edit,
-                      color: Colors.white,
-                      size: 20,
+                  const SizedBox(height: 4),
+                  const Text(
+                    'แตะรูปเพื่อเปลี่ยนโปรไฟล์',
+                    style: TextStyle(
+                      color: AdminColors.muted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-            Text(
-              'แตะเพื่อเปลี่ยนรูปโปรไฟล์',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 40),
             _buildMenuButton(
               title: 'เปลี่ยนชื่อผู้ใช้',
               icon: Icons.person_outline_rounded,
@@ -275,14 +278,7 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
 
                 if (result == true) {
                   if (!context.mounted) return;
-                  final updatedUser = await _adminController.fetchUserById(
-                    _currentUser.id,
-                  );
-                  if (updatedUser != null && mounted) {
-                    setState(() {
-                      _currentUser = updatedUser;
-                    });
-                  }
+                  await _refreshCurrentUser();
                 }
               },
             ),

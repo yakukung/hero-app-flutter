@@ -9,6 +9,7 @@ import 'package:hero_app_flutter/features/user/sheet/quiz_page.dart';
 import 'package:hero_app_flutter/features/user/sheet/sheet_preview_reader.dart';
 import 'package:hero_app_flutter/features/user/sheet/widgets/preview_sheet_bottom_action_bar.dart';
 import 'package:hero_app_flutter/features/user/sheet/widgets/preview_sheet_content_section.dart';
+import 'package:hero_app_flutter/features/user/profile/profile_wallet_page.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 
 class PreviewSheetPage extends StatefulWidget {
@@ -76,6 +77,12 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
                 slivers: [
                   _buildHeader(sheet),
                   PreviewSheetContentSection(sheet: sheet),
+                  _SheetReviewsSection(
+                    reviews: _controller.reviews,
+                    isLoading: _controller.isLoadingReviews,
+                    errorMessage: _controller.reviewErrorMessage,
+                    onSubmitReview: _submitReview,
+                  ),
                 ],
               ),
               PreviewSheetBottomActionBar(
@@ -130,12 +137,39 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       title: 'ยืนยันการซื้อ',
       message: 'คุณต้องการซื้อ "${sheet.title}" ในราคา ${sheet.price} บาท?',
       isConfirm: true,
-      onOk: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ระบบชำระเงินกำลังจะมาเร็วๆ นี้')),
-        );
+      onOk: () async {
+        final result = await _controller.purchase();
+        if (!mounted) {
+          return;
+        }
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result.message)));
+
+        if (!result.success &&
+            (result.message.contains('เงิน') ||
+                result.message.contains('wallet') ||
+                result.message.contains('ยอด'))) {
+          Get.to(() => const ProfileWalletPage());
+        } else if (result.success) {
+          await _controller.load();
+        }
       },
     );
+  }
+
+  Future<void> _submitReview(int score, String content) async {
+    final result = await _controller.submitReview(
+      score: score,
+      content: content,
+    );
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result.message)));
   }
 
   void _openQuiz() {
@@ -327,6 +361,190 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
     return Container(
       color: Colors.grey[300],
       child: const Icon(Icons.image, size: 60),
+    );
+  }
+}
+
+class _SheetReviewsSection extends StatefulWidget {
+  const _SheetReviewsSection({
+    required this.reviews,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.onSubmitReview,
+  });
+
+  final List<SheetReviewModel> reviews;
+  final bool isLoading;
+  final String errorMessage;
+  final Future<void> Function(int score, String content) onSubmitReview;
+
+  @override
+  State<_SheetReviewsSection> createState() => _SheetReviewsSectionState();
+}
+
+class _SheetReviewsSectionState extends State<_SheetReviewsSection> {
+  final TextEditingController _reviewController = TextEditingController();
+  int _score = 5;
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 160),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'รีวิวชีต',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            _buildReviewForm(),
+            const SizedBox(height: 20),
+            if (widget.isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (widget.errorMessage.isNotEmpty)
+              _EmptyReviewMessage(message: widget.errorMessage)
+            else if (widget.reviews.isEmpty)
+              const _EmptyReviewMessage(message: 'ยังไม่มีรีวิวสำหรับชีตนี้')
+            else
+              ...widget.reviews.map(_ReviewTile.new),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewForm() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FA),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE4E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: List.generate(5, (index) {
+              final value = index + 1;
+              return IconButton(
+                tooltip: '$value ดาว',
+                onPressed: () => setState(() => _score = value),
+                icon: Icon(
+                  value <= _score ? Icons.star_rounded : Icons.star_border,
+                  color: const Color(0xFFFFC107),
+                ),
+              );
+            }),
+          ),
+          TextField(
+            controller: _reviewController,
+            minLines: 2,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: 'เขียนรีวิวของคุณ',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isSubmitting ? null : _submit,
+              child: Text(_isSubmitting ? 'กำลังส่ง...' : 'ส่งรีวิว'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    setState(() => _isSubmitting = true);
+    await widget.onSubmitReview(_score, _reviewController.text.trim());
+    if (!mounted) {
+      return;
+    }
+    _reviewController.clear();
+    setState(() => _isSubmitting = false);
+  }
+}
+
+class _ReviewTile extends StatelessWidget {
+  const _ReviewTile(this.review);
+
+  final SheetReviewModel review;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        border: Border.all(color: const Color(0xFFE4E8F0)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ...List.generate(
+                5,
+                (index) => Icon(
+                  index < review.score
+                      ? Icons.star_rounded
+                      : Icons.star_border_rounded,
+                  size: 18,
+                  color: const Color(0xFFFFC107),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${review.createdAt.day}/${review.createdAt.month}/${review.createdAt.year}',
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+          if (review.content != null && review.content!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(review.content!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyReviewMessage extends StatelessWidget {
+  const _EmptyReviewMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FA),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Colors.grey),
+      ),
     );
   }
 }

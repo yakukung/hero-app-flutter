@@ -15,7 +15,22 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(const MaterialApp(home: ProfilePaymentsPage()));
+    final payments = [
+      for (final status in PaymentStatus.values)
+        ProfilePaymentHistoryItem(
+          id: 'test-payment-${status.name}',
+          packageTitle: 'แพ็กเกจ ${status.name}',
+          price: '฿79.00',
+          amount: '฿79.00',
+          status: status,
+          createdAt: DateTime(2026, 5, 5, 16, 48),
+          reference: 'REF-${status.name}',
+        ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(home: ProfilePaymentsPage(payments: payments)),
+    );
 
     expect(find.text('รายการชำระเงินทั้งหมดของคุณ'), findsOneWidget);
     expect(find.text('ทั้งหมด 4 รายการ'), findsOneWidget);
@@ -36,10 +51,24 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(const MaterialApp(home: ProfilePaymentsPage()));
+    final payments = [
+      ProfilePaymentHistoryItem(
+        id: 'test-payment-pending',
+        packageTitle: 'รายเดือน',
+        price: '฿79.00',
+        amount: '฿79.00',
+        status: PaymentStatus.PENDING,
+        createdAt: DateTime(2026, 5, 5, 16, 48),
+        reference: 'REF-PM-001',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(home: ProfilePaymentsPage(payments: payments)),
+    );
 
     await tester.tap(
-      find.byKey(const Key('profile_payment_item_mock-payment-001')),
+      find.byKey(const Key('profile_payment_item_test-payment-pending')),
     );
     await tester.pumpAndSettle();
 

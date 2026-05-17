@@ -200,6 +200,8 @@ class PostCommentModel {
   final String userId;
   final UserModel? user;
   final String content;
+  final bool visibleFlag;
+  final StatusFlag statusFlag;
   final DateTime createdAt;
 
   PostCommentModel({
@@ -208,10 +210,15 @@ class PostCommentModel {
     required this.userId,
     this.user,
     required this.content,
+    this.visibleFlag = true,
+    this.statusFlag = StatusFlag.ACTIVE,
     required this.createdAt,
   });
 
   factory PostCommentModel.fromJson(Map<String, dynamic> json) {
+    final flag = json['flag'] is Map
+        ? Map<String, dynamic>.from(json['flag'] as Map)
+        : const <String, dynamic>{};
     final createdAtRaw =
         json['created_at'] ?? json['operation']?['created_at'] ?? '';
     final parsedDate = DateTime.tryParse(createdAtRaw.toString());
@@ -222,6 +229,12 @@ class PostCommentModel {
     final rawId = json['id'] ?? json['comment_id'] ?? json['commentId'];
     final synthesizedId =
         'gen-$postId-$userId-${createdAtRaw.toString()}-${json['content']?.hashCode ?? ''}';
+    final rawVisibleFlag = json['visible_flag'] ?? flag['visible_flag'];
+    final visibleFlag = rawVisibleFlag == null
+        ? true
+        : rawVisibleFlag == true ||
+              rawVisibleFlag == 1 ||
+              rawVisibleFlag.toString().toLowerCase() == 'true';
 
     return PostCommentModel(
       id: (rawId?.toString().isNotEmpty ?? false)
@@ -233,6 +246,10 @@ class PostCommentModel {
           ? UserModel.fromJson(Map<String, dynamic>.from(json['user'] as Map))
           : null,
       content: json['content']?.toString() ?? '',
+      visibleFlag: visibleFlag,
+      statusFlag: StatusFlag.fromString(
+        (json['status_flag'] ?? flag['status_flag'] ?? 'ACTIVE').toString(),
+      ),
       createdAt: parsedDate ?? DateTime.now(),
     );
   }

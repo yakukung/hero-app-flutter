@@ -13,7 +13,22 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
 
-    await tester.pumpWidget(const MaterialApp(home: ProfileTopUpsPage()));
+    final topUps = [
+      for (final status in PaymentStatus.values)
+        ProfileTopUpHistoryItem(
+          id: 'test-top-up-${status.name}',
+          amount: '฿100.00',
+          status: status,
+          createdAt: DateTime(2026, 5, 5, 16, 48),
+          reference: status == PaymentStatus.PENDING
+              ? 'REF-TU-001'
+              : 'REF-TU-${status.name}',
+        ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(home: ProfileTopUpsPage(topUps: topUps)),
+    );
 
     expect(find.text('รายการเติมเงินทั้งหมดของคุณ'), findsOneWidget);
     expect(find.text('ทั้งหมด 4 รายการ'), findsOneWidget);

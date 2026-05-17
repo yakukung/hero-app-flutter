@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:hero_app_flutter/core/models/enums.dart';
+import 'package:hero_app_flutter/core/models/payment_history_model.dart';
+import 'package:hero_app_flutter/core/services/payment_service.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_payment_status_page.dart';
 
 class ProfilePaymentHistoryItem {
@@ -21,20 +23,63 @@ class ProfilePaymentHistoryItem {
   final PaymentStatus status;
   final DateTime createdAt;
   final String reference;
+
+  factory ProfilePaymentHistoryItem.fromServiceModel(PaymentHistoryItem item) {
+    return ProfilePaymentHistoryItem(
+      id: item.id,
+      packageTitle: item.title,
+      price: item.priceLabel ?? item.amountLabel,
+      amount: item.amountLabel,
+      status: item.status,
+      createdAt: item.createdAt,
+      reference: item.reference,
+    );
+  }
 }
 
-class ProfilePaymentsPage extends StatelessWidget {
+class ProfilePaymentsPage extends StatefulWidget {
   const ProfilePaymentsPage({super.key, this.payments});
 
   final List<ProfilePaymentHistoryItem>? payments;
 
-  List<ProfilePaymentHistoryItem> get _payments =>
-      payments ?? _mockPaymentHistory;
+  @override
+  State<ProfilePaymentsPage> createState() => _ProfilePaymentsPageState();
+}
+
+class _ProfilePaymentsPageState extends State<ProfilePaymentsPage> {
+  List<ProfilePaymentHistoryItem> _payments = const [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.payments != null) {
+      _payments = widget.payments!;
+      _isLoading = false;
+    } else {
+      _loadPayments();
+    }
+  }
+
+  Future<void> _loadPayments() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+    final result = await PaymentService.fetchPaymentHistory();
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      _payments = (result.data ?? const [])
+          .map(ProfilePaymentHistoryItem.fromServiceModel)
+          .toList();
+      _errorMessage = result.success ? '' : result.message;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final paymentItems = _payments;
-
     return Scaffold(
       key: const Key('profile_payments_page'),
       backgroundColor: Colors.white,
@@ -44,35 +89,52 @@ class ProfilePaymentsPage extends StatelessWidget {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: paymentItems.isEmpty
-          ? const Center(
-              child: Text(
-                'ยังไม่มีรายการชำระเงิน',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-              itemCount: paymentItems.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      'ทั้งหมด ${paymentItems.length} รายการ',
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  );
-                }
+      body: _buildBody(),
+    );
+  }
 
-                final payment = paymentItems[index - 1];
-                return _PaymentHistoryCard(payment: payment);
-              },
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return _HistoryStateMessage(
+        message: _errorMessage,
+        actionLabel: 'ลองใหม่',
+        onAction: _loadPayments,
+      );
+    }
+
+    if (_payments.isEmpty) {
+      return const Center(
+        child: Text(
+          'ยังไม่มีรายการชำระเงิน',
+          style: TextStyle(color: Colors.grey, fontSize: 16),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+      itemCount: _payments.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'ทั้งหมด ${_payments.length} รายการ',
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
+          );
+        }
+
+        return _PaymentHistoryCard(payment: _payments[index - 1]);
+      },
     );
   }
 }
@@ -212,6 +274,39 @@ class _StatusChip extends StatelessWidget {
   }
 }
 
+class _HistoryStateMessage extends StatelessWidget {
+  const _HistoryStateMessage({
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton(onPressed: onAction, child: Text(actionLabel)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 String _formatDateTime(DateTime dateTime) {
   final day = dateTime.day.toString().padLeft(2, '0');
   final month = dateTime.month.toString().padLeft(2, '0');
@@ -220,42 +315,3 @@ String _formatDateTime(DateTime dateTime) {
   final minute = dateTime.minute.toString().padLeft(2, '0');
   return '$day/$month/$year $hour:$minute';
 }
-
-final List<ProfilePaymentHistoryItem> _mockPaymentHistory = [
-  ProfilePaymentHistoryItem(
-    id: 'mock-payment-001',
-    packageTitle: 'รายเดือน',
-    price: '฿79.00/เดือน',
-    amount: '฿79.00',
-    status: PaymentStatus.PENDING,
-    createdAt: DateTime(2026, 5, 5, 16, 48),
-    reference: 'REF-PM-001',
-  ),
-  ProfilePaymentHistoryItem(
-    id: 'mock-payment-002',
-    packageTitle: 'ราย 3 เดือน',
-    price: '฿229.00/3เดือน',
-    amount: '฿229.00',
-    status: PaymentStatus.SUCCESSFUL,
-    createdAt: DateTime(2026, 4, 28, 10, 15),
-    reference: 'REF-PM-002',
-  ),
-  ProfilePaymentHistoryItem(
-    id: 'mock-payment-003',
-    packageTitle: 'รายปี',
-    price: '฿879.00/ปี',
-    amount: '฿879.00',
-    status: PaymentStatus.FAILED,
-    createdAt: DateTime(2026, 4, 20, 13, 30),
-    reference: 'REF-PM-003',
-  ),
-  ProfilePaymentHistoryItem(
-    id: 'mock-payment-004',
-    packageTitle: 'รายเดือน',
-    price: '฿79.00/เดือน',
-    amount: '฿79.00',
-    status: PaymentStatus.REFUNDED,
-    createdAt: DateTime(2026, 3, 30, 9, 5),
-    reference: 'REF-PM-004',
-  ),
-];

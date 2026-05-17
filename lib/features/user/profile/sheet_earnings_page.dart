@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/core/models/revenue_model.dart';
+import 'package:hero_app_flutter/core/services/revenue_service.dart';
 
 class SheetEarningsPage extends StatefulWidget {
   const SheetEarningsPage({super.key});
@@ -10,7 +12,30 @@ class SheetEarningsPage extends StatefulWidget {
 }
 
 class _SheetEarningsPageState extends State<SheetEarningsPage> {
-  int _selectedTab = 0; // 0 = รายวัน, 1 = รายเดือน
+  int _selectedTab = 0;
+  bool _isLoading = true;
+  String _errorMessage = '';
+  RevenueSummaryModel _summary = RevenueSummaryModel.empty();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEarnings();
+  }
+
+  Future<void> _loadEarnings() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+    final result = await RevenueService.fetchCreatorEarnings();
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      _summary = result.data ?? RevenueSummaryModel.empty();
+      _errorMessage = result.success ? '' : result.message;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,20 +48,33 @@ class _SheetEarningsPageState extends State<SheetEarningsPage> {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 8),
-          _buildTotalEarningsCard(),
-          const SizedBox(height: 20),
-          _buildTabSelector(),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _selectedTab == 0
-                ? _buildDailyEarnings()
-                : _buildMonthlyEarnings(),
-          ),
-        ],
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                const SizedBox(height: 8),
+                _buildTotalEarningsCard(),
+                const SizedBox(height: 20),
+                _buildTabSelector(),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: _errorMessage.isNotEmpty
+                      ? _EarningsStateMessage(
+                          message: _errorMessage,
+                          onRetry: _loadEarnings,
+                        )
+                      : _selectedTab == 0
+                      ? _buildEarningsList(
+                          _summary.daily,
+                          emptyMessage: 'ยังไม่มีรายได้ในวันนี้',
+                        )
+                      : _buildEarningsList(
+                          _summary.monthly,
+                          emptyMessage: 'ยังไม่มีรายได้ในเดือนนี้',
+                        ),
+                ),
+              ],
+            ),
     );
   }
 
@@ -61,9 +99,9 @@ class _SheetEarningsPageState extends State<SheetEarningsPage> {
             ),
           ],
         ),
-        child: const Column(
+        child: Column(
           children: [
-            Text(
+            const Text(
               'รายได้ทั้งหมด',
               style: TextStyle(
                 fontSize: 16,
@@ -71,11 +109,11 @@ class _SheetEarningsPageState extends State<SheetEarningsPage> {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              '0 บาท',
-              key: Key('sheet_earnings_total'),
-              style: TextStyle(
+              _formatAmount(_summary.total),
+              key: const Key('sheet_earnings_total'),
+              style: const TextStyle(
                 fontSize: 30,
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
@@ -120,50 +158,31 @@ class _SheetEarningsPageState extends State<SheetEarningsPage> {
     );
   }
 
-  Widget _buildDailyEarnings() {
-    // Mock data - will be replaced with real data later
-    final dailyItems = <_EarningItem>[];
-
-    if (dailyItems.isEmpty) {
-      return const Center(
+  Widget _buildEarningsList(
+    List<RevenueItemModel> items, {
+    required String emptyMessage,
+  }) {
+    if (items.isEmpty) {
+      return Center(
         child: Text(
-          'ยังไม่มีรายได้ในวันนี้',
-          style: TextStyle(fontSize: 16, color: Colors.grey),
+          emptyMessage,
+          style: const TextStyle(fontSize: 16, color: Colors.grey),
         ),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-      itemCount: dailyItems.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final item = dailyItems[index];
-        return _EarningCard(item: item);
+        return _EarningCard(item: items[index]);
       },
     );
   }
 
-  Widget _buildMonthlyEarnings() {
-    // Mock data - will be replaced with real data later
-    final monthlyItems = <_EarningItem>[];
-
-    if (monthlyItems.isEmpty) {
-      return const Center(
-        child: Text(
-          'ยังไม่มีรายได้ในเดือนนี้',
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-      itemCount: monthlyItems.length,
-      itemBuilder: (context, index) {
-        final item = monthlyItems[index];
-        return _EarningCard(item: item);
-      },
-    );
+  String _formatAmount(double amount) {
+    if (amount % 1 == 0) return '${amount.toInt()} บาท';
+    return '${amount.toStringAsFixed(2)} บาท';
   }
 }
 
@@ -215,24 +234,10 @@ class _TabButton extends StatelessWidget {
   }
 }
 
-class _EarningItem {
-  const _EarningItem({
-    required this.sheetTitle,
-    required this.amount,
-    required this.date,
-    required this.buyerName,
-  });
-
-  final String sheetTitle;
-  final double amount;
-  final DateTime date;
-  final String buyerName;
-}
-
 class _EarningCard extends StatelessWidget {
   const _EarningCard({required this.item});
 
-  final _EarningItem item;
+  final RevenueItemModel item;
 
   @override
   Widget build(BuildContext context) {
@@ -291,7 +296,7 @@ class _EarningCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _formatDateTime(item.date),
+                  _formatDateTime(item.createdAt),
                   style: const TextStyle(
                     color: Color(0xFF8A8A8A),
                     fontSize: 12,
@@ -325,5 +330,33 @@ class _EarningCard extends StatelessWidget {
     final hour = dateTime.hour.toString().padLeft(2, '0');
     final minute = dateTime.minute.toString().padLeft(2, '0');
     return '$day/$month/$year $hour:$minute';
+  }
+}
+
+class _EarningsStateMessage extends StatelessWidget {
+  const _EarningsStateMessage({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton(onPressed: onRetry, child: const Text('ลองใหม่')),
+          ],
+        ),
+      ),
+    );
   }
 }

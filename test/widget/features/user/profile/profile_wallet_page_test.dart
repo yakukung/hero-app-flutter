@@ -77,7 +77,7 @@ void main() {
     expect(enabledButton.onPressed, isNotNull);
   });
 
-  testWidgets('wallet pay button opens pending payment status', (tester) async {
+  testWidgets('wallet pay button opens slip payment sheet', (tester) async {
     _setLargeWalletViewport(tester);
 
     await tester.pumpWidget(const MaterialApp(home: ProfileWalletPage()));
@@ -91,19 +91,13 @@ void main() {
     await tester.tap(find.byKey(const Key('wallet_pay_button')));
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('profile_payment_status_page')),
-      findsOneWidget,
+    expect(find.text('ชำระเงิน'), findsAtLeastNWidgets(1));
+    expect(find.byKey(const Key('payment_slip_picker')), findsOneWidget);
+    final confirmButton = tester.widget<ElevatedButton>(
+      find.byKey(const Key('payment_confirm_button')),
     );
+    expect(confirmButton.onPressed, isNull);
     expect(find.text('เติมเงินกระเป๋า'), findsOneWidget);
-    expect(
-      find.byKey(const Key('payment_current_status_PENDING')),
-      findsOneWidget,
-    );
-    expect(
-      find.text('ระบบได้รับข้อมูลแล้ว กรุณารอการตรวจสอบสลิป'),
-      findsAtLeastNWidgets(1),
-    );
   });
 
   testWidgets('wallet top up history button sits below balance', (

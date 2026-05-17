@@ -316,8 +316,8 @@ class _MainSidebarState extends State<MainSidebar> {
                         },
                       ),
                       SidebarMenuItem(
-                        icon: Icons.report_problem_rounded,
-                        label: 'รายงานแจ้งปัญหา',
+                        icon: Icons.admin_panel_settings_rounded,
+                        label: 'จัดการ',
                         selected: navigationController.currentIndex.value == 1,
                         onTap: () {
                           navigationController.changeIndex(1);

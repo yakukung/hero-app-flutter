@@ -30,6 +30,17 @@ class AppSessionCoordinator {
 
   String get currentUserId => _appController.uid;
 
+  bool get hasPremiumAccess {
+    final roleName = _appController.user.value?.roleName?.toUpperCase() ?? '';
+    final roleId = _appController.user.value?.roleId ?? '';
+    if (_appController.hasPremiumSubscription) {
+      return true;
+    }
+    return roleName.contains('PREMIUM') ||
+        roleName.contains('ADMIN') ||
+        roleId == '019affa1-0872-78cb-b4ff-5376279dba2d';
+  }
+
   bool get isAuthenticated =>
       _appController.hasUser && _appController.uid.isNotEmpty;
 
@@ -41,6 +52,7 @@ class AppSessionCoordinator {
     _sheetsController.resetState();
     _adminController.resetState();
     _navigationController.reset();
+    await _appController.refreshSubscriptionStatus();
 
     final roleName = _appController.user.value?.roleName?.toUpperCase() ?? '';
     return roleName == 'ADMIN'
@@ -57,6 +69,13 @@ class AppSessionCoordinator {
   Future<void> expireSession() async {
     _sessionStore.clearSession();
     _resetAppState(tokenExpired: true);
+  }
+
+  Future<void> refreshCurrentUserData() async {
+    if (_sessionStore.token.isEmpty || _sessionStore.uid.isEmpty) {
+      return;
+    }
+    await _appController.fetchUserData();
   }
 
   void _resetAppState({required bool tokenExpired}) {

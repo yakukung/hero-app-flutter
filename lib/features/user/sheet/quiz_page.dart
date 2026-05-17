@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/core/models/quiz_result_model.dart';
 import 'package:hero_app_flutter/core/models/question_model.dart';
+import 'package:hero_app_flutter/core/services/quiz_service.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:get/get.dart';
@@ -23,11 +27,17 @@ class QuizPage extends StatefulWidget {
 }
 
 class _QuizPageState extends State<QuizPage> {
+  static const int _fallbackSecondsPerQuestion = 60;
+
   final AppController _appController = Get.find<AppController>();
   int _currentIndex = 0;
   Map<int, int?> _selectedAnswers = {};
   bool _showScore = false;
   bool _revealedAll = false;
+  int _remainingSeconds = _fallbackSecondsPerQuestion;
+  int _elapsedSeconds = 0;
+  Timer? _timer;
+  String? _saveResultMessage;
   final _storage = GetStorage();
   late List<QuestionModel> _sortedQuestions;
 
@@ -44,6 +54,13 @@ class _QuizPageState extends State<QuizPage> {
       }
     }
     _loadProgress();
+    _startTimer();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   void _loadProgress() {
@@ -57,6 +74,9 @@ class _QuizPageState extends State<QuizPage> {
             (key, value) => MapEntry(int.parse(key.toString()), value as int?),
           );
         }
+        _remainingSeconds =
+            saved['remainingSeconds'] ?? _fallbackSecondsPerQuestion;
+        _elapsedSeconds = saved['elapsedSeconds'] ?? 0;
       });
     }
   }
@@ -68,6 +88,8 @@ class _QuizPageState extends State<QuizPage> {
     _storage.write(_storageKey, {
       'currentIndex': _currentIndex,
       'selectedAnswers': answersToSave,
+      'remainingSeconds': _remainingSeconds,
+      'elapsedSeconds': _elapsedSeconds,
     });
   }
 
@@ -81,6 +103,7 @@ class _QuizPageState extends State<QuizPage> {
       final question = _sortedQuestions[i];
       final selectedIndex = _selectedAnswers[i];
       if (selectedIndex != null &&
+          selectedIndex >= 0 &&
           question.answers != null &&
           question.answers![selectedIndex].isCorrect) {
         s++;
@@ -90,7 +113,9 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   void _onAnswerSelected(int answerIndex) {
-    if (_showScore || _revealedAll || _selectedAnswers[_currentIndex] != null) {
+    if (_showScore ||
+        _revealedAll ||
+        _selectedAnswers.containsKey(_currentIndex)) {
       return;
     }
 
@@ -112,19 +137,80 @@ class _QuizPageState extends State<QuizPage> {
     if (_currentIndex < _sortedQuestions.length - 1) {
       setState(() {
         _currentIndex++;
+        _remainingSeconds = _fallbackSecondsPerQuestion;
       });
       _saveProgress();
+      _startTimer();
     } else {
-      setState(() {
-        _showScore = true;
-      });
-      _clearProgress();
+      _finishQuiz();
     }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (_showScore || _revealedAll) {
+      return;
+    }
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted || _showScore || _revealedAll) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _elapsedSeconds++;
+        _remainingSeconds--;
+      });
+      if (_remainingSeconds <= 0) {
+        timer.cancel();
+        _handleQuestionTimeout();
+      } else {
+        _saveProgress();
+      }
+    });
+  }
+
+  void _handleQuestionTimeout() {
+    if (_selectedAnswers.containsKey(_currentIndex)) {
+      return;
+    }
+    setState(() {
+      _selectedAnswers[_currentIndex] = -1;
+    });
+    _saveProgress();
+  }
+
+  void _finishQuiz() {
+    _timer?.cancel();
+    setState(() {
+      _showScore = true;
+    });
+    _clearProgress();
+    unawaited(_submitResult());
+  }
+
+  Future<void> _submitResult() async {
+    final result = await QuizService.submitResult(
+      QuizResultModel(
+        sheetId: widget.id,
+        score: _score,
+        totalQuestions: _sortedQuestions.length,
+        answers: _selectedAnswers,
+        elapsedSeconds: _elapsedSeconds,
+        pointsEarned: _score,
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _saveResultMessage = result.message;
+    });
   }
 
   void _revealAllAnswers() {
     setState(() {
       _revealedAll = true;
+      _timer?.cancel();
       if (_showScore) {
         _showScore = false;
         _currentIndex = 0;
@@ -178,6 +264,19 @@ class _QuizPageState extends State<QuizPage> {
             'คำถามจากผู้สร้างชีทนี้',
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
           ),
+          if (!_showScore && !_revealedAll) ...[
+            const SizedBox(height: 14),
+            LinearProgressIndicator(
+              value: _remainingSeconds / _fallbackSecondsPerQuestion,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(99),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'เหลือเวลา $_remainingSeconds วินาที',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ],
         ],
       ),
     );
@@ -251,7 +350,7 @@ class _QuizPageState extends State<QuizPage> {
     double borderWidth = 0;
     Color borderColor = Colors.transparent;
 
-    final hasSelected = _selectedAnswers[_currentIndex] != null;
+    final hasSelected = _selectedAnswers.containsKey(_currentIndex);
 
     if (_revealedAll) {
       if (isCorrect) {
@@ -266,18 +365,6 @@ class _QuizPageState extends State<QuizPage> {
         labelColor = Colors.red;
       }
     } else if (hasSelected && isSelected) {
-      if (isCorrect) {
-        bgColor = Colors.green.withValues(alpha: 0.1);
-        borderColor = Colors.green;
-        borderWidth = 1;
-        labelColor = Colors.green;
-      } else {
-        bgColor = Colors.red.withValues(alpha: 0.1);
-        borderColor = Colors.red;
-        borderWidth = 1;
-        labelColor = Colors.red;
-      }
-    } else if (isSelected) {
       bgColor = AppColors.primary.withValues(alpha: 0.1);
       borderColor = AppColors.primary;
       borderWidth = 1;
@@ -381,6 +468,14 @@ class _QuizPageState extends State<QuizPage> {
                 ),
               ),
             ],
+            if (_saveResultMessage != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                _saveResultMessage!,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+              ),
+            ],
           ],
         ),
       ),
@@ -388,7 +483,7 @@ class _QuizPageState extends State<QuizPage> {
   }
 
   Widget _buildFooter(bool isPremium) {
-    final hasSelected = _selectedAnswers[_currentIndex] != null;
+    final hasSelected = _selectedAnswers.containsKey(_currentIndex);
     final isLast = _currentIndex == _sortedQuestions.length - 1;
 
     if (_showScore) {

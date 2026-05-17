@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'package:hero_app_flutter/core/models/enums.dart';
+import 'package:hero_app_flutter/core/models/payment_history_model.dart';
+import 'package:hero_app_flutter/core/services/payment_service.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_payment_status_page.dart';
 
 class ProfileTopUpHistoryItem {
@@ -17,19 +19,61 @@ class ProfileTopUpHistoryItem {
   final PaymentStatus status;
   final DateTime createdAt;
   final String reference;
+
+  factory ProfileTopUpHistoryItem.fromServiceModel(TopUpHistoryItem item) {
+    return ProfileTopUpHistoryItem(
+      id: item.id,
+      amount: item.amountLabel,
+      status: item.status,
+      createdAt: item.createdAt,
+      reference: item.reference,
+    );
+  }
 }
 
-class ProfileTopUpsPage extends StatelessWidget {
+class ProfileTopUpsPage extends StatefulWidget {
   const ProfileTopUpsPage({super.key, this.topUps});
 
   final List<ProfileTopUpHistoryItem>? topUps;
 
-  List<ProfileTopUpHistoryItem> get _topUps => topUps ?? _mockTopUpHistory;
+  @override
+  State<ProfileTopUpsPage> createState() => _ProfileTopUpsPageState();
+}
+
+class _ProfileTopUpsPageState extends State<ProfileTopUpsPage> {
+  List<ProfileTopUpHistoryItem> _topUps = const [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.topUps != null) {
+      _topUps = widget.topUps!;
+      _isLoading = false;
+    } else {
+      _loadTopUps();
+    }
+  }
+
+  Future<void> _loadTopUps() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+    final result = await PaymentService.fetchTopUpHistory();
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      _topUps = (result.data ?? const [])
+          .map(ProfileTopUpHistoryItem.fromServiceModel)
+          .toList();
+      _errorMessage = result.success ? '' : result.message;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final topUpItems = _topUps;
-
     return Scaffold(
       key: const Key('profile_top_ups_page'),
       backgroundColor: Colors.white,
@@ -39,35 +83,52 @@ class ProfileTopUpsPage extends StatelessWidget {
         foregroundColor: Colors.black,
         elevation: 0,
       ),
-      body: topUpItems.isEmpty
-          ? const Center(
-              child: Text(
-                'ยังไม่มีรายการเติมเงิน',
-                style: TextStyle(color: Colors.grey, fontSize: 16),
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
-              itemCount: topUpItems.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      'ทั้งหมด ${topUpItems.length} รายการ',
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  );
-                }
+      body: _buildBody(),
+    );
+  }
 
-                final topUp = topUpItems[index - 1];
-                return _TopUpHistoryCard(topUp: topUp);
-              },
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return _TopUpStateMessage(
+        message: _errorMessage,
+        actionLabel: 'ลองใหม่',
+        onAction: _loadTopUps,
+      );
+    }
+
+    if (_topUps.isEmpty) {
+      return const Center(
+        child: Text(
+          'ยังไม่มีรายการเติมเงิน',
+          style: TextStyle(color: Colors.grey, fontSize: 16),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+      itemCount: _topUps.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              'ทั้งหมด ${_topUps.length} รายการ',
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
+          );
+        }
+
+        return _TopUpHistoryCard(topUp: _topUps[index - 1]);
+      },
     );
   }
 }
@@ -206,6 +267,39 @@ class _TopUpStatusChip extends StatelessWidget {
   }
 }
 
+class _TopUpStateMessage extends StatelessWidget {
+  const _TopUpStateMessage({
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton(onPressed: onAction, child: Text(actionLabel)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 String _formatDateTime(DateTime dateTime) {
   final day = dateTime.day.toString().padLeft(2, '0');
   final month = dateTime.month.toString().padLeft(2, '0');
@@ -214,34 +308,3 @@ String _formatDateTime(DateTime dateTime) {
   final minute = dateTime.minute.toString().padLeft(2, '0');
   return '$day/$month/$year $hour:$minute';
 }
-
-final List<ProfileTopUpHistoryItem> _mockTopUpHistory = [
-  ProfileTopUpHistoryItem(
-    id: 'mock-top-up-001',
-    amount: '฿100.00',
-    status: PaymentStatus.PENDING,
-    createdAt: DateTime(2026, 5, 5, 16, 48),
-    reference: 'REF-TU-001',
-  ),
-  ProfileTopUpHistoryItem(
-    id: 'mock-top-up-002',
-    amount: '฿500.00',
-    status: PaymentStatus.SUCCESSFUL,
-    createdAt: DateTime(2026, 4, 28, 10, 15),
-    reference: 'REF-TU-002',
-  ),
-  ProfileTopUpHistoryItem(
-    id: 'mock-top-up-003',
-    amount: '฿50.00',
-    status: PaymentStatus.FAILED,
-    createdAt: DateTime(2026, 4, 20, 13, 30),
-    reference: 'REF-TU-003',
-  ),
-  ProfileTopUpHistoryItem(
-    id: 'mock-top-up-004',
-    amount: '฿200.00',
-    status: PaymentStatus.REFUNDED,
-    createdAt: DateTime(2026, 3, 30, 9, 5),
-    reference: 'REF-TU-004',
-  ),
-];

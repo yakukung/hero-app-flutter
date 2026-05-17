@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/constants/app_assets.dart';
 import 'package:hero_app_flutter/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/features/admin/admin_design.dart';
 import 'package:get/get.dart';
 
 class AdminNavbar extends GetView<AppController>
@@ -8,23 +9,33 @@ class AdminNavbar extends GetView<AppController>
   const AdminNavbar({super.key});
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(72);
 
   @override
   Widget build(BuildContext context) {
     return Obx(
       () => AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AdminColors.background,
+        surfaceTintColor: AdminColors.background,
+        elevation: 0,
         automaticallyImplyLeading: false,
+        toolbarHeight: 72,
         title: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             IconButton(
+              style: IconButton.styleFrom(
+                backgroundColor: AdminColors.surface,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  side: const BorderSide(color: AdminColors.border),
+                ),
+              ),
               icon: const Icon(
                 Icons.dashboard_rounded,
-                color: Colors.black87,
-                size: 32,
+                color: AdminColors.text,
+                size: 28,
               ),
               onPressed: () {
                 Scaffold.of(context).openDrawer();
@@ -36,7 +47,7 @@ class AdminNavbar extends GetView<AppController>
                 const Text(
                   'ยินดีต้อนรับ',
                   style: TextStyle(
-                    color: Color(0xFFB2B2B2),
+                    color: AdminColors.muted,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
@@ -44,7 +55,7 @@ class AdminNavbar extends GetView<AppController>
                 Text(
                   'ผู้ดูแลระบบ ${controller.username}',
                   style: const TextStyle(
-                    color: Colors.black,
+                    color: AdminColors.text,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -58,8 +69,8 @@ class AdminNavbar extends GetView<AppController>
                 Scaffold.of(context).openDrawer();
               },
               child: CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.grey[200],
+                radius: 21,
+                backgroundColor: AdminColors.surface,
                 child: ClipOval(
                   child: controller.profileImage.isNotEmpty
                       ? Image.network(
