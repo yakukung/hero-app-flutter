@@ -51,7 +51,7 @@ class UserModel {
     // Handle nested flag object if present
     final flagData = json['flag'] is Map<String, dynamic> ? json['flag'] : null;
 
-    // Extremely Robust Role Parsing
+    // Extract nested roles object
     Map<String, dynamic>? rolesMap;
     String? nameFromData;
     String? idFromData;
@@ -75,28 +75,22 @@ class UserModel {
       nameFromData = roleJson;
     }
 
-    // Ultimate Fallback: Search ALL keys for any value containing 'PREMIUM' or 'ADMIN'
-    String? ultimateName;
-    json.forEach((key, value) {
-      if (key.toLowerCase().contains('role')) {
-        final valStr = value.toString().toUpperCase();
-        if (valStr.contains('PREMIUM') || valStr.contains('ADMIN')) {
-          if (value is String) {
-            ultimateName = value;
-          } else if (value is Map && value['name'] != null) {
-            ultimateName = value['name'].toString();
-          }
-        }
-      }
-    });
+    // Handle nested flag from roles object
+    final rolesFlagData = rolesMap?['flag'] is Map
+        ? (rolesMap!['flag'] as Map).cast<String, dynamic>()
+        : null;
+
+    // Handle nested operation from roles object
+    final rolesOpData = rolesMap?['operation'] is Map
+        ? (rolesMap!['operation'] as Map).cast<String, dynamic>()
+        : null;
 
     final roleName =
+        rolesMap?['name'] ??
         json['role_name'] ??
         json['roleName'] ??
-        nameFromData ??
-        rolesMap?['name'] ??
-        ultimateName;
-    final roleId = json['role_id'] ?? idFromData ?? rolesMap?['id'] ?? '';
+        nameFromData;
+    final roleId = rolesMap?['id'] ?? json['role_id'] ?? idFromData ?? '';
 
     return UserModel(
       id: json['id'] ?? json['uid'] ?? '',
@@ -118,29 +112,50 @@ class UserModel {
           json['visible_flag'] == true ||
           json['visible_flag'] == 1 ||
           flagData?['visible_flag'] == true ||
-          flagData?['visible_flag'] == 1,
+          flagData?['visible_flag'] == 1 ||
+          rolesFlagData?['visible_flag'] == true ||
+          rolesFlagData?['visible_flag'] == 1,
       statusFlag: StatusFlag.fromString(
-        json['status_flag'] ?? flagData?['status_flag'] ?? 'ACTIVE',
+        json['status_flag'] ??
+            flagData?['status_flag'] ??
+            rolesFlagData?['status_flag'] ??
+            'ACTIVE',
       ),
       createdAt: DateTime.parse(
         json['created_at'] ??
             json['operation']?['created_at'] ??
+            rolesOpData?['created_at'] ??
             DateTime.now().toIso8601String(),
       ),
       createdBy:
-          json['created_by'] ?? json['operation']?['created_by'] ?? 'SYSTEM',
+          json['created_by'] ??
+          json['operation']?['created_by'] ??
+          rolesOpData?['created_by'] ??
+          'SYSTEM',
       updatedAt:
-          (json['updated_at'] ?? json['operation']?['updated_at']) != null
-          ? DateTime.parse(
-              json['updated_at'] ?? json['operation']?['updated_at'],
-            )
-          : null,
-      updatedBy: json['updated_by'] ?? json['operation']?['updated_by'],
-      statusModifiedAt:
-          (json['status_modified_at'] ?? flagData?['status_modified_at']) !=
+          (json['updated_at'] ??
+                  json['operation']?['updated_at'] ??
+                  rolesOpData?['updated_at']) !=
               null
           ? DateTime.parse(
-              json['status_modified_at'] ?? flagData?['status_modified_at'],
+              json['updated_at'] ??
+                  json['operation']?['updated_at'] ??
+                  rolesOpData?['updated_at'],
+            )
+          : null,
+      updatedBy:
+          json['updated_by'] ??
+          json['operation']?['updated_by'] ??
+          rolesOpData?['updated_by'],
+      statusModifiedAt:
+          (json['status_modified_at'] ??
+                  flagData?['status_modified_at'] ??
+                  rolesFlagData?['status_modified_at']) !=
+              null
+          ? DateTime.parse(
+              json['status_modified_at'] ??
+                  flagData?['status_modified_at'] ??
+                  rolesFlagData?['status_modified_at'],
             )
           : null,
       followersCount: json['followers'] != null

@@ -31,14 +31,18 @@ class _AdminCommunityModerationPageState
 
   Future<void> _refresh() async {
     final nextPostsFuture = PostsService.getPosts();
-    setState(() => _postsFuture = nextPostsFuture);
+    setState(() {
+      _postsFuture = nextPostsFuture;
+    });
     await nextPostsFuture;
   }
 
   Future<bool> _updatePostStatus(PostModel post, StatusFlag status) async {
     if (_updatingPostIds.contains(post.id)) return false;
 
-    setState(() => _updatingPostIds.add(post.id));
+    setState(() {
+      _updatingPostIds.add(post.id);
+    });
     try {
       final response = await AdminService.updatePostStatus(
         postId: post.id,
@@ -412,7 +416,9 @@ class _AdminPostCommentsSheetState extends State<_AdminPostCommentsSheet> {
 
   Future<void> _refresh() async {
     final nextCommentsFuture = _fetchComments();
-    setState(() => _commentsFuture = nextCommentsFuture);
+    setState(() {
+      _commentsFuture = nextCommentsFuture;
+    });
     await nextCommentsFuture;
   }
 

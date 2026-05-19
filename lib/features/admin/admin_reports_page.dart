@@ -40,7 +40,9 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
 
   Future<void> _refresh() async {
     final nextReportsFuture = _fetchReports();
-    setState(() => _reportsFuture = nextReportsFuture);
+    setState(() {
+      _reportsFuture = nextReportsFuture;
+    });
     await nextReportsFuture;
   }
 

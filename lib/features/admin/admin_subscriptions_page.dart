@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hero_app_flutter/constants/app_fonts.dart';
+import 'package:hero_app_flutter/core/controllers/config_controller.dart';
 import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/services/admin_service.dart';
 import 'package:hero_app_flutter/core/session/session_store.dart';
@@ -17,12 +20,57 @@ class AdminSubscriptionsPage extends StatefulWidget {
 
 class _AdminSubscriptionsPageState extends State<AdminSubscriptionsPage> {
   final _sessionStore = SessionStore();
+  late final ConfigController configController;
+  final Map<String, int> _planDurationMap = {};
+
   late Future<List<AdminSubscriptionItem>> _future;
 
   @override
   void initState() {
     super.initState();
+    if (!Get.isRegistered<ConfigController>()) {
+      Get.put(ConfigController());
+    }
+    configController = Get.find<ConfigController>();
     _future = _fetch();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await configController.fetchConfigs();
+    _buildPlanDurationMap();
+    _refresh();
+  }
+
+  void _buildPlanDurationMap() {
+    final raw = configController.getConfigString('subscription_plans') ?? '';
+    if (raw.isEmpty) return;
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      data.forEach((key, value) {
+        if (value is Map && value['duration'] != null) {
+          final duration = value['duration'];
+          if (duration is num && duration > 0) {
+            _planDurationMap[key] = duration.toInt();
+            final name = value['name']?.toString();
+            if (name != null && name.isNotEmpty) {
+              _planDurationMap[name] = duration.toInt();
+            }
+          }
+        }
+      });
+    } catch (_) {}
+  }
+
+  double get _pricePerMonth {
+    final raw = configController.getConfigString('subscription_plans') ?? '';
+    if (raw.isEmpty) return 299.0;
+    try {
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      return (map['pricePerMonth'] ?? 299).toDouble();
+    } catch (_) {
+      return 299.0;
+    }
   }
 
   Future<void> _refresh() async {
@@ -56,6 +104,14 @@ class _AdminSubscriptionsPageState extends State<AdminSubscriptionsPage> {
         .whereType<Map>()
         .map((e) => AdminSubscriptionItem.fromJson(Map.from(e)))
         .toList();
+  }
+
+  int _planDuration(String planId, String planName) {
+    final byId = _planDurationMap[planId];
+    if (byId != null) return byId;
+    final byName = _planDurationMap[planName];
+    if (byName != null) return byName;
+    return 1;
   }
 
   @override
@@ -108,9 +164,15 @@ class _AdminSubscriptionsPageState extends State<AdminSubscriptionsPage> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 itemCount: items.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
                   final subscription = items[index];
+                  final duration = _planDuration(
+                    subscription.planId,
+                    subscription.planName,
+                  );
+                  final price = duration * _pricePerMonth;
+
                   return AdminCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -135,13 +197,28 @@ class _AdminSubscriptionsPageState extends State<AdminSubscriptionsPage> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          subscription.planName,
-                          style: const TextStyle(
-                            fontFamily: AppFonts.sukhumvit,
-                            color: AdminColors.muted,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                subscription.planName,
+                                style: const TextStyle(
+                                  fontFamily: AppFonts.sukhumvit,
+                                  color: AdminColors.muted,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '฿${price.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontFamily: AppFonts.sukhumvit,
+                                color: AdminColors.primary,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 18,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 6),
                         Text(

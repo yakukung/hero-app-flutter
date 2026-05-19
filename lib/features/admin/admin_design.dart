@@ -5,15 +5,15 @@ import 'package:hero_app_flutter/constants/app_fonts.dart';
 class AdminColors {
   const AdminColors._();
 
-  static const background = Colors.white;
+  static const background = Color(0xFFF2F4F8);
   static const surface = Colors.white;
-  static const surfaceAlt = Color(0xFFF7F9FE);
-  static const border = Color(0xFFDDE5F1);
-  static const text = Color(0xFF111827);
-  static const muted = Color(0xFF6B7280);
-  static const success = Color(0xFF1B7F3A);
-  static const warning = Color(0xFFB26A00);
-  static const danger = Color(0xFFC62828);
+  static const surfaceAlt = Color(0xFFE8ECF4);
+  static const border = Color(0xFFC8D2E0);
+  static const text = Color(0xFF0F172A);
+  static const muted = Color(0xFF64748B);
+  static const success = Color(0xFF16A34A);
+  static const warning = Color(0xFFD97706);
+  static const danger = Color(0xFFDC2626);
   static const primary = AppColors.primary;
 }
 
@@ -38,7 +38,6 @@ class AdminCard extends StatelessWidget {
       shadowColor: Colors.black.withValues(alpha: 0.12),
       color: AdminColors.surface,
       shape: RoundedRectangleBorder(
-        side: const BorderSide(color: AdminColors.border),
         borderRadius: BorderRadius.circular(26),
       ),
       child: InkWell(
@@ -116,6 +115,19 @@ class AdminPageHeader extends StatelessWidget {
   }
 }
 
+String roleLabel(String? roleName) {
+  if (roleName == null || roleName.isEmpty) return 'สมาชิกทั่วไป';
+  switch (roleName.toUpperCase()) {
+    case 'ADMIN':
+      return 'ผู้ดูแลระบบ';
+    case 'PREMIUM_MEMBER':
+      return 'สมาชิกพรีเมียม';
+    case 'MEMBER':
+    default:
+      return 'สมาชิกทั่วไป';
+  }
+}
+
 class AdminStatusPill extends StatelessWidget {
   const AdminStatusPill({super.key, required this.label, required this.color});
 
@@ -127,7 +139,7 @@ class AdminStatusPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.18),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
