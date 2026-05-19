@@ -79,6 +79,7 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
   final AdminController _adminController = Get.find<AdminController>();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  StatusFlag? _statusFilter;
 
   @override
   void initState() {
@@ -101,10 +102,13 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
         final query = _searchQuery.toLowerCase();
         final username = (user.username ?? '').toLowerCase();
         final uid = user.id.toLowerCase();
-        return username.contains(query) || uid.contains(query);
+        final matchesSearch = username.contains(query) || uid.contains(query);
+        final matchesStatus =
+            _statusFilter == null || user.statusFlag == _statusFilter;
+        return matchesSearch && matchesStatus;
       }).toList();
       final totalUsers = _adminController.users.length;
-      final userCountLabel = _searchQuery.trim().isEmpty
+      final userCountLabel = _searchQuery.trim().isEmpty && _statusFilter == null
           ? 'ผู้ใช้ทั้งหมด $totalUsers รายการ'
           : 'พบ ${filteredUsers.length} จาก $totalUsers รายการ';
 
@@ -155,6 +159,33 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 36,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _statusFilterValues.length + 1,
+                          separatorBuilder: (_, _) => const SizedBox(width: 8),
+                          itemBuilder: (context, index) {
+                            if (index == 0) {
+                              return _UserFilterChip(
+                                label: 'ทั้งหมด',
+                                selected: _statusFilter == null,
+                                onTap: () =>
+                                    setState(() => _statusFilter = null),
+                              );
+                            }
+                            final status = _statusFilterValues[index - 1];
+                            return _UserFilterChip(
+                              label: _userStatusLabel(status),
+                              color: _userStatusColor(status),
+                              selected: _statusFilter == status,
+                              onTap: () =>
+                                  setState(() => _statusFilter = status),
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -212,7 +243,6 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
       padding: const EdgeInsets.all(14),
       onTap: () => Get.to(() => AdminUserProfilePage(userId: user.id)),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _AdminUserAvatar(user: user),
           const SizedBox(width: 12),
@@ -255,9 +285,7 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                       color: statusColor,
                     ),
                     Text(
-                      user.roleName?.isNotEmpty == true
-                          ? user.roleName!
-                          : 'USER',
+                      roleLabel(user.roleName),
                       style: const TextStyle(
                         color: AdminColors.muted,
                         fontSize: 12,
@@ -269,12 +297,11 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
               ],
             ),
           ),
-          const SizedBox(width: 10),
-          IconButton.filledTonal(
-            onPressed: () =>
-                Get.to(() => AdminUserProfilePage(userId: user.id)),
-            icon: const Icon(Icons.chevron_right),
-            tooltip: 'ดูโปรไฟล์',
+          const SizedBox(width: 4),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: AdminColors.muted.withValues(alpha: 0.5),
+            size: 22,
           ),
         ],
       ),
@@ -284,15 +311,15 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
   String _userStatusLabel(StatusFlag status) {
     switch (status) {
       case StatusFlag.PENDING:
-        return 'รอตรวจ';
+        return 'รอยืนยัน';
       case StatusFlag.ACTIVE:
         return 'ใช้งาน';
       case StatusFlag.INACTIVE:
-        return 'ซ่อน';
+        return 'ไม่ใช้งาน';
       case StatusFlag.SUSPENDED:
-        return 'ระงับ';
+        return 'ระงับชั่วคราว';
       case StatusFlag.TERMINATED:
-        return 'ยุติ';
+        return 'ระงับถาวร';
     }
   }
 
@@ -377,6 +404,65 @@ class _AdminListState extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+const _statusFilterValues = [
+  StatusFlag.PENDING,
+  StatusFlag.ACTIVE,
+  StatusFlag.INACTIVE,
+  StatusFlag.SUSPENDED,
+  StatusFlag.TERMINATED,
+];
+
+class _UserFilterChip extends StatelessWidget {
+  const _UserFilterChip({
+    required this.label,
+    this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color? color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? (color ?? AdminColors.primary) : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: selected
+              ? Border.all(
+                  color: (color ?? AdminColors.primary).withValues(alpha: 0.3),
+                )
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: AppFonts.sukhumvit,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selected ? Colors.white : AdminColors.muted,
+          ),
         ),
       ),
     );

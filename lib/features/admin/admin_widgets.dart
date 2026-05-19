@@ -72,9 +72,8 @@ class AdminInlineEmptyState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: AdminColors.border),
-        borderRadius: BorderRadius.circular(24),
         color: AdminColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Text(text, style: const TextStyle(color: AdminColors.muted)),
     );

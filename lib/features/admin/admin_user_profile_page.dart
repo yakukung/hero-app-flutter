@@ -84,7 +84,6 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
         borderRadius: BorderRadius.circular(26),
       ),
       child: Column(
@@ -201,9 +200,7 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
               color: _statusColor(user.statusFlag),
             ),
             AdminStatusPill(
-              label: user.roleName?.isNotEmpty == true
-                  ? user.roleName!
-                  : 'USER',
+              label: roleLabel(user.roleName),
               color: AdminColors.primary,
             ),
           ],
@@ -282,15 +279,15 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
   String _statusLabel(StatusFlag status) {
     switch (status) {
       case StatusFlag.PENDING:
-        return 'รอตรวจ';
+        return 'รอยืนยัน';
       case StatusFlag.ACTIVE:
         return 'ใช้งาน';
       case StatusFlag.INACTIVE:
-        return 'ซ่อน';
+        return 'ไม่ใช้งาน';
       case StatusFlag.SUSPENDED:
-        return 'ระงับ';
+        return 'ระงับชั่วคราว';
       case StatusFlag.TERMINATED:
-        return 'ยุติ';
+        return 'ระงับถาวร';
     }
   }
 
@@ -345,17 +342,17 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: StatusFlag.values.map((status) {
-                return RadioListTile<StatusFlag>(
-                  title: Text(
-                    status.name,
-                    style: const TextStyle(
-                      fontFamily: AppFonts.sukhumvit,
-                      fontWeight: FontWeight.bold,
+                  return RadioListTile<StatusFlag>(
+                    title: Text(
+                      _statusLabel(status),
+                      style: const TextStyle(
+                        fontFamily: AppFonts.sukhumvit,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  value: status,
-                  activeColor: AppColors.primary,
-                );
+                    value: status,
+                    activeColor: AppColors.primary,
+                  );
               }).toList(),
             ),
           );
@@ -389,7 +386,7 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
                   ),
                   Text(
                     success
-                        ? 'เปลี่ยนสถานะเป็น ${selectedStatus.name} เรียบร้อยแล้ว'
+                        ? 'เปลี่ยนสถานะเป็น ${_statusLabel(selectedStatus)} เรียบร้อยแล้ว'
                         : 'ไม่สามารถเปลี่ยนสถานะผู้ใช้ได้',
                     style: const TextStyle(
                       fontSize: 16,
