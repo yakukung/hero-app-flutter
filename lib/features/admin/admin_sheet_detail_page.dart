@@ -84,8 +84,10 @@ class _AdminSheetDetailPageState extends State<AdminSheetDetailPage> {
 
     final sheet = _sheet!;
     final statusFlag = sheet.statusFlag;
-    final effectiveStatus =
-        _effectiveContentStatus(statusFlag, sheet.visibleFlag);
+    final effectiveStatus = _effectiveContentStatus(
+      statusFlag,
+      sheet.visibleFlag,
+    );
     final statusColor = _contentStatusColor(effectiveStatus);
     final statusLabel = _contentStatusLabel(effectiveStatus);
     final priceLabel = sheet.price == null
@@ -107,128 +109,130 @@ class _AdminSheetDetailPageState extends State<AdminSheetDetailPage> {
       body: RefreshIndicator(
         onRefresh: _fetchSheet,
         child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              sheet.title,
-              style: const TextStyle(
-                fontFamily: AppFonts.sukhumvit,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AdminColors.text,
-              ),
-            ),
-            if (sheet.description?.isNotEmpty == true) ...[
-              const SizedBox(height: 8),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                sheet.description!,
+                sheet.title,
                 style: const TextStyle(
                   fontFamily: AppFonts.sukhumvit,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  color: AdminColors.muted,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AdminColors.text,
                 ),
               ),
-            ],
-            const SizedBox(height: 24),
-            const AdminSectionHeader(title: 'ข้อมูลชีต', subtitle: ''),
-            const SizedBox(height: 8),
-            AdminCard(
-              child: Column(
-                children: [
-                  _InfoRow(
-                    icon: Icons.tag_outlined,
-                    label: 'ID',
-                    value: sheet.id,
+              if (sheet.description?.isNotEmpty == true) ...[
+                const SizedBox(height: 8),
+                Text(
+                  sheet.description!,
+                  style: const TextStyle(
+                    fontFamily: AppFonts.sukhumvit,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: AdminColors.muted,
                   ),
-                  const Divider(height: 24),
-                  _InfoRow(
-                    icon: Icons.person_outline,
-                    label: 'เจ้าของ',
-                    value: sheet.authorName?.isNotEmpty == true
-                        ? sheet.authorName!
-                        : sheet.authorId,
-                  ),
-                  const Divider(height: 24),
-                  _InfoRow(
-                    icon: Icons.star_outline,
-                    label: 'คะแนน',
-                    value: sheet.rating != null
-                        ? sheet.rating!.toStringAsFixed(1)
-                        : '-',
-                  ),
-                  const Divider(height: 24),
-                  _InfoRow(
-                    icon: Icons.sell_outlined,
-                    label: 'ราคา',
-                    value: priceLabel,
-                  ),
-                  const Divider(height: 24),
-                  _InfoRow(
-                    icon: Icons.flag_outlined,
-                    label: 'สถานะ',
-                    value: statusLabel,
-                    valueColor: statusColor,
-                  ),
-                  const Divider(height: 24),
-                  _InfoRow(
-                    icon: Icons.shopping_bag_outlined,
-                    label: 'ผู้ซื้อ',
-                    value: '${sheet.buyerCount} คน',
-                  ),
-                  const Divider(height: 24),
-                  _InfoRow(
-                    icon: Icons.calendar_today_outlined,
-                    label: 'วันที่สร้าง',
-                    value: formattedDate,
-                  ),
-                  if (updatedDate != null) ...[
+                ),
+              ],
+              const SizedBox(height: 24),
+              const AdminSectionHeader(title: 'ข้อมูลชีต', subtitle: ''),
+              const SizedBox(height: 8),
+              AdminCard(
+                child: Column(
+                  children: [
+                    _InfoRow(
+                      icon: Icons.tag_outlined,
+                      label: 'ID',
+                      value: sheet.id,
+                    ),
                     const Divider(height: 24),
                     _InfoRow(
-                      icon: Icons.update_outlined,
-                      label: 'อัปเดตล่าสุด',
-                      value: updatedDate,
+                      icon: Icons.person_outline,
+                      label: 'เจ้าของ',
+                      value: sheet.authorName?.isNotEmpty == true
+                          ? sheet.authorName!
+                          : sheet.authorId,
                     ),
+                    const Divider(height: 24),
+                    _InfoRow(
+                      icon: Icons.star_outline,
+                      label: 'คะแนน',
+                      value: sheet.rating != null
+                          ? sheet.rating!.toStringAsFixed(1)
+                          : '-',
+                    ),
+                    const Divider(height: 24),
+                    _InfoRow(
+                      icon: Icons.sell_outlined,
+                      label: 'ราคา',
+                      value: priceLabel,
+                    ),
+                    const Divider(height: 24),
+                    _InfoRow(
+                      icon: Icons.flag_outlined,
+                      label: 'สถานะ',
+                      value: statusLabel,
+                      valueColor: statusColor,
+                    ),
+                    const Divider(height: 24),
+                    _InfoRow(
+                      icon: Icons.shopping_bag_outlined,
+                      label: 'ผู้ซื้อ',
+                      value: '${sheet.buyerCount} คน',
+                    ),
+                    const Divider(height: 24),
+                    _InfoRow(
+                      icon: Icons.calendar_today_outlined,
+                      label: 'วันที่สร้าง',
+                      value: formattedDate,
+                    ),
+                    if (updatedDate != null) ...[
+                      const Divider(height: 24),
+                      _InfoRow(
+                        icon: Icons.update_outlined,
+                        label: 'อัปเดตล่าสุด',
+                        value: updatedDate,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            if (hasFiles) ...[
-              const SizedBox(height: 24),
-              AdminSectionHeader(
-                title: 'ไฟล์',
-                subtitle: '${sheet.files!.length} รายการ',
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: sheet.files!.map((file) => _FileGridItem(file: file)).toList(),
-              ),
+              if (hasFiles) ...[
+                const SizedBox(height: 24),
+                AdminSectionHeader(
+                  title: 'ไฟล์',
+                  subtitle: '${sheet.files!.length} รายการ',
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: sheet.files!
+                      .map((file) => _FileGridItem(file: file))
+                      .toList(),
+                ),
+              ],
+              if (hasCategories || hasKeywords) ...[
+                const SizedBox(height: 24),
+                const AdminSectionHeader(
+                  title: 'หมวดหมู่ / คีย์เวิร์ด',
+                  subtitle: '',
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (hasCategories)
+                      ...sheet.categoryIds!.map((c) => _LabelChip(text: c)),
+                    if (hasKeywords)
+                      ...sheet.keywordIds!.map((k) => _LabelChip(text: k)),
+                  ],
+                ),
+              ],
             ],
-            if (hasCategories || hasKeywords) ...[
-              const SizedBox(height: 24),
-              const AdminSectionHeader(
-                title: 'หมวดหมู่ / คีย์เวิร์ด',
-                subtitle: '',
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  if (hasCategories)
-                    ...sheet.categoryIds!.map((c) => _LabelChip(text: c)),
-                  if (hasKeywords)
-                    ...sheet.keywordIds!.map((k) => _LabelChip(text: k)),
-                ],
-              ),
-            ],
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -304,13 +308,20 @@ class _FileGridItem extends StatelessWidget {
   IconData get _formatIcon {
     final fmt = file.format.toUpperCase();
     if (fmt == 'PDF' || fmt == 'APPLICATION/PDF') return Icons.picture_as_pdf;
-    if (fmt == 'DOC' || fmt == 'DOCX' || fmt == 'APPLICATION/Msword' ||
-        fmt == 'APPLICATION/VND.OPENXMLFORMATS-OFFICEDOCUMENT.WORDPROCESSINGML.DOCUMENT')
+    if (fmt == 'DOC' ||
+        fmt == 'DOCX' ||
+        fmt == 'APPLICATION/Msword' ||
+        fmt ==
+            'APPLICATION/VND.OPENXMLFORMATS-OFFICEDOCUMENT.WORDPROCESSINGML.DOCUMENT') {
       return Icons.description_outlined;
-    if (fmt == 'XLS' || fmt == 'XLSX' ||
+    }
+    if (fmt == 'XLS' ||
+        fmt == 'XLSX' ||
         fmt == 'APPLICATION/VND.MS-EXCEL' ||
-        fmt == 'APPLICATION/VND.OPENXMLFORMATS-OFFICEDOCUMENT.SPREADSHEETML.SHEET')
+        fmt ==
+            'APPLICATION/VND.OPENXMLFORMATS-OFFICEDOCUMENT.SPREADSHEETML.SHEET') {
       return Icons.table_chart_outlined;
+    }
     if (fmt.startsWith('IMAGE/')) return Icons.image_outlined;
     return Icons.insert_drive_file_outlined;
   }
@@ -342,8 +353,12 @@ class _FileGridItem extends StatelessWidget {
                     if (progress == null) return child;
                     return const Center(child: CircularProgressIndicator());
                   },
-                  errorBuilder: (_, __, ___) => const Center(
-                    child: Icon(Icons.broken_image, size: 64, color: Colors.white54),
+                  errorBuilder: (_, _, _) => const Center(
+                    child: Icon(
+                      Icons.broken_image,
+                      size: 64,
+                      color: Colors.white54,
+                    ),
                   ),
                 ),
               ),
@@ -386,7 +401,9 @@ class _FileGridItem extends StatelessWidget {
             SizedBox(
               height: itemSize,
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(11)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(11),
+                ),
                 child: Container(
                   color: AdminColors.background,
                   child: _isImage
@@ -401,7 +418,7 @@ class _FileGridItem extends StatelessWidget {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             );
                           },
-                          errorBuilder: (_, __, ___) => Icon(
+                          errorBuilder: (_, _, _) => Icon(
                             _formatIcon,
                             size: 36,
                             color: AdminColors.muted,
