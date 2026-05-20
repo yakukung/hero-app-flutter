@@ -57,32 +57,65 @@ class _AdminSheetsPageState extends State<AdminSheetsPage> {
     final adminResponse = await AdminService.fetchSheets(
       token: _sessionStore.token,
     );
-    final Map<String, Map<String, dynamic>> adminDataMap = {};
+
+    List<SheetModel> sheets;
     if (_isOkResponse(adminResponse.statusCode)) {
+      sheets = [];
       for (final item in getApiList(
         adminResponse.body,
         const ['sheets', 'items', 'data'],
       ).whereType<Map>()) {
         final map = Map<String, dynamic>.from(item);
-        adminDataMap[map['id']?.toString() ?? ''] = map;
+        sheets.add(SheetModel.fromJson(map));
       }
+    } else {
+      sheets = await SheetsService.fetchSheets(
+        token: _sessionStore.token,
+      );
     }
 
-    final sheets = await SheetsService.fetchSheets(
-      token: _sessionStore.token,
-    );
-
-    for (final sheet in sheets) {
-      final adminData = adminDataMap[sheet.id];
-      if (adminData != null) {
-        final buyersCount = adminData['buyers_count'] ?? adminData['buyer_count'];
-        if (buyersCount != null) {
-          final overrideBuyerCount = int.tryParse(buyersCount.toString()) ?? 0;
-          if (overrideBuyerCount > 0) {
-            _sheetBuyerOverrides[sheet.id] = overrideBuyerCount;
+    // admin API doesn't return categories, merge them from regular API
+    if (sheets.every((s) => s.categoryIds == null)) {
+      try {
+        final regularSheets = await SheetsService.fetchSheets(
+          token: _sessionStore.token,
+        );
+        final categoryMap = <String, List<String>>{};
+        for (final rs in regularSheets) {
+          if (rs.categoryIds != null) {
+            categoryMap[rs.id] = rs.categoryIds!;
           }
         }
-      }
+        sheets = sheets.map((s) {
+          final cats = categoryMap[s.id];
+          if (cats != null) {
+            return SheetModel(
+              id: s.id,
+              authorId: s.authorId,
+              title: s.title,
+              description: s.description,
+              rating: s.rating,
+              price: s.price,
+              visibleFlag: s.visibleFlag,
+              statusFlag: s.statusFlag,
+              createdAt: s.createdAt,
+              createdBy: s.createdBy,
+              updatedAt: s.updatedAt,
+              updatedBy: s.updatedBy,
+              authorName: s.authorName,
+              authorAvatar: s.authorAvatar,
+              files: s.files,
+              questions: s.questions,
+              categoryIds: cats,
+              keywordIds: s.keywordIds,
+              buyerCount: s.buyerCount,
+              isPurchased: s.isPurchased,
+              isFavorite: s.isFavorite,
+            );
+          }
+          return s;
+        }).toList();
+      } catch (_) {}
     }
 
     return sheets;
@@ -118,11 +151,15 @@ class _AdminSheetsPageState extends State<AdminSheetsPage> {
       }).toList();
     }
     if (_typeFilter != null) {
+      final selectedId = _typeFilter!.id.trim();
       final selectedName = _typeFilter!.name.trim();
       result = result.where((e) {
         final ids = e.categoryIds;
         if (ids == null || ids.isEmpty) return false;
-        return ids.any((c) => c.trim() == selectedName);
+        return ids.any((c) {
+          final trimmed = c.trim();
+          return trimmed == selectedId || trimmed == selectedName;
+        });
       }).toList();
     }
     return result;

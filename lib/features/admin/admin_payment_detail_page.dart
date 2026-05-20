@@ -107,7 +107,10 @@ class _AdminPaymentDetailPageState extends State<AdminPaymentDetailPage> {
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide(color: statusColor),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
               trailingIcon: _isSaving
                   ? const SizedBox(
@@ -205,10 +208,7 @@ class _AdminPaymentDetailPageState extends State<AdminPaymentDetailPage> {
                     ],
                   ),
                 ),
-                AdminStatusPill(
-                  label: payment.statusLabel,
-                  color: statusColor,
-                ),
+                AdminStatusPill(label: payment.statusLabel, color: statusColor),
               ],
             ),
             const SizedBox(height: 20),
@@ -298,7 +298,7 @@ class _AdminPaymentDetailPageState extends State<AdminPaymentDetailPage> {
                         child: Image.network(
                           payment.fullSlipImageUrl,
                           fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Center(
+                          errorBuilder: (_, _, _) => const Center(
                             child: Icon(
                               Icons.image_not_supported_outlined,
                               color: AdminColors.muted,
