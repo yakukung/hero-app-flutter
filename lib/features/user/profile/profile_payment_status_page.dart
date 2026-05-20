@@ -11,6 +11,7 @@ class ProfilePaymentStatusPage extends StatelessWidget {
     required this.amount,
     this.statusMessages,
     this.summaryLabel = 'แพ็กเกจ',
+    this.paymentMethod,
   });
 
   final PaymentStatus status;
@@ -19,11 +20,25 @@ class ProfilePaymentStatusPage extends StatelessWidget {
   final String amount;
   final Map<PaymentStatus, String>? statusMessages;
   final String summaryLabel;
+  final String? paymentMethod;
+
+  String? get _displayPaymentMethod {
+    if (paymentMethod == null) return null;
+    final method = paymentMethod!.toUpperCase();
+    if (method == 'WALLET') {
+      return 'Wallet';
+    }
+    if (method == 'PROMPTPAY') {
+      return 'พร้อมเพย์';
+    }
+    return paymentMethod;
+  }
 
   @override
   Widget build(BuildContext context) {
     final currentStatus = PaymentStatusViewData.fromStatus(status);
     final currentMessage = statusMessages?[status] ?? currentStatus.message;
+    final displayMethod = _displayPaymentMethod;
 
     return Scaffold(
       key: const Key('profile_payment_status_page'),
@@ -99,6 +114,26 @@ class ProfilePaymentStatusPage extends StatelessWidget {
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  if (displayMethod != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'ชำระด้วย $displayMethod',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

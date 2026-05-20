@@ -299,6 +299,7 @@ class _ProfileSubscriptionState extends State<ProfileSubscription> {
             packageTitle: plan.title,
             price: _formatPlanPrice(plan),
             amount: plan.amountLabel,
+            paymentMethod: 'Wallet',
           ),
         ),
       );
@@ -331,6 +332,7 @@ class _ProfileSubscriptionState extends State<ProfileSubscription> {
           packageTitle: packageTitle,
           price: price,
           amount: amount,
+          paymentMethod: 'พร้อมเพย์',
         ),
       ),
     );
@@ -565,6 +567,7 @@ class _ProfilePaymentSheetState extends State<ProfilePaymentSheet> {
           packageTitle: widget.packageTitle,
           price: widget.price,
           amount: widget.amount,
+          paymentMethod: 'พร้อมเพย์',
         ),
       ),
     );

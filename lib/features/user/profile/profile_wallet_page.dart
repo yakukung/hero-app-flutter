@@ -89,6 +89,7 @@ class _ProfileWalletPageState extends State<ProfileWalletPage> {
           amount: amount,
           statusMessages: topUpPaymentStatusMessages,
           summaryLabel: 'รายการ',
+          paymentMethod: 'พร้อมเพย์',
         ),
       ),
     );
