@@ -12,6 +12,7 @@ class ProfileSummarySection extends StatelessWidget {
     required this.followersCount,
     required this.followingsCount,
     required this.onEditAvatar,
+    this.isPremium = false,
   });
 
   final String profileImage;
@@ -20,6 +21,7 @@ class ProfileSummarySection extends StatelessWidget {
   final int followersCount;
   final int followingsCount;
   final VoidCallback onEditAvatar;
+  final bool isPremium;
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +69,40 @@ class ProfileSummarySection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isPremium
+                        ? const Color(0xFFFFB800)
+                        : Colors.grey,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isPremium) ...[
+                        const Icon(
+                          Icons.auto_awesome,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(
+                        isPremium ? 'PREMIUM' : 'สมาชิกทั่วไป',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Text(
                   username.isNotEmpty ? username : 'ชื่อผู้ใช้',
                   style: const TextStyle(

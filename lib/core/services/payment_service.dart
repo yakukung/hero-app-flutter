@@ -241,6 +241,67 @@ class PaymentService {
     }
   }
 
+  static Future<ServiceResult<Map<String, dynamic>>> subscribePremium({
+    required String planId,
+    http.Client? client,
+  }) async {
+    final token = _sessionStore.token;
+    if (token.isEmpty) {
+      return const ServiceResult(
+        success: false,
+        statusCode: 401,
+        message: 'กรุณาเข้าสู่ระบบ',
+        data: {},
+      );
+    }
+
+    try {
+      final response = await _api.postJson(
+        path: '/users/subscribe-premium',
+        body: {'plan_id': planId},
+        token: token,
+        client: client,
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = decodeJsonMap(response.body) ?? {};
+        return ServiceResult(
+          success: true,
+          statusCode: response.statusCode,
+          message: 'สมัครสมาชิกพรีเมียมสำเร็จ',
+          data: data,
+        );
+      }
+      if (response.statusCode == 402 || response.statusCode == 409) {
+        return ServiceResult(
+          success: false,
+          statusCode: response.statusCode,
+          message: getErrorMessage(
+            response,
+            fallback: 'ยอดเงินใน Wallet ไม่เพียงพอ',
+          ),
+          data: {},
+        );
+      }
+      return ServiceResult(
+        success: false,
+        statusCode: response.statusCode,
+        message: getErrorMessage(
+          response,
+          fallback: 'ไม่สามารถสมัครสมาชิกพรีเมียมได้',
+        ),
+        data: {},
+      );
+    } catch (error) {
+      debugPrint('Error subscribing premium: $error');
+      return const ServiceResult(
+        success: false,
+        statusCode: 0,
+        message: 'ไม่สามารถเชื่อมต่อระบบสมัครสมาชิกได้',
+        data: {},
+      );
+    }
+  }
+
   static Future<ServiceResult<List<SubscriptionPlanModel>>> fetchPlans({
     http.Client? client,
   }) async {

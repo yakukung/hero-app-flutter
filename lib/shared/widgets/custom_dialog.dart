@@ -14,6 +14,7 @@ Future<void> showCustomDialog({
   String? okButtonLabel,
   VoidCallback? onOk,
   VoidCallback? onCancel,
+  Widget? customActions,
 }) async {
   final buttonLabel = okButtonLabel ?? (isConfirm ? title : 'ตกลง');
   final actionColor = isDanger
@@ -28,7 +29,9 @@ Future<void> showCustomDialog({
   await showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    useSafeArea: true,
+    useSafeArea: false,
+    enableDrag: true,
+    isDismissible: true,
     backgroundColor: Colors.transparent,
     builder: (context) => Stack(
       children: [
@@ -56,7 +59,7 @@ Future<void> showCustomDialog({
                       top: Radius.circular(45),
                     ),
                   ),
-                  padding: EdgeInsets.fromLTRB(20, 20, 20, 16 + bottomInset),
+                  padding: EdgeInsets.fromLTRB(20, 28, 20, 24 + bottomInset),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -114,7 +117,9 @@ Future<void> showCustomDialog({
                       const SizedBox(height: 16),
 
                       // ── Buttons ──
-                      if (isConfirm)
+                      if (customActions != null)
+                        customActions
+                      else if (isConfirm)
                         Row(
                           children: [
                             Expanded(
