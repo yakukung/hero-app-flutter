@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/constants/app_fonts.dart';
 import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/models/sheet_model.dart';
+import 'package:hero_app_flutter/core/services/admin_service.dart';
 import 'package:hero_app_flutter/core/services/sheets_service.dart';
 import 'package:hero_app_flutter/core/session/session_store.dart';
+import 'package:hero_app_flutter/core/utils/api_utils.dart';
 import 'package:hero_app_flutter/features/admin/admin_design.dart';
 import 'package:hero_app_flutter/features/admin/admin_widgets.dart';
 
@@ -34,10 +36,28 @@ class _AdminSheetDetailPageState extends State<AdminSheetDetailPage> {
       _error = null;
     });
     try {
-      final sheet = await SheetsService.fetchSheetById(
+      SheetModel? sheet;
+
+      // admin API first (full data, no visible_flag filter)
+      final adminResponse = await AdminService.fetchSheetById(
         widget.sheetId,
         token: _sessionStore.token,
       );
+      if (adminResponse.statusCode >= 200 && adminResponse.statusCode < 300) {
+        final data = getApiData(adminResponse.body);
+        if (data is Map<String, dynamic>) {
+          sheet = SheetModel.fromJson(data);
+        }
+      }
+
+      // fallback: try regular API
+      if (sheet == null) {
+        sheet = await SheetsService.fetchSheetById(
+          widget.sheetId,
+          token: _sessionStore.token,
+        );
+      }
+
       if (!mounted) return;
       if (sheet != null) {
         setState(() {
@@ -53,7 +73,7 @@ class _AdminSheetDetailPageState extends State<AdminSheetDetailPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e.toString();
+        _error = e.toString().replaceFirst('Exception: ', '');
         _isLoading = false;
       });
     }
