@@ -2,13 +2,16 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:hero_app_flutter/core/controllers/app_controller.dart';
 import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/models/payment_history_model.dart';
 import 'package:hero_app_flutter/core/models/service_result.dart';
 import 'package:hero_app_flutter/core/services/payment_service.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_payment_status_page.dart';
+import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 
 typedef PickSlipImage = Future<XFile?> Function();
 typedef PaymentConfirmed = Future<void> Function(PaymentStatus status);
@@ -136,8 +139,8 @@ class _ProfileSubscriptionState extends State<ProfileSubscription> {
                       price: _formatPlanPrice(plan),
                       amount: plan.amountLabel,
                       subtitles: _planSubtitles(plan),
-                      buttonText: 'ชำระเงินในราคา ${plan.amountLabel}',
-                      onPay: () => _openPaymentSheet(context, plan: plan),
+                      buttonText: 'สมัคร ${plan.amountLabel}',
+                      onPay: () => _showPaymentMethod(context, plan: plan),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -186,6 +189,124 @@ class _ProfileSubscriptionState extends State<ProfileSubscription> {
         );
       },
     );
+  }
+
+  void _showPaymentMethod(
+    BuildContext context, {
+    required SubscriptionPlanModel plan,
+  }) {
+    final appController = Get.find<AppController>();
+    if (appController.subscriptionStatus.value?.isPremium == true) {
+      showCustomDialog(
+        title: 'คุณเป็นสมาชิกพรีเมียมอยู่แล้ว',
+        message: 'คุณสามารถใช้งานพรีเมียมต่อไปได้จนกว่าสมาชิกจะหมดอายุ',
+      );
+      return;
+    }
+
+    if (plan.id.isEmpty) {
+      showCustomDialog(
+        title: 'ไม่สามารถสมัครได้',
+        message: 'ไม่พบข้อมูลแผนการสมัคร กรุณาลองใหม่อีกครั้ง',
+        isDanger: true,
+      );
+      return;
+    }
+
+    showCustomDialog(
+      title: 'เลือกวิธีชำระเงิน',
+      message: '${plan.title} ${plan.amountLabel}',
+      customActions: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2A5DB9),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: () {
+                Get.back();
+                _payWithWallet(context, plan: plan);
+              },
+              icon: const Icon(
+                Icons.account_balance_wallet_outlined,
+                color: Colors.white,
+              ),
+              label: const Text(
+                'ชำระด้วย Wallet',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF2A5DB9),
+                side: const BorderSide(color: Color(0xFF2A5DB9)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              onPressed: () {
+                Get.back();
+                _openPaymentSheet(context, plan: plan);
+              },
+              icon: const Icon(Icons.qr_code_2_outlined),
+              label: const Text(
+                'ชำระด้วยพร้อมเพย์',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _payWithWallet(
+    BuildContext context, {
+    required SubscriptionPlanModel plan,
+  }) async {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) navigator.pop();
+    if (navigator.canPop()) navigator.pop();
+
+    final result = await PaymentService.subscribePremium(planId: plan.id);
+    if (!context.mounted) return;
+
+    if (result.success) {
+      await Get.find<AppController>().refreshSubscriptionStatus();
+      await Get.find<AppController>().fetchUserData();
+      await navigator.push<void>(
+        MaterialPageRoute(
+          builder: (_) => ProfilePaymentStatusPage(
+            status: PaymentStatus.SUCCESSFUL,
+            packageTitle: plan.title,
+            price: _formatPlanPrice(plan),
+            amount: plan.amountLabel,
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.message)),
+      );
+    }
   }
 
   Future<void> _completePaymentFlow(
@@ -328,6 +449,7 @@ class _PackageCard extends StatelessWidget {
               ),
             ),
           ),
+
         ],
       ),
     );

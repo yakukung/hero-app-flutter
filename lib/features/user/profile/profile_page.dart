@@ -134,6 +134,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 email: appController.email,
                 followersCount: appController.followersCount,
                 followingsCount: appController.followingsCount,
+                isPremium: appController.subscriptionStatus.value?.isPremium ?? false,
                 onEditAvatar: _pickProfileImage,
               ),
               const SizedBox(height: 24),
