@@ -121,6 +121,18 @@ class AdminService {
     return _api.get(path: '/admin/sheets', token: token, client: client);
   }
 
+  static Future<http.Response> fetchSheetById(
+    String sheetId, {
+    String? token,
+    http.Client? client,
+  }) {
+    return _api.get(
+      path: '/admin/sheets/$sheetId',
+      token: token,
+      client: client,
+    );
+  }
+
   static Future<http.Response> updateReportStatus({
     required String reportId,
     required String referenceTable,
