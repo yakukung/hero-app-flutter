@@ -9,6 +9,7 @@ class PaymentHistoryItem {
     required this.createdAt,
     required this.reference,
     this.priceLabel,
+    this.paymentMethod,
   });
 
   final String id;
@@ -18,6 +19,7 @@ class PaymentHistoryItem {
   final DateTime createdAt;
   final String reference;
   final String? priceLabel;
+  final String? paymentMethod;
 
   factory PaymentHistoryItem.fromJson(Map<String, dynamic> json) {
     final amountValue =
@@ -44,6 +46,7 @@ class PaymentHistoryItem {
           (json['reference'] ?? json['reference_id'] ?? json['id'] ?? '-')
               .toString(),
       priceLabel: json['price_label']?.toString(),
+      paymentMethod: json['payment_method']?.toString(),
     );
   }
 
@@ -57,6 +60,7 @@ class TopUpHistoryItem {
     required this.status,
     required this.createdAt,
     required this.reference,
+    this.paymentMethod,
   });
 
   final String id;
@@ -64,6 +68,7 @@ class TopUpHistoryItem {
   final PaymentStatus status;
   final DateTime createdAt;
   final String reference;
+  final String? paymentMethod;
 
   factory TopUpHistoryItem.fromJson(Map<String, dynamic> json) {
     final amountValue = json['amount'] ?? json['total'] ?? json['value'] ?? 0;
@@ -81,6 +86,7 @@ class TopUpHistoryItem {
       reference:
           (json['reference'] ?? json['reference_id'] ?? json['id'] ?? '-')
               .toString(),
+      paymentMethod: json['payment_method']?.toString(),
     );
   }
 

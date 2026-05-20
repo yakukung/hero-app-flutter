@@ -12,6 +12,7 @@ class ProfileTopUpHistoryItem {
     required this.status,
     required this.createdAt,
     required this.reference,
+    this.paymentMethod,
   });
 
   final String id;
@@ -19,6 +20,7 @@ class ProfileTopUpHistoryItem {
   final PaymentStatus status;
   final DateTime createdAt;
   final String reference;
+  final String? paymentMethod;
 
   factory ProfileTopUpHistoryItem.fromServiceModel(TopUpHistoryItem item) {
     return ProfileTopUpHistoryItem(
@@ -27,6 +29,7 @@ class ProfileTopUpHistoryItem {
       status: item.status,
       createdAt: item.createdAt,
       reference: item.reference,
+      paymentMethod: item.paymentMethod,
     );
   }
 }
@@ -154,6 +157,7 @@ class _TopUpHistoryCard extends StatelessWidget {
               amount: topUp.amount,
               statusMessages: topUpPaymentStatusMessages,
               summaryLabel: 'รายการ',
+              paymentMethod: topUp.paymentMethod ?? 'พร้อมเพย์',
             ),
           ),
         );

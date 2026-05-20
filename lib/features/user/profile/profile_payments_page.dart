@@ -14,6 +14,7 @@ class ProfilePaymentHistoryItem {
     required this.status,
     required this.createdAt,
     required this.reference,
+    this.paymentMethod,
   });
 
   final String id;
@@ -23,6 +24,7 @@ class ProfilePaymentHistoryItem {
   final PaymentStatus status;
   final DateTime createdAt;
   final String reference;
+  final String? paymentMethod;
 
   factory ProfilePaymentHistoryItem.fromServiceModel(PaymentHistoryItem item) {
     return ProfilePaymentHistoryItem(
@@ -33,6 +35,7 @@ class ProfilePaymentHistoryItem {
       status: item.status,
       createdAt: item.createdAt,
       reference: item.reference,
+      paymentMethod: item.paymentMethod,
     );
   }
 }
@@ -158,6 +161,7 @@ class _PaymentHistoryCard extends StatelessWidget {
               packageTitle: payment.packageTitle,
               price: payment.price,
               amount: payment.amount,
+              paymentMethod: payment.paymentMethod,
             ),
           ),
         );

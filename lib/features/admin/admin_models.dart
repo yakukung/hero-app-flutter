@@ -14,6 +14,7 @@ class AdminPaymentItem {
     required this.email,
     required this.slipImageUrl,
     required this.rawJson,
+    this.paymentMethod,
   });
 
   final String id;
@@ -27,6 +28,7 @@ class AdminPaymentItem {
   final String email;
   final String slipImageUrl;
   final Map<String, dynamic> rawJson;
+  final String? paymentMethod;
 
   factory AdminPaymentItem.fromJson(Map<dynamic, dynamic> json) {
     return AdminPaymentItem(
@@ -45,6 +47,7 @@ class AdminPaymentItem {
       email: (json['email'] ?? '').toString(),
       slipImageUrl: (json['slip_image_url'] ?? '').toString(),
       rawJson: json.map((key, value) => MapEntry(key.toString(), value)),
+      paymentMethod: json['payment_method']?.toString(),
     );
   }
 

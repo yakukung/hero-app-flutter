@@ -265,6 +265,18 @@ class _AdminPaymentDetailPageState extends State<AdminPaymentDetailPage> {
                     label: 'วันที่',
                     value: payment.dateLabel,
                   ),
+                  if (payment.paymentMethod != null) ...[
+                    const SizedBox(height: 8),
+                    _InfoRow(
+                      icon: Icons.payment_outlined,
+                      label: 'ช่องทางการชำระเงิน',
+                      value: payment.paymentMethod == 'PROMPTPAY'
+                          ? 'พร้อมเพย์'
+                          : payment.paymentMethod == 'WALLET'
+                              ? 'Wallet'
+                              : payment.paymentMethod!,
+                    ),
+                  ],
                 ],
               ),
             ),
