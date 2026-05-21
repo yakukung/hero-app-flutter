@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'package:hero_app_flutter/core/models/quiz_leaderboard_entry_model.dart';
 import 'package:hero_app_flutter/core/models/sheet_model.dart';
 import 'package:hero_app_flutter/features/user/sheet/controllers/preview_sheet_page_controller.dart';
 import 'package:hero_app_flutter/features/user/sheet/quiz_page.dart';
@@ -81,8 +82,19 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
                     reviews: _controller.reviews,
                     isLoading: _controller.isLoadingReviews,
                     errorMessage: _controller.reviewErrorMessage,
+                    currentUserId: _controller.currentUserId,
+                    hasExistingReview: _controller.hasExistingReview,
+                    currentUserReviewId: _controller.currentUserReviewId,
                     onSubmitReview: _submitReview,
+                    onDeleteReview: _deleteReview,
                   ),
+                  if (sheet.questions?.isNotEmpty ?? false)
+                    _LeaderboardSection(
+                      leaderboard: _controller.leaderboard,
+                      isLoading: _controller.isLoadingLeaderboard,
+                      totalQuestions: sheet.questions!.length,
+                    ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 120)),
                 ],
               ),
               PreviewSheetBottomActionBar(
@@ -160,6 +172,16 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
   }
 
   Future<void> _submitReview(int score, String content) async {
+    if (_controller.hasExistingReview) {
+      if (!mounted) return;
+      showCustomDialog(
+        title: 'รีวิวแล้ว',
+        message: 'คุณมีรีวิวอยู่แล้ว กรุณาลบรีวิวเก่าก่อนจึงจะสามารถรีวิวใหม่ได้',
+        onOk: () {},
+      );
+      return;
+    }
+
     final result = await _controller.submitReview(
       score: score,
       content: content,
@@ -170,6 +192,22 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(result.message)));
+  }
+
+  Future<void> _deleteReview(String reviewId) async {
+    await showCustomDialog(
+      title: 'ลบรีวิว',
+      message: 'คุณต้องการลบรีวิวนี้ใช่ไหม?',
+      isConfirm: true,
+      isDanger: true,
+      onOk: () async {
+        final result = await _controller.deleteReview(reviewId);
+        if (!mounted) return;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(result.message)));
+      },
+    );
   }
 
   void _openQuiz() {
@@ -365,18 +403,42 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
   }
 }
 
+String _formatReviewDate(DateTime dt) {
+  final now = DateTime.now();
+  final diff = now.difference(dt);
+  String dayStr;
+  if (diff.inDays == 0) {
+    dayStr = 'วันนี้';
+  } else if (diff.inDays == 1) {
+    dayStr = 'เมื่อวาน';
+  } else {
+    dayStr = '${dt.day}/${dt.month}/${dt.year}';
+  }
+  final hour = dt.hour.toString().padLeft(2, '0');
+  final minute = dt.minute.toString().padLeft(2, '0');
+  return '$dayStr  $hour:$minute';
+}
+
 class _SheetReviewsSection extends StatefulWidget {
   const _SheetReviewsSection({
     required this.reviews,
     required this.isLoading,
     required this.errorMessage,
+    required this.currentUserId,
+    required this.hasExistingReview,
+    required this.currentUserReviewId,
     required this.onSubmitReview,
+    required this.onDeleteReview,
   });
 
   final List<SheetReviewModel> reviews;
   final bool isLoading;
   final String errorMessage;
+  final String currentUserId;
+  final bool hasExistingReview;
+  final String? currentUserReviewId;
   final Future<void> Function(int score, String content) onSubmitReview;
+  final Future<void> Function(String reviewId) onDeleteReview;
 
   @override
   State<_SheetReviewsSection> createState() => _SheetReviewsSectionState();
@@ -398,7 +460,7 @@ class _SheetReviewsSectionState extends State<_SheetReviewsSection> {
     return SliverToBoxAdapter(
       child: Container(
         color: Colors.white,
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 160),
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -416,7 +478,16 @@ class _SheetReviewsSectionState extends State<_SheetReviewsSection> {
             else if (widget.reviews.isEmpty)
               const _EmptyReviewMessage(message: 'ยังไม่มีรีวิวสำหรับชีตนี้')
             else
-              ...widget.reviews.map(_ReviewTile.new),
+              ...widget.reviews.map(
+                (r) => _ReviewTile(
+                  review: r,
+                  isOwnReview: r.userId == widget.currentUserId,
+                  onDelete:
+                      r.userId == widget.currentUserId
+                          ? () => widget.onDeleteReview(r.id)
+                          : null,
+                ),
+              ),
           ],
         ),
       ),
@@ -424,44 +495,121 @@ class _SheetReviewsSectionState extends State<_SheetReviewsSection> {
   }
 
   Widget _buildReviewForm() {
+    if (widget.hasExistingReview) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF8E1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFFE082)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline, color: Color(0xFFF57F17), size: 20),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'คุณมีรีวิวอยู่แล้ว กรุณาลบรีวิวเก่าก่อนจึงจะสามารถรีวิวใหม่ได้',
+                style: TextStyle(fontSize: 13, color: Color(0xFF795548)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F7FA),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4E8F0)),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF8F9FF), Color(0xFFF5F7FA)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE8ECF4)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: List.generate(5, (index) {
-              final value = index + 1;
-              return IconButton(
-                tooltip: '$value ดาว',
-                onPressed: () => setState(() => _score = value),
-                icon: Icon(
-                  value <= _score ? Icons.star_rounded : Icons.star_border,
-                  color: const Color(0xFFFFC107),
-                ),
-              );
-            }),
+            children: [
+              const Text(
+                'ให้คะแนน',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF4A4A6A)),
+              ),
+              const Spacer(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(5, (index) {
+                  final value = index + 1;
+                  return GestureDetector(
+                    onTap: () => setState(() => _score = value),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Icon(
+                        value <= _score ? Icons.star_rounded : Icons.star_border_rounded,
+                        size: 32,
+                        color: value <= _score ? const Color(0xFFFFB300) : const Color(0xFFD0D0D0),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ],
           ),
+          const SizedBox(height: 14),
           TextField(
             controller: _reviewController,
-            minLines: 2,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              hintText: 'เขียนรีวิวของคุณ',
-              border: OutlineInputBorder(),
+            minLines: 3,
+            maxLines: 5,
+            style: const TextStyle(fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'เขียนรีวิวของคุณ…',
+              hintStyle: TextStyle(color: Colors.grey[400]),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.all(16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 1.5),
+              ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
+            height: 48,
             child: ElevatedButton(
               onPressed: _isSubmitting ? null : _submit,
-              child: Text(_isSubmitting ? 'กำลังส่ง...' : 'ส่งรีวิว'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C63FF),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                _isSubmitting ? 'กำลังส่ง…' : 'ส่งรีวิว',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],
@@ -481,46 +629,336 @@ class _SheetReviewsSectionState extends State<_SheetReviewsSection> {
 }
 
 class _ReviewTile extends StatelessWidget {
-  const _ReviewTile(this.review);
+  const _ReviewTile({
+    required this.review,
+    this.isOwnReview = false,
+    this.onDelete,
+  });
 
   final SheetReviewModel review;
+  final bool isOwnReview;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE4E8F0)),
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isOwnReview ? const Color(0xFFFFE082) : const Color(0xFFEEF0F6),
+          width: isOwnReview ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              ...List.generate(
-                5,
-                (index) => Icon(
-                  index < review.score
-                      ? Icons.star_rounded
-                      : Icons.star_border_rounded,
-                  size: 18,
-                  color: const Color(0xFFFFC107),
+              ClipOval(
+                child: review.profileImage != null
+                    ? Image.network(
+                        review.profileImage!,
+                        width: 34,
+                        height: 34,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _avatarFallback(),
+                      )
+                    : _avatarFallback(),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          review.username ?? 'ผู้ใช้',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: Color(0xFF2D2D3A),
+                          ),
+                        ),
+                        if (isOwnReview) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF3E0),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'คุณ',
+                              style: TextStyle(
+                                color: Color(0xFFE65100),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        ...List.generate(
+                          5,
+                          (index) => Icon(
+                            index < review.score
+                                ? Icons.star_rounded
+                                : Icons.star_border_rounded,
+                            size: 14,
+                            color: const Color(0xFFFFB300),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${review.score}',
+                          style: const TextStyle(
+                            color: Color(0xFFFFB300),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(),
-              Text(
-                '${review.createdAt.day}/${review.createdAt.month}/${review.createdAt.year}',
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
-              ),
+              if (isOwnReview && onDelete != null)
+                GestureDetector(
+                  onTap: onDelete,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFE53935)),
+                  ),
+                ),
             ],
           ),
           if (review.content != null && review.content!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(review.content!),
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F9FC),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                review.content!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF3D3D4A),
+                  height: 1.5,
+                ),
+              ),
+            ),
           ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.access_time, size: 12, color: Colors.grey[400]),
+              const SizedBox(width: 4),
+              Text(
+                _formatReviewDate(review.createdAt),
+                style: TextStyle(color: Colors.grey[400], fontSize: 11),
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _avatarFallback() {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: (review.username != null ? Color(review.username!.hashCode).withValues(alpha: 0.15) : const Color(0xFFE4E8F0)),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          review.username != null && review.username!.isNotEmpty
+              ? review.username![0].toUpperCase()
+              : '?',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF8E8EA0),
+            fontSize: 14,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LeaderboardSection extends StatelessWidget {
+  const _LeaderboardSection({
+    required this.leaderboard,
+    required this.isLoading,
+    required this.totalQuestions,
+  });
+
+  final List<QuizLeaderboardEntryModel> leaderboard;
+  final bool isLoading;
+  final int totalQuestions;
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.fromLTRB(24, 4, 24, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'อันดับผู้ทำโจทย์ท้ายบท',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            if (isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (leaderboard.isEmpty)
+              _buildEmptyState()
+            else
+              ..._buildLeaderboardEntries(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F7FA),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Text(
+        'ยังไม่มีผู้ทำโจทย์ท้ายบท',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: Colors.grey),
+      ),
+    );
+  }
+
+  List<Widget> _buildLeaderboardEntries() {
+    return List.generate(leaderboard.length, (index) {
+      final entry = leaderboard[index];
+      return _buildLeaderboardTile(entry, index);
+    });
+  }
+
+  Widget _buildLeaderboardTile(
+    QuizLeaderboardEntryModel entry,
+    int rank,
+  ) {
+    final Color rankColor;
+    final IconData rankIcon;
+    if (rank == 0) {
+      rankColor = const Color(0xFFFFD700);
+      rankIcon = Icons.emoji_events;
+    } else if (rank == 1) {
+      rankColor = const Color(0xFFC0C0C0);
+      rankIcon = Icons.emoji_events;
+    } else if (rank == 2) {
+      rankColor = const Color(0xFFCD7F32);
+      rankIcon = Icons.emoji_events;
+    } else {
+      rankColor = Colors.grey;
+      rankIcon = Icons.person;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: rank < 3
+            ? rankColor.withValues(alpha: 0.08)
+            : const Color(0xFFF5F7FA),
+        borderRadius: BorderRadius.circular(14),
+        border: rank < 3
+            ? Border.all(color: rankColor.withValues(alpha: 0.3))
+            : null,
+      ),
+      child: Row(
+        children: [
+          Icon(rankIcon, color: rankColor, size: 22),
+          const SizedBox(width: 10),
+          ClipOval(
+            child: entry.profileImage != null
+                ? Image.network(
+                    entry.profileImage!,
+                    width: 32,
+                    height: 32,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _buildAvatarFallback(entry),
+                  )
+                : _buildAvatarFallback(entry),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              entry.username.isNotEmpty ? entry.username : 'ผู้ใช้',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                fontSize: 14,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            '${entry.correctCount}/${totalQuestions}',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: entry.correctCount == totalQuestions
+                  ? const Color(0xFF4CAF50)
+                  : Colors.black87,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarFallback(QuizLeaderboardEntryModel entry) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: const BoxDecoration(
+        color: Color(0xFFE4E8F0),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Text(
+          entry.username.isNotEmpty ? entry.username[0].toUpperCase() : '?',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+        ),
       ),
     );
   }

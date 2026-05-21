@@ -134,7 +134,7 @@ class PreviewSheetContentSection extends StatelessWidget {
                 height: 1.6,
               ),
             ),
-            const SizedBox(height: 100),
+            const SizedBox(height: 8),
           ],
         ),
       ),

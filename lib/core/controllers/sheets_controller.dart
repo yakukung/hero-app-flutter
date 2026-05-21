@@ -7,6 +7,7 @@ import 'package:hero_app_flutter/core/session/session_store.dart';
 import 'package:hero_app_flutter/core/services/sheets_service.dart';
 import 'package:hero_app_flutter/core/services/preferences_service.dart';
 import 'package:hero_app_flutter/core/services/recommendation_service.dart';
+import 'package:hero_app_flutter/core/controllers/app_controller.dart';
 
 class SheetsController extends GetxController {
   SheetsController({GetStorage? storage, SessionStore? sessionStore})
@@ -208,13 +209,34 @@ class SheetsController extends GetxController {
     }
 
     final preferences = (preferencesService ?? PreferencesService()).load();
-    if (preferences.isEmpty) {
+
+    Set<String>? followedIds;
+    if (preferences.followedOnly) {
+      try {
+        final appUser = Get.find<AppController>().user.value;
+        if (appUser != null && appUser.followingsUid.isNotEmpty) {
+          followedIds = appUser.followingsUid.toSet();
+        }
+      } catch (_) {}
+    }
+
+    final hasKeywordOrSubject = preferences.keywords.isNotEmpty ||
+        preferences.subjects.isNotEmpty;
+
+    final followed = followedIds;
+    if (!hasKeywordOrSubject) {
+      if (followed != null) {
+        final filtered = sheets
+            .where((sheet) => followed.contains(sheet.authorId))
+            .toList();
+        return filtered.isEmpty ? popularSheets : filtered;
+      }
       return popularSheets;
     }
 
     final keywords = preferences.keywords.map((e) => e.toLowerCase()).toSet();
     final subjects = preferences.subjects.map((e) => e.toLowerCase()).toSet();
-    final filtered = sheets.where((sheet) {
+    var filtered = sheets.where((sheet) {
       final keywordMatches =
           sheet.keywordIds?.any((keyword) {
             final lower = keyword.toLowerCase();
@@ -229,6 +251,12 @@ class SheetsController extends GetxController {
           false;
       return keywordMatches || subjectMatches;
     }).toList();
+
+    if (followed != null && followed.isNotEmpty) {
+      filtered = filtered
+          .where((sheet) => followed.contains(sheet.authorId))
+          .toList();
+    }
 
     if (filtered.isEmpty) {
       return popularSheets;

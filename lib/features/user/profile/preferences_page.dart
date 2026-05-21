@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/core/session/session_store.dart';
 import 'package:hero_app_flutter/core/services/preferences_service.dart';
 import 'package:hero_app_flutter/core/services/users_service.dart';
@@ -63,20 +64,24 @@ class _PreferencesPageState extends State<PreferencesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
         title: const Text('ความสนใจของคุณ'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
+        scrolledUnderElevation: 0.5,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          _buildInputSection(
+          _buildSectionCard(
+            icon: Icons.tag_rounded,
             title: 'คีย์เวิร์ดที่สนใจ',
+            subtitle: 'เช่น calculus, flutter, ชีวะ',
+            hintText: 'พิมพ์คีย์เวิร์ดแล้วกดเพิ่ม',
             controller: _keywordController,
-            hintText: 'เช่น calculus, flutter, ชีวะ',
+            tags: _preferences.keywords,
             onAdd: () {
               final value = _keywordController.text.trim();
               if (value.isEmpty) return;
@@ -89,9 +94,6 @@ class _PreferencesPageState extends State<PreferencesPage> {
                 ),
               );
             },
-          ),
-          _TagWrap(
-            tags: _preferences.keywords,
             onDeleted: (tag) => _save(
               UserPreferences(
                 keywords: _preferences.keywords
@@ -102,11 +104,14 @@ class _PreferencesPageState extends State<PreferencesPage> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          _buildInputSection(
+          const SizedBox(height: 16),
+          _buildSectionCard(
+            icon: Icons.menu_book_rounded,
             title: 'รายวิชาที่สนใจ',
+            subtitle: 'เช่น คณิตศาสตร์, คอมพิวเตอร์',
+            hintText: 'พิมพ์ชื่อวิชาแล้วกดเพิ่ม',
             controller: _subjectController,
-            hintText: 'เช่น คณิตศาสตร์, คอมพิวเตอร์',
+            tags: _preferences.subjects,
             onAdd: () {
               final value = _subjectController.text.trim();
               if (value.isEmpty) return;
@@ -119,9 +124,6 @@ class _PreferencesPageState extends State<PreferencesPage> {
                 ),
               );
             },
-          ),
-          _TagWrap(
-            tags: _preferences.subjects,
             onDeleted: (tag) => _save(
               UserPreferences(
                 keywords: _preferences.keywords,
@@ -132,86 +134,217 @@ class _PreferencesPageState extends State<PreferencesPage> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          SwitchListTile(
-            value: _preferences.followedOnly,
-            onChanged: (value) => _save(
-              UserPreferences(
-                keywords: _preferences.keywords,
-                subjects: _preferences.subjects,
-                followedOnly: value,
+          const SizedBox(height: 16),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+              secondary: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.group_rounded,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
+              ),
+              value: _preferences.followedOnly,
+              onChanged: (value) => _save(
+                UserPreferences(
+                  keywords: _preferences.keywords,
+                  subjects: _preferences.subjects,
+                  followedOnly: value,
+                ),
+              ),
+              title: const Text(
+                'ให้ความสำคัญกับคนที่ติดตาม',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 16,
+                ),
+              ),
+              subtitle: Text(
+                'แสดงเนื้อหาจากคนที่คุณติดตามก่อน',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.grey[500],
+                ),
               ),
             ),
-            title: const Text('ให้ความสำคัญกับคนที่ติดตาม'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInputSection({
+  Widget _buildSectionCard({
+    required IconData icon,
     required String title,
-    required TextEditingController controller,
+    required String subtitle,
     required String hintText,
+    required TextEditingController controller,
+    required List<String> tags,
     required VoidCallback onAdd,
+    required ValueChanged<String> onDeleted,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  hintText: hintText,
-                  border: const OutlineInputBorder(),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  icon,
+                  color: AppColors.primary,
+                  size: 22,
                 ),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    hintText: hintText,
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    filled: true,
+                    fillColor: const Color(0xFFF5F6FA),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => onAdd(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                height: 48,
+                width: 48,
+                child: ElevatedButton(
+                  onPressed: onAdd,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: const Icon(Icons.add, size: 22),
+                ),
+              ),
+            ],
+          ),
+          if (tags.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: tags
+                  .map(
+                    (tag) => Chip(
+                      label: Text(
+                        tag,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                      deleteIcon: const Icon(
+                        Icons.close_rounded,
+                        size: 18,
+                        color: Colors.white70,
+                      ),
+                      onDeleted: () => onDeleted(tag),
+                      backgroundColor: AppColors.primary,
+                      side: BorderSide.none,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
-            const SizedBox(width: 8),
-            IconButton.filled(
-              tooltip: 'เพิ่ม',
-              onPressed: onAdd,
-              icon: const Icon(Icons.add),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.grey[400]),
+                  const SizedBox(width: 6),
+                  Text(
+                    'ยังไม่ได้เพิ่ม',
+                    style: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _TagWrap extends StatelessWidget {
-  const _TagWrap({required this.tags, required this.onDeleted});
-
-  final List<String> tags;
-  final ValueChanged<String> onDeleted;
-
-  @override
-  Widget build(BuildContext context) {
-    if (tags.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 10),
-        child: Text('ยังไม่ได้ตั้งค่า', style: TextStyle(color: Colors.grey)),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.only(top: 10),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: tags
-            .map(
-              (tag) =>
-                  InputChip(label: Text(tag), onDeleted: () => onDeleted(tag)),
-            )
-            .toList(),
+        ],
       ),
     );
   }

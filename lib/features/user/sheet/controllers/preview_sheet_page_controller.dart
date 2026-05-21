@@ -3,9 +3,11 @@ import 'package:get/get.dart';
 
 import 'package:hero_app_flutter/core/controllers/sheets_controller.dart';
 import 'package:hero_app_flutter/core/models/payment_history_model.dart';
+import 'package:hero_app_flutter/core/models/quiz_leaderboard_entry_model.dart';
 import 'package:hero_app_flutter/core/models/sheet_model.dart';
 import 'package:hero_app_flutter/core/models/service_result.dart';
 import 'package:hero_app_flutter/core/services/payment_service.dart';
+import 'package:hero_app_flutter/core/services/quiz_service.dart';
 import 'package:hero_app_flutter/core/services/reviews_service.dart';
 import 'package:hero_app_flutter/core/services/sheets_service.dart';
 import 'package:hero_app_flutter/core/session/app_session_coordinator.dart';
@@ -24,6 +26,14 @@ typedef SubmitSheetReview =
       required int score,
       required String content,
     });
+typedef FetchLeaderboard =
+    Future<ServiceResult<List<QuizLeaderboardEntryModel>>> Function(
+  String sheetId,
+);
+typedef DeleteSheetReview = Future<ServiceResult<bool>> Function({
+  required String sheetId,
+  required String reviewId,
+});
 
 class PreviewSheetFavoriteResult {
   const PreviewSheetFavoriteResult({
@@ -44,12 +54,17 @@ class PreviewSheetPageController extends ChangeNotifier {
     PurchaseSheet? purchaseSheet,
     FetchSheetReviews? fetchReviews,
     SubmitSheetReview? submitReview,
+    FetchLeaderboard? fetchLeaderboard,
+    DeleteSheetReview? deleteReview,
   }) : _sheetsController = sheetsController ?? Get.find<SheetsController>(),
        _sessionCoordinator = sessionCoordinator ?? AppSessionCoordinator(),
        _fetchSheetById = fetchSheetById ?? SheetsService.fetchSheetById,
        _purchaseSheet = purchaseSheet ?? PaymentService.purchaseSheet,
        _fetchReviews = fetchReviews ?? ReviewsService.fetchSheetReviews,
-       _submitReview = submitReview ?? ReviewsService.submitSheetReview;
+       _submitReview = submitReview ?? ReviewsService.submitSheetReview,
+       _fetchLeaderboard =
+           fetchLeaderboard ?? QuizService.fetchLeaderboard,
+       _deleteReview = deleteReview ?? ReviewsService.deleteSheetReview;
 
   final String sheetId;
   final SheetsController _sheetsController;
@@ -58,24 +73,30 @@ class PreviewSheetPageController extends ChangeNotifier {
   final PurchaseSheet _purchaseSheet;
   final FetchSheetReviews _fetchReviews;
   final SubmitSheetReview _submitReview;
+  final FetchLeaderboard _fetchLeaderboard;
+  final DeleteSheetReview _deleteReview;
 
   SheetModel? _sheet;
   bool _isLoading = true;
   bool _isPurchasing = false;
   bool _isLoadingReviews = false;
+  bool _isLoadingLeaderboard = false;
   String _errorMessage = '';
   String _reviewErrorMessage = '';
   List<String> _previewImages = const [];
   List<SheetReviewModel> _reviews = const [];
+  List<QuizLeaderboardEntryModel> _leaderboard = const [];
 
   SheetModel? get sheet => _sheet;
   bool get isLoading => _isLoading;
   bool get isPurchasing => _isPurchasing;
   bool get isLoadingReviews => _isLoadingReviews;
+  bool get isLoadingLeaderboard => _isLoadingLeaderboard;
   String get errorMessage => _errorMessage;
   String get reviewErrorMessage => _reviewErrorMessage;
   List<String> get previewImages => _previewImages;
   List<SheetReviewModel> get reviews => _reviews;
+  List<QuizLeaderboardEntryModel> get leaderboard => _leaderboard;
   String get currentUserId => _sessionCoordinator.currentUserId;
   bool get isOwner => _sheet != null && _sheet!.authorId == currentUserId;
   bool get hasPremiumAccess => _sessionCoordinator.hasPremiumAccess;
@@ -117,6 +138,9 @@ class PreviewSheetPageController extends ChangeNotifier {
       _sheet = _copyWithFavoriteState(fetchedSheet, isFavorited);
       _previewImages = previewImages;
       await loadReviews();
+      if (fetchedSheet.questions?.isNotEmpty ?? false) {
+        await loadLeaderboard();
+      }
     } catch (error) {
       debugPrint('Error fetching sheet details: $error');
       _errorMessage = 'Error: $error';
@@ -207,6 +231,45 @@ class PreviewSheetPageController extends ChangeNotifier {
     _reviews = result.data ?? const [];
     _reviewErrorMessage = result.success ? '' : result.message;
     notifyListeners();
+  }
+
+  Future<void> loadLeaderboard() async {
+    _isLoadingLeaderboard = true;
+    notifyListeners();
+
+    try {
+      final result = await _fetchLeaderboard(sheetId);
+      _leaderboard = result.success ? (result.data ?? const []) : const [];
+    } catch (error) {
+      debugPrint('Error loading leaderboard: $error');
+      _leaderboard = const [];
+    } finally {
+      _isLoadingLeaderboard = false;
+      notifyListeners();
+    }
+  }
+
+  bool get hasExistingReview =>
+      _reviews.any((r) => r.userId == currentUserId);
+
+  String? get currentUserReviewId {
+    final idx = _reviews.indexWhere((r) => r.userId == currentUserId);
+    return idx >= 0 ? _reviews[idx].id : null;
+  }
+
+  Future<PreviewSheetFavoriteResult> deleteReview(String reviewId) async {
+    final result = await _deleteReview(
+      sheetId: sheetId,
+      reviewId: reviewId,
+    );
+    if (result.success) {
+      await loadReviews();
+      return const PreviewSheetFavoriteResult(
+        success: true,
+        message: 'ลบรีวิวแล้ว',
+      );
+    }
+    return PreviewSheetFavoriteResult(success: false, message: result.message);
   }
 
   Future<PreviewSheetFavoriteResult> submitReview({

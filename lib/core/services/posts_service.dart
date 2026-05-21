@@ -22,6 +22,61 @@ class PostsService {
   static final SessionStore _sessionStore = SessionStore();
   static final ApiClient _api = ApiClient(sessionStore: _sessionStore);
 
+  static List<PostModel> _parsePosts(String body, String currentUserId) {
+    final Map<String, dynamic> data = jsonDecode(body);
+    if (data['code'] == 200) {
+      final List<dynamic> postsJson = data['data']['posts'];
+      return postsJson
+          .map(
+            (json) => PostModel.fromJson(json, currentUserId: currentUserId),
+          )
+          .toList();
+    }
+    return [];
+  }
+
+  static Future<List<PostModel>> getPostsByUserId(String userId) async {
+    final String token = _sessionStore.token;
+    final String currentUserId = _sessionStore.uid;
+
+    try {
+      final response = await _api.get(
+        path: '/posts/user/$userId',
+        token: token.isNotEmpty ? token : null,
+        disableCache: true,
+      );
+
+      if (response.statusCode == 200) {
+        return _parsePosts(response.body, currentUserId);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting user posts: $e');
+      return [];
+    }
+  }
+
+  static Future<List<PostModel>> getSharedPostsByUserId(String userId) async {
+    final String token = _sessionStore.token;
+    final String currentUserId = _sessionStore.uid;
+
+    try {
+      final response = await _api.get(
+        path: '/posts/user/$userId/shared',
+        token: token.isNotEmpty ? token : null,
+        disableCache: true,
+      );
+
+      if (response.statusCode == 200) {
+        return _parsePosts(response.body, currentUserId);
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting shared posts: $e');
+      return [];
+    }
+  }
+
   static Future<List<PostModel>> getPosts() async {
     final String token = _sessionStore.token;
     final String currentUserId = _sessionStore.uid;
@@ -34,23 +89,7 @@ class PostsService {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(response.body);
-        if (data['code'] == 200) {
-          final List<dynamic> postsJson = data['data']['posts'];
-
-          try {
-            final posts = postsJson
-                .map(
-                  (json) =>
-                      PostModel.fromJson(json, currentUserId: currentUserId),
-                )
-                .toList();
-            return posts;
-          } catch (e) {
-            debugPrint('Error mapping posts: $e');
-            return [];
-          }
-        }
+        return _parsePosts(response.body, currentUserId);
       }
       return [];
     } catch (e) {

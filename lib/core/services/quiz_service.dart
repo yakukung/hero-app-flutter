@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:hero_app_flutter/core/models/quiz_leaderboard_entry_model.dart';
 import 'package:hero_app_flutter/core/models/quiz_result_model.dart';
 import 'package:hero_app_flutter/core/models/service_result.dart';
 import 'package:hero_app_flutter/core/network/api_client.dart';
@@ -105,6 +106,60 @@ class QuizService {
         statusCode: 0,
         message: 'ไม่สามารถเชื่อมต่อระบบผลคะแนนได้',
         data: {},
+      );
+    }
+  }
+
+  static Future<ServiceResult<List<QuizLeaderboardEntryModel>>>
+      fetchLeaderboard(String sheetId, {http.Client? client}) async {
+    final token = _sessionStore.token;
+    if (token.isEmpty) {
+      return const ServiceResult(
+        success: false,
+        statusCode: 401,
+        message: 'กรุณาเข้าสู่ระบบ',
+        data: [],
+      );
+    }
+
+    try {
+      final response = await _api.get(
+        path: '/quiz/leaderboard/$sheetId',
+        token: token,
+        disableCache: true,
+        client: client,
+      );
+      if (response.statusCode == 200) {
+        final data = getApiData(response.body);
+        final leaderboardList =
+            (data is Map<String, dynamic> ? data['leaderboard'] : null)
+                    as List? ??
+                [];
+        return ServiceResult(
+          success: true,
+          statusCode: response.statusCode,
+          message: 'โหลดอันดับสำเร็จ',
+          data: leaderboardList
+              .map((e) => QuizLeaderboardEntryModel.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
+      }
+      return ServiceResult(
+        success: false,
+        statusCode: response.statusCode,
+        message: getErrorMessage(
+          response,
+          fallback: 'ไม่สามารถโหลดอันดับได้',
+        ),
+        data: const [],
+      );
+    } catch (error) {
+      debugPrint('Error fetching leaderboard: $error');
+      return const ServiceResult(
+        success: false,
+        statusCode: 0,
+        message: 'ไม่สามารถเชื่อมต่อระบบอันดับได้',
+        data: [],
       );
     }
   }

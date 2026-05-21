@@ -21,8 +21,12 @@ class CreatePostPrompt extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                'สร้างโพสของคุณที่นี่',
-                style: TextStyle(color: Colors.grey[500]),
+                'สร้างโพสต์ของคุณที่นี่',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[600],
+                ),
               ),
             ),
             Container(

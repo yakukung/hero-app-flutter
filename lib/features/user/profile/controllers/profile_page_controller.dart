@@ -4,7 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 
 import 'package:hero_app_flutter/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/core/models/post_model.dart';
 import 'package:hero_app_flutter/core/models/upload_state.dart';
+import 'package:hero_app_flutter/core/services/posts_service.dart';
 import 'package:hero_app_flutter/core/services/users_service.dart';
 import 'package:hero_app_flutter/core/session/app_session_coordinator.dart';
 
@@ -34,9 +36,49 @@ class ProfilePageController {
     const UploadState(),
   );
 
+  final ValueNotifier<List<PostModel>> userPosts = ValueNotifier([]);
+  final ValueNotifier<List<PostModel>> sharedPosts = ValueNotifier([]);
+  final ValueNotifier<bool> isLoadingPosts = ValueNotifier(false);
+  final ValueNotifier<bool> isLoadingSharedPosts = ValueNotifier(false);
+
   AppController get appController => _appController;
 
-  Future<void> refresh() => _appController.fetchUserData();
+  Future<void> refresh() async {
+    await _appController.fetchUserData();
+    await loadPosts();
+  }
+
+  Future<void> loadPosts() async {
+    final uid = _appController.uid;
+    if (uid.isEmpty) return;
+
+    isLoadingPosts.value = true;
+    try {
+      final posts = await PostsService.getPostsByUserId(uid);
+      userPosts.value = posts;
+    } catch (e) {
+      debugPrint('Error loading user posts: $e');
+      userPosts.value = [];
+    } finally {
+      isLoadingPosts.value = false;
+    }
+  }
+
+  Future<void> loadSharedPosts() async {
+    final uid = _appController.uid;
+    if (uid.isEmpty) return;
+
+    isLoadingSharedPosts.value = true;
+    try {
+      final posts = await PostsService.getSharedPostsByUserId(uid);
+      sharedPosts.value = posts;
+    } catch (e) {
+      debugPrint('Error loading shared posts: $e');
+      sharedPosts.value = [];
+    } finally {
+      isLoadingSharedPosts.value = false;
+    }
+  }
 
   String? validateUserSheetsAccess() {
     if (_appController.uid.isEmpty) {
@@ -112,5 +154,9 @@ class ProfilePageController {
 
   void dispose() {
     uploadStateNotifier.dispose();
+    userPosts.dispose();
+    sharedPosts.dispose();
+    isLoadingPosts.dispose();
+    isLoadingSharedPosts.dispose();
   }
 }

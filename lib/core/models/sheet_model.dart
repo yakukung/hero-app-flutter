@@ -253,6 +253,8 @@ class SheetReviewModel {
   final String id;
   final String sheetId;
   final String userId;
+  final String? username;
+  final String? profileImage;
   final String? content;
   final int score;
   final DateTime createdAt;
@@ -261,6 +263,8 @@ class SheetReviewModel {
     required this.id,
     required this.sheetId,
     required this.userId,
+    this.username,
+    this.profileImage,
     this.content,
     required this.score,
     required this.createdAt,
@@ -271,6 +275,8 @@ class SheetReviewModel {
       id: json['id'],
       sheetId: json['sheet_id'],
       userId: json['user_id'],
+      username: json['username'],
+      profileImage: json['profile_image'],
       content: json['content'],
       score: json['score'] ?? 0,
       createdAt: DateTime.parse(json['created_at']),

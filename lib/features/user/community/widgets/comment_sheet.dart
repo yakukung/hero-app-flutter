@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/models/post_model.dart';
 import 'package:hero_app_flutter/core/services/posts_service.dart';
-import 'package:get/get.dart';
+import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 
 class CommentSheet extends StatefulWidget {
   final PostModel post;
@@ -124,26 +125,19 @@ class _CommentSheetState extends State<CommentSheet> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('ลบความคิดเห็น'),
-        content: const Text('คุณต้องการลบความคิดเห็นนี้หรือไม่?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('ยกเลิก'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('ลบ'),
-          ),
-        ],
-      ),
+    final completer = Completer<bool>();
+    await showCustomDialog(
+      title: 'ลบความคิดเห็น',
+      message: 'คุณต้องการลบความคิดเห็นนี้หรือไม่?',
+      isConfirm: true,
+      isDanger: true,
+      okButtonLabel: 'ลบ',
+      onOk: () => completer.complete(true),
+      onCancel: () => completer.complete(false),
     );
-
     if (!mounted) return;
-    if (confirmed != true) return;
+    final confirmed = await completer.future;
+    if (!confirmed) return;
 
     String commentId = comment.id;
     if (_isSyntheticId(commentId)) {
