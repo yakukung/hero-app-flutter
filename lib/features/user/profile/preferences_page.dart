@@ -64,17 +64,28 @@ class _PreferencesPageState extends State<PreferencesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('ความสนใจของคุณ'),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0,
-        scrolledUnderElevation: 0.5,
+        scrolledUnderElevation: 0,
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 20),
+            child: Text(
+              'ตั้งค่าความสนใจเพื่อรับคำแนะนำชีตที่ตรงกับคุณมากขึ้น',
+              style: TextStyle(
+                fontSize: 15,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
           _buildSectionCard(
             icon: Icons.tag_rounded,
             title: 'คีย์เวิร์ดที่สนใจ',
@@ -137,15 +148,8 @@ class _PreferencesPageState extends State<PreferencesPage> {
           const SizedBox(height: 16),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: const Color(0xFFF5F6FA),
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20),
@@ -203,15 +207,8 @@ class _PreferencesPageState extends State<PreferencesPage> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF5F6FA),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -266,14 +263,18 @@ class _PreferencesPageState extends State<PreferencesPage> {
                     hintText: hintText,
                     hintStyle: TextStyle(color: Colors.grey[400]),
                     filled: true,
-                    fillColor: const Color(0xFFF5F6FA),
+                    fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 14,
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                      borderSide: const BorderSide(color: Color(0xFFE7EAF0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE7EAF0)),
                     ),
                   ),
                   textInputAction: TextInputAction.done,

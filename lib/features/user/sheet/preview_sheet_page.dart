@@ -3,8 +3,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/models/quiz_leaderboard_entry_model.dart';
 import 'package:hero_app_flutter/core/models/sheet_model.dart';
+import 'package:hero_app_flutter/core/services/reports_service.dart';
+import 'package:hero_app_flutter/features/user/profile/user_profile_view_page.dart';
 import 'package:hero_app_flutter/features/user/sheet/controllers/preview_sheet_page_controller.dart';
 import 'package:hero_app_flutter/features/user/sheet/quiz_page.dart';
 import 'package:hero_app_flutter/features/user/sheet/sheet_preview_reader.dart';
@@ -77,7 +80,11 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
               CustomScrollView(
                 slivers: [
                   _buildHeader(sheet),
-                  PreviewSheetContentSection(sheet: sheet),
+                  PreviewSheetContentSection(
+                    sheet: sheet,
+                    onAuthorTap: () => _openAuthorProfile(sheet),
+                    onReportTap: () => _reportSheet(sheet.id),
+                  ),
                   _SheetReviewsSection(
                     reviews: _controller.reviews,
                     isLoading: _controller.isLoadingReviews,
@@ -176,7 +183,8 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       if (!mounted) return;
       showCustomDialog(
         title: 'รีวิวแล้ว',
-        message: 'คุณมีรีวิวอยู่แล้ว กรุณาลบรีวิวเก่าก่อนจึงจะสามารถรีวิวใหม่ได้',
+        message:
+            'คุณมีรีวิวอยู่แล้ว กรุณาลบรีวิวเก่าก่อนจึงจะสามารถรีวิวใหม่ได้',
         onOk: () {},
       );
       return;
@@ -232,6 +240,11 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
     );
   }
 
+  void _openAuthorProfile(SheetModel sheet) {
+    if (sheet.authorId.isEmpty) return;
+    Get.to(() => UserProfileViewPage(userId: sheet.authorId));
+  }
+
   void _toggleFavorite() {
     final sheet = _controller.sheet;
     if (sheet == null) {
@@ -264,6 +277,86 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
     );
   }
 
+  void _reportSheet(String sheetId) {
+    final detailController = TextEditingController();
+    final reportTypes = ReportType.forTable('sheets');
+    var selectedType = reportTypes.first;
+
+    showCustomDialog(
+      title: 'รายงานชีต',
+      message: 'ระบุเหตุผลที่ต้องการรายงาน',
+      isConfirm: true,
+      okButtonLabel: 'ส่งรายงาน',
+      isDanger: true,
+      content: StatefulBuilder(
+        builder: (context, setState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: DropdownButtonFormField<ReportType>(
+                isExpanded: true,
+                initialValue: selectedType,
+                decoration: const InputDecoration(
+                  labelText: 'เหตุผล',
+                  border: InputBorder.none,
+                ),
+                items: reportTypes
+                    .map((type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(type.displayName),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => selectedType = value);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: detailController,
+              minLines: 3,
+              maxLines: 5,
+              decoration: InputDecoration(
+                labelText: 'รายละเอียดเพิ่มเติม',
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      onOk: () async {
+        final result = await ReportsService.submitReport(
+          referenceId: sheetId,
+          referenceTable: 'sheets',
+          reportType: selectedType,
+          content: detailController.text.trim(),
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.success ? 'ส่งรายงานแล้ว' : result.message,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  
+
   Widget _buildHeader(SheetModel sheet) {
     return SliverAppBar(
       expandedHeight: 400.0,
@@ -271,9 +364,12 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       stretch: true,
       backgroundColor: Colors.white,
       elevation: 0,
-      leading: _buildCircleButton(
-        icon: Icons.arrow_back,
-        onPressed: () => Get.back(),
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: _buildCircleButton(
+          icon: Icons.arrow_back,
+          onPressed: () => Get.back(),
+        ),
       ),
       actions: [
         _buildCircleButton(
@@ -282,6 +378,11 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
               : Icons.star_border_rounded,
           iconColor: sheet.isFavorite ? Colors.amber : Colors.white,
           onPressed: _toggleFavorite,
+        ),
+        const SizedBox(width: 8),
+        _buildCircleButton(
+          icon: Icons.flag_outlined,
+          onPressed: () => _reportSheet(sheet.id),
         ),
         const SizedBox(width: 16),
       ],
@@ -373,12 +474,14 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
     required VoidCallback onPressed,
     Color iconColor = Colors.white,
   }) {
-    return IconButton(
-      icon: ClipOval(
+    return GestureDetector(
+      onTap: onPressed,
+      child: ClipOval(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            padding: const EdgeInsets.all(8),
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: Colors.black.withValues(alpha: 0.2),
               shape: BoxShape.circle,
@@ -387,11 +490,10 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
                 width: 1,
               ),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(icon, color: iconColor, size: 24),
           ),
         ),
       ),
-      onPressed: onPressed,
     );
   }
 
@@ -482,10 +584,9 @@ class _SheetReviewsSectionState extends State<_SheetReviewsSection> {
                 (r) => _ReviewTile(
                   review: r,
                   isOwnReview: r.userId == widget.currentUserId,
-                  onDelete:
-                      r.userId == widget.currentUserId
-                          ? () => widget.onDeleteReview(r.id)
-                          : null,
+                  onDelete: r.userId == widget.currentUserId
+                      ? () => widget.onDeleteReview(r.id)
+                      : null,
                 ),
               ),
           ],
@@ -544,7 +645,11 @@ class _SheetReviewsSectionState extends State<_SheetReviewsSection> {
             children: [
               const Text(
                 'ให้คะแนน',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF4A4A6A)),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF4A4A6A),
+                ),
               ),
               const Spacer(),
               Row(
@@ -556,9 +661,13 @@ class _SheetReviewsSectionState extends State<_SheetReviewsSection> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 2),
                       child: Icon(
-                        value <= _score ? Icons.star_rounded : Icons.star_border_rounded,
+                        value <= _score
+                            ? Icons.star_rounded
+                            : Icons.star_border_rounded,
                         size: 32,
-                        color: value <= _score ? const Color(0xFFFFB300) : const Color(0xFFD0D0D0),
+                        color: value <= _score
+                            ? const Color(0xFFFFB300)
+                            : const Color(0xFFD0D0D0),
                       ),
                     ),
                   );
@@ -588,7 +697,10 @@ class _SheetReviewsSectionState extends State<_SheetReviewsSection> {
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 1.5),
+                borderSide: const BorderSide(
+                  color: Color(0xFF6C63FF),
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -608,7 +720,10 @@ class _SheetReviewsSectionState extends State<_SheetReviewsSection> {
               ),
               child: Text(
                 _isSubmitting ? 'กำลังส่ง…' : 'ส่งรีวิว',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -648,7 +763,9 @@ class _ReviewTile extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isOwnReview ? const Color(0xFFFFE082) : const Color(0xFFEEF0F6),
+          color: isOwnReview
+              ? const Color(0xFFFFE082)
+              : const Color(0xFFEEF0F6),
           width: isOwnReview ? 1.5 : 1,
         ),
         boxShadow: [
@@ -693,7 +810,10 @@ class _ReviewTile extends StatelessWidget {
                         if (isOwnReview) ...[
                           const SizedBox(width: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFF3E0),
                               borderRadius: BorderRadius.circular(4),
@@ -746,7 +866,11 @@ class _ReviewTile extends StatelessWidget {
                       color: Colors.red.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.delete_outline, size: 16, color: Color(0xFFE53935)),
+                    child: const Icon(
+                      Icons.delete_outline,
+                      size: 16,
+                      color: Color(0xFFE53935),
+                    ),
                   ),
                 ),
             ],
@@ -791,7 +915,9 @@ class _ReviewTile extends StatelessWidget {
       width: 34,
       height: 34,
       decoration: BoxDecoration(
-        color: (review.username != null ? Color(review.username!.hashCode).withValues(alpha: 0.15) : const Color(0xFFE4E8F0)),
+        color: (review.username != null
+            ? Color(review.username!.hashCode).withValues(alpha: 0.15)
+            : const Color(0xFFE4E8F0)),
         shape: BoxShape.circle,
       ),
       child: Center(
@@ -870,10 +996,7 @@ class _LeaderboardSection extends StatelessWidget {
     });
   }
 
-  Widget _buildLeaderboardTile(
-    QuizLeaderboardEntryModel entry,
-    int rank,
-  ) {
+  Widget _buildLeaderboardTile(QuizLeaderboardEntryModel entry, int rank) {
     final Color rankColor;
     final IconData rankIcon;
     if (rank == 0) {
@@ -921,10 +1044,7 @@ class _LeaderboardSection extends StatelessWidget {
           Expanded(
             child: Text(
               entry.username.isNotEmpty ? entry.username : 'ผู้ใช้',
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-                fontSize: 14,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
               overflow: TextOverflow.ellipsis,
             ),
           ),

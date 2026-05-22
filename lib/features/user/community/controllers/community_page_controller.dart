@@ -57,7 +57,9 @@ class CommunityPageController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _posts = await _loadPosts();
+      final loaded = await _loadPosts();
+      _posts = List.of(loaded)
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (error) {
       _errorMessage = error.toString();
     } finally {

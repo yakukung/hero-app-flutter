@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/models/enums.dart';
+import 'package:hero_app_flutter/core/models/post_model.dart';
 import 'package:hero_app_flutter/core/models/user_model.dart';
+import 'package:hero_app_flutter/core/services/posts_service.dart';
+import 'package:hero_app_flutter/core/services/reports_service.dart';
 import 'package:hero_app_flutter/core/services/users_service.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/constants/app_assets.dart';
+import 'package:hero_app_flutter/features/user/community/widgets/community_post_card.dart';
+import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
 
 class UserProfileViewPage extends StatefulWidget {
   final String userId;
@@ -22,7 +28,9 @@ class UserProfileViewPage extends StatefulWidget {
   State<UserProfileViewPage> createState() => _UserProfileViewPageState();
 }
 
-class _UserProfileViewPageState extends State<UserProfileViewPage> {
+class _UserProfileViewPageState extends State<UserProfileViewPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
   UserModel? _user;
   bool _isLoading = true;
   bool _isFollowBusy = false;
@@ -31,12 +39,29 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
   DateTime? _lastFollowActionAt;
   static const Duration _followCooldown = Duration(milliseconds: 800);
 
+  List<PostModel> _posts = [];
+  bool _isLoadingPosts = true;
+  List<PostModel> _sharedPosts = [];
+  bool _isLoadingSharedPosts = true;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) setState(() {});
+    });
     _currentUserId = GetStorage().read('uid')?.toString();
     _user = widget.initialUser;
     _fetchUser();
+    _fetchPosts();
+    _fetchSharedPosts();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchUser({bool showLoading = true}) async {
@@ -63,6 +88,32 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
       if (mounted && showLoading) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _fetchPosts() async {
+    setState(() => _isLoadingPosts = true);
+    try {
+      final posts = await PostsService.getPostsByUserId(widget.userId);
+      if (!mounted) return;
+      setState(() => _posts = posts);
+    } catch (_) {
+      if (!mounted) return;
+    } finally {
+      if (mounted) setState(() => _isLoadingPosts = false);
+    }
+  }
+
+  Future<void> _fetchSharedPosts() async {
+    setState(() => _isLoadingSharedPosts = true);
+    try {
+      final posts = await PostsService.getSharedPostsByUserId(widget.userId);
+      if (!mounted) return;
+      setState(() => _sharedPosts = posts);
+    } catch (_) {
+      if (!mounted) return;
+    } finally {
+      if (mounted) setState(() => _isLoadingSharedPosts = false);
     }
   }
 
@@ -203,9 +254,19 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.flag_outlined, color: Colors.black54),
+            onPressed: _reportUser,
+          ),
+        ],
       ),
       body: RefreshIndicator(
-        onRefresh: () => _fetchUser(),
+        onRefresh: () async {
+          await _fetchUser();
+          await _fetchPosts();
+          await _fetchSharedPosts();
+        },
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           children: [
@@ -220,6 +281,12 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
               _buildProfile(user)
             else
               _buildErrorState(),
+            if (user != null) ...[
+              const SizedBox(height: 24),
+              _buildTabBar(),
+              const SizedBox(height: 12),
+              _buildPostsTabContent(),
+            ],
           ],
         ),
       ),
@@ -253,6 +320,198 @@ class _UserProfileViewPageState extends State<UserProfileViewPage> {
         ),
       ],
     );
+  }
+
+  void _reportUser() {
+    final detailController = TextEditingController();
+    final reportTypes = ReportType.forTable('users');
+    var selectedType = reportTypes.first;
+
+    showCustomDialog(
+      title: 'รายงานผู้ใช้',
+      message: 'ระบุเหตุผลที่ต้องการรายงาน',
+      isConfirm: true,
+      okButtonLabel: 'ส่งรายงาน',
+      isDanger: true,
+      content: StatefulBuilder(
+        builder: (context, setState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: DropdownButtonFormField<ReportType>(
+                isExpanded: true,
+                initialValue: selectedType,
+                decoration: const InputDecoration(
+                  labelText: 'เหตุผล',
+                  border: InputBorder.none,
+                ),
+                items: reportTypes
+                    .map((type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(type.displayName),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => selectedType = value);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: detailController,
+              minLines: 3,
+              maxLines: 5,
+              decoration: InputDecoration(
+                labelText: 'รายละเอียดเพิ่มเติม',
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      onOk: () async {
+        final result = await ReportsService.submitReport(
+          referenceId: widget.userId,
+          referenceTable: 'users',
+          reportType: selectedType,
+          content: detailController.text.trim(),
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.success ? 'ส่งรายงานแล้ว' : result.message,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicator: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelColor: const Color(0xFF1A1A1A),
+        unselectedLabelColor: Colors.grey,
+        labelStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+        dividerColor: Colors.transparent,
+        splashBorderRadius: BorderRadius.circular(999),
+        tabs: const [
+          Tab(text: 'โพสต์'),
+          Tab(text: 'โพสต์ที่แชร์'),
+        ],
+      ),
+    );
+  }
+
+  List<PostModel> get _currentPosts =>
+      _tabController.index == 0 ? _posts : _sharedPosts;
+
+  bool get _isLoadingCurrentPosts =>
+      _tabController.index == 0 ? _isLoadingPosts : _isLoadingSharedPosts;
+
+  String _emptyMessageForTab() =>
+      _tabController.index == 0 ? 'ยังไม่มีโพสต์' : 'ยังไม่มีโพสต์ที่แชร์';
+
+  Widget _buildPostsTabContent() {
+    final posts = _currentPosts;
+    final isLoading = _isLoadingCurrentPosts;
+
+    if (isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (posts.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Center(
+          child: Text(
+            _emptyMessageForTab(),
+            style: const TextStyle(color: Colors.grey, fontSize: 15),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: posts
+          .take(5)
+          .map(
+            (post) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: CommunityPostCard(
+                post: post,
+                formattedDate: _formatPostDate(post.createdAt),
+                avatarProvider: _resolveProfileImageUrl(
+                      post.author.profileImage,
+                    ) != null
+                    ? NetworkImage(
+                        _resolveProfileImageUrl(post.author.profileImage)!,
+                      )
+                    : null,
+                onUserTap: () {},
+                onReportTap: () {},
+                onSheetTap: post.sheetId == null
+                    ? null
+                    : () => Get.to(
+                        () => PreviewSheetPage(sheetId: post.sheetId!),
+                      ),
+                onLikeTap: () {},
+                onCommentTap: () {},
+                onShareTap: () {},
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  String _formatPostDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}  $hour:$minute';
   }
 
   Widget _buildProfile(UserModel user) {

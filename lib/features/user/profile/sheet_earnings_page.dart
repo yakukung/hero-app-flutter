@@ -1,8 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/core/models/revenue_model.dart';
 import 'package:hero_app_flutter/core/services/revenue_service.dart';
+import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
 
 class SheetEarningsPage extends StatefulWidget {
   const SheetEarningsPage({super.key});
@@ -11,8 +15,9 @@ class SheetEarningsPage extends StatefulWidget {
   State<SheetEarningsPage> createState() => _SheetEarningsPageState();
 }
 
-class _SheetEarningsPageState extends State<SheetEarningsPage> {
-  int _selectedTab = 0;
+class _SheetEarningsPageState extends State<SheetEarningsPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
   bool _isLoading = true;
   String _errorMessage = '';
   RevenueSummaryModel _summary = RevenueSummaryModel.empty();
@@ -20,7 +25,19 @@ class _SheetEarningsPageState extends State<SheetEarningsPage> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
     _loadEarnings();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadEarnings() async {
@@ -63,18 +80,16 @@ class _SheetEarningsPageState extends State<SheetEarningsPage> {
                           message: _errorMessage,
                           onRetry: _loadEarnings,
                         )
-                      : _selectedTab == 0
-                      ? _buildEarningsList(
-                          _summary.daily,
-                          emptyMessage: 'ยังไม่มีรายได้ในวันนี้',
-                        )
-                      : _buildEarningsList(
-                          _summary.monthly,
-                          emptyMessage: 'ยังไม่มีรายได้ในเดือนนี้',
+                      : IndexedStack(
+                          index: _tabController.index,
+                          children: [
+                            _buildDailyTab(),
+                            _buildMonthlyTab(),
+                          ],
                         ),
                 ),
-              ],
-            ),
+        ],
+      ),
     );
   }
 
@@ -129,28 +144,386 @@ class _SheetEarningsPageState extends State<SheetEarningsPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
+        height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F3F8),
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(999),
         ),
-        padding: const EdgeInsets.all(4),
-        child: Row(
-          children: [
-            Expanded(
-              child: _TabButton(
-                key: const Key('sheet_earnings_tab_daily'),
-                label: 'รายวัน',
-                isSelected: _selectedTab == 0,
-                onTap: () => setState(() => _selectedTab = 0),
+        child: TabBar(
+          controller: _tabController,
+          indicator: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelColor: const Color(0xFF1A1A1A),
+          unselectedLabelColor: Colors.grey,
+          labelStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+          dividerColor: Colors.transparent,
+          splashBorderRadius: BorderRadius.circular(999),
+          tabs: const [
+            Tab(key: Key('sheet_earnings_tab_daily'), text: 'รายวัน'),
+            Tab(key: Key('sheet_earnings_tab_monthly'), text: 'รายเดือน'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDailyTab() {
+    final daily = _summary.daily;
+    if (daily.items.isEmpty) {
+      return _buildEmptyState('ยังไม่มีรายได้ในวันนี้');
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadEarnings,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+        children: [
+          _buildDailySummaryCard(daily),
+          const SizedBox(height: 20),
+          _buildSectionHeader('รายการวันนี้'),
+          const SizedBox(height: 8),
+          ...daily.items.map((item) => _EarningCard(
+            item: item,
+            onTap: () => _openSheet(item.sheetId),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailySummaryCard(DailyEarningsSummary daily) {
+    final itemsWord = daily.count <= 1 ? 'รายการ' : 'รายการ';
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F6FA),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2AB950).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.today_rounded,
+              color: Color(0xFF2AB950),
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'วันนี้',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _formatAmount(daily.total),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${daily.count} $itemsWord',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            Expanded(
-              child: _TabButton(
-                key: const Key('sheet_earnings_tab_monthly'),
-                label: 'รายเดือน',
-                isSelected: _selectedTab == 1,
-                onTap: () => setState(() => _selectedTab = 1),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthlyTab() {
+    final monthly = _summary.monthly;
+    if (monthly.groups.isEmpty) {
+      return _buildEmptyState('ยังไม่มีรายได้ในเดือนนี้');
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadEarnings,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+        children: [
+          _buildMonthlySummaryCard(monthly),
+          const SizedBox(height: 20),
+          if (monthly.trend.length >= 2) ...[
+            _buildSectionHeader('แนวโน้มรายวัน'),
+            const SizedBox(height: 12),
+            _buildTrendChart(monthly.trend),
+            const SizedBox(height: 20),
+            _buildSectionHeader('รายการตามวันที่'),
+            const SizedBox(height: 8),
+          ] else ...[
+            _buildSectionHeader('รายการตามวันที่'),
+            const SizedBox(height: 8),
+          ],
+          ...monthly.groups.expand((group) => _buildDateGroup(group)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthlySummaryCard(MonthlyEarningsSummary monthly) {
+    final itemsWord = monthly.count <= 1 ? 'รายการ' : 'รายการ';
+    final now = DateTime.now();
+    final monthNames = [
+      '', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+      'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม',
+    ];
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F6FA),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.calendar_month_rounded,
+              color: AppColors.primary,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  monthNames[now.month],
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _formatAmount(monthly.total),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
               ),
+              child: Text(
+                '${monthly.count} $itemsWord',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendChart(List<EarningsTrend> trend) {
+    if (trend.isEmpty) return const SizedBox.shrink();
+
+    final maxTotal = trend.fold<double>(
+      0,
+      (max, t) => t.total > max ? t.total : max,
+    );
+    if (maxTotal == 0) return const SizedBox.shrink();
+
+    return Container(
+      height: 120,
+      padding: const EdgeInsets.fromLTRB(4, 16, 4, 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F6FA),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final barWidth = (constraints.maxWidth - (trend.length - 1) * 4) /
+              trend.length;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: trend.map((entry) {
+              final fraction = entry.total / maxTotal;
+              final barHeight = math.min(fraction * 80, 80.0);
+              return Padding(
+                padding: EdgeInsets.only(
+                  right: entry != trend.last ? 4 : 0,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      _formatCompact(entry.total),
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Colors.black45,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      width: math.min(math.max(barWidth, 8.0), 40.0),
+                      height: barHeight,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF2A5DB9), Color(0xFF2AB9A7)],
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                        ),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(4),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      entry.date.substring(8),
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Colors.black38,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _buildDateGroup(MonthlyGroup group) {
+    final dateParts = group.date.split('-');
+    final day = dateParts.length > 2 ? int.tryParse(dateParts[2]) ?? 1 : 1;
+    final month = dateParts.length > 1 ? int.tryParse(dateParts[1]) ?? 1 : 1;
+    final year = dateParts.isNotEmpty ? int.tryParse(dateParts[0]) ?? 0 : 0;
+
+    final thaiMonths = [
+      '', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+      'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.',
+    ];
+    final headerText = '$day ${thaiMonths[month]} ${year + 543}';
+
+    return [
+      Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 8),
+        child: Row(
+          children: [
+            Text(
+              headerText,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.primary,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${group.count} รายการ  ${_formatAmount(group.total)}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+      ...group.items.map((item) => _EarningCard(
+        item: item,
+        onTap: () => _openSheet(item.sheetId),
+      )),
+    ];
+  }
+
+  Widget _buildSectionHeader(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
+        color: Color(0xFF1A1A1A),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.receipt_long_outlined, size: 56, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
           ],
         ),
@@ -158,90 +531,36 @@ class _SheetEarningsPageState extends State<SheetEarningsPage> {
     );
   }
 
-  Widget _buildEarningsList(
-    List<RevenueItemModel> items, {
-    required String emptyMessage,
-  }) {
-    if (items.isEmpty) {
-      return Center(
-        child: Text(
-          emptyMessage,
-          style: const TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        return _EarningCard(item: items[index]);
-      },
-    );
-  }
-
   String _formatAmount(double amount) {
     if (amount % 1 == 0) return '${amount.toInt()} บาท';
     return '${amount.toStringAsFixed(2)} บาท';
   }
+
+  String _formatCompact(double amount) {
+    if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(1)}k';
+    }
+    if (amount % 1 == 0) return amount.toInt().toString();
+    return amount.toStringAsFixed(0);
+  }
+
+  void _openSheet(String sheetId) {
+    if (sheetId.isEmpty) return;
+    Get.to(() => PreviewSheetPage(sheetId: sheetId));
+  }
 }
 
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    super.key,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
+class _EarningCard extends StatelessWidget {
+  const _EarningCard({required this.item, this.onTap});
 
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
+  final RevenueItemModel item;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : [],
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: isSelected ? AppColors.primary : const Color(0xFF8A8A8A),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EarningCard extends StatelessWidget {
-  const _EarningCard({required this.item});
-
-  final RevenueItemModel item;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
+      child: Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -314,6 +633,7 @@ class _EarningCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

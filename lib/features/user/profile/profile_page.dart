@@ -39,7 +39,8 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
+class _ProfilePageState extends State<ProfilePage>
+    with SingleTickerProviderStateMixin {
   late final ProfilePageController _controller;
   late final TabController _tabController;
   final ImagePicker _picker = ImagePicker();
@@ -166,10 +167,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   Future<void> _toggleSharePost(PostModel post) async {
     final result = await PostsService.sharePost(post.id);
     if (result.success) {
-      _updatePostInAllLists(post, (p) => p.copyWith(
-        isShared: true,
-        shareCount: result.shareCount ?? p.shareCount,
-      ));
+      _updatePostInAllLists(
+        post,
+        (p) => p.copyWith(
+          isShared: true,
+          shareCount: result.shareCount ?? p.shareCount,
+        ),
+      );
     }
   }
 
@@ -177,20 +181,20 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     final result = await PostsService.unsharePost(post.id);
     if (!result.success) return;
     _removePostFromShared(post);
-    _updatePostInAllLists(post, (p) => p.copyWith(
-      isShared: false,
-      shareCount: result.shareCount ?? p.shareCount,
-    ));
+    _updatePostInAllLists(
+      post,
+      (p) => p.copyWith(
+        isShared: false,
+        shareCount: result.shareCount ?? p.shareCount,
+      ),
+    );
   }
 
   void _updatePostInAllLists(
     PostModel post,
     PostModel Function(PostModel) transform,
   ) {
-    for (final notifier in [
-      _controller.userPosts,
-      _controller.sharedPosts,
-    ]) {
+    for (final notifier in [_controller.userPosts, _controller.sharedPosts]) {
       final list = notifier.value;
       final index = list.indexWhere((p) => p.id == post.id);
       if (index != -1) {
@@ -247,7 +251,8 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     }
 
     final detailController = TextEditingController();
-    var selectedType = ReportType.SPAM;
+    final reportTypes = ReportType.forTable('posts');
+    var selectedType = reportTypes.first;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -289,29 +294,18 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<ReportType>(
+                      isExpanded: true,
                       initialValue: selectedType,
                       decoration: const InputDecoration(
                         labelText: 'เหตุผล',
                         border: OutlineInputBorder(),
                       ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: ReportType.SPAM,
-                          child: Text('สแปม'),
-                        ),
-                        DropdownMenuItem(
-                          value: ReportType.ABUSE,
-                          child: Text('เนื้อหาไม่เหมาะสม'),
-                        ),
-                        DropdownMenuItem(
-                          value: ReportType.BUG,
-                          child: Text('ข้อมูลผิดพลาด'),
-                        ),
-                        DropdownMenuItem(
-                          value: ReportType.OTHER,
-                          child: Text('อื่นๆ'),
-                        ),
-                      ],
+                      items: reportTypes
+                          .map((type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type.displayName),
+                              ))
+                          .toList(),
                       onChanged: (value) {
                         if (value != null) {
                           setSheetState(() => selectedType = value);
@@ -423,10 +417,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                         onSheetTap: post.sheetId == null
                             ? null
                             : () => Get.to(
-                                  () => PreviewSheetPage(sheetId: post.sheetId!),
-                                ),
-                        onLikeTap: () =>
-                            _toggleLikePost(post, postsNotifier),
+                                () => PreviewSheetPage(sheetId: post.sheetId!),
+                              ),
+                        onLikeTap: () => _toggleLikePost(post, postsNotifier),
                         onCommentTap: () => _openComments(post),
                         onShareTap: () {
                           if (post.isShared) {
@@ -489,9 +482,14 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 onOpenPreferences: _openPreferences,
                 onOpenNotifications: _openNotifications,
               ),
-              const SizedBox(height: 12),
-              ProfileLogoutButton(onPressed: _showLogoutConfirmation),
-              const SizedBox(height: 24),
+              // const SizedBox(height: 12),
+              // ProfileLogoutButton(onPressed: _showLogoutConfirmation),
+              const SizedBox(height: 18),
+              // Text(
+              //   'กิจกรรมล่าสุด',
+              //   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              // ).paddingSymmetric(horizontal: 20),
+              // const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: CreatePostPrompt(onTap: _openCreatePostPage),

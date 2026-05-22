@@ -208,7 +208,8 @@ class _CommunityPageState extends State<CommunityPage> {
     }
 
     final detailController = TextEditingController();
-    var selectedType = ReportType.SPAM;
+    final reportTypes = ReportType.forTable('posts');
+    var selectedType = reportTypes.first;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -250,29 +251,18 @@ class _CommunityPageState extends State<CommunityPage> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<ReportType>(
+                      isExpanded: true,
                       initialValue: selectedType,
                       decoration: const InputDecoration(
                         labelText: 'เหตุผล',
                         border: OutlineInputBorder(),
                       ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: ReportType.SPAM,
-                          child: Text('สแปม'),
-                        ),
-                        DropdownMenuItem(
-                          value: ReportType.ABUSE,
-                          child: Text('เนื้อหาไม่เหมาะสม'),
-                        ),
-                        DropdownMenuItem(
-                          value: ReportType.BUG,
-                          child: Text('ข้อมูลผิดพลาด'),
-                        ),
-                        DropdownMenuItem(
-                          value: ReportType.OTHER,
-                          child: Text('อื่นๆ'),
-                        ),
-                      ],
+                      items: reportTypes
+                          .map((type) => DropdownMenuItem(
+                                value: type,
+                                child: Text(type.displayName),
+                              ))
+                          .toList(),
                       onChanged: (value) {
                         if (value != null) {
                           setSheetState(() => selectedType = value);

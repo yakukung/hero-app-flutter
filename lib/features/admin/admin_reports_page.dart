@@ -102,74 +102,148 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     );
   }
 
+  List<AdminReportItem> _reportsForTable(List<AdminReportItem> reports, String table) {
+    return reports.where((r) => r.referenceTable == table).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AdminColors.background,
-      appBar: AppBar(
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
         backgroundColor: AdminColors.background,
-        surfaceTintColor: AdminColors.background,
-        elevation: 0,
-        title: const Text(
-          'แจ้งปัญหา',
-          style: TextStyle(
-            color: AdminColors.text,
-            fontWeight: FontWeight.w800,
+        appBar: AppBar(
+          backgroundColor: AdminColors.background,
+          surfaceTintColor: AdminColors.background,
+          elevation: 0,
+          title: const Text(
+            'แจ้งปัญหา',
+            style: TextStyle(
+              color: AdminColors.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          centerTitle: true,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(56),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AdminColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                child: TabBar(
+                  indicator: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: const Color(0xFF1A1A1A),
+                  unselectedLabelColor: Colors.grey,
+                  labelStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  dividerColor: Colors.transparent,
+                  splashBorderRadius: BorderRadius.circular(999),
+                  tabs: const [
+                    Tab(text: 'ชีต'),
+                    Tab(text: 'โพสต์'),
+                    Tab(text: 'โปรไฟล์'),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
-        centerTitle: true,
-      ),
-      body: FutureBuilder<List<AdminReportItem>>(
-      future: _reportsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return AdminEmptyStatePage(
-            title: 'แจ้งปัญหา',
-            icon: Icons.error_outline,
-            message: snapshot.error.toString().replaceFirst('Exception: ', ''),
-            onRefresh: _refresh,
-          );
-        }
-
-        final reports = snapshot.data ?? const <AdminReportItem>[];
-        if (reports.isEmpty) {
-          return AdminEmptyStatePage(
-            title: 'แจ้งปัญหา',
-            icon: Icons.report_problem_outlined,
-            message: 'ยังไม่มีรายงานแจ้งปัญหา',
-            onRefresh: _refresh,
-          );
-        }
-
-        return RefreshIndicator(
-          onRefresh: _refresh,
-          child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
-            itemCount: reports.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return AdminSectionHeader(
-                  title: 'รายงานแจ้งปัญหา',
-                  subtitle: '${reports.length} รายการ',
+        body: SafeArea(
+          top: false,
+          child: FutureBuilder<List<AdminReportItem>>(
+            future: _reportsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return AdminEmptyStatePage(
+                  title: 'แจ้งปัญหา',
+                  icon: Icons.error_outline,
+                  message: snapshot.error.toString().replaceFirst('Exception: ', ''),
+                  onRefresh: _refresh,
                 );
               }
 
-              final report = reports[index - 1];
-              return _AdminReportCard(
-                report: report,
-                onStatusSelected: (status) => _updateStatus(report, status),
-                onActionSelected: (action) => _runAction(report, action),
+              final reports = snapshot.data ?? const <AdminReportItem>[];
+              if (reports.isEmpty) {
+                return AdminEmptyStatePage(
+                  title: 'แจ้งปัญหา',
+                  icon: Icons.report_problem_outlined,
+                  message: 'ยังไม่มีรายงานแจ้งปัญหา',
+                  onRefresh: _refresh,
+                );
+              }
+
+              final sheetReports = _reportsForTable(reports, 'sheets');
+              final postReports = _reportsForTable(reports, 'posts');
+              final userReports = _reportsForTable(reports, 'users');
+
+              return TabBarView(
+                children: [
+                  _buildReportTab(sheetReports, 'sheets'),
+                  _buildReportTab(postReports, 'posts'),
+                  _buildReportTab(userReports, 'users'),
+                ],
               );
             },
           ),
-        );
-      },
-    ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportTab(List<AdminReportItem> reports, String table) {
+    if (reports.isEmpty) {
+      return AdminEmptyStatePage(
+        title: '',
+        icon: Icons.report_problem_outlined,
+        message: table == 'sheets'
+            ? 'ไม่มีรายงานชีต'
+            : table == 'posts'
+                ? 'ไม่มีรายงานโพสต์'
+                : 'ไม่มีรายงานโปรไฟล์',
+        onRefresh: _refresh,
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        itemCount: reports.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final report = reports[index];
+          return _AdminReportCard(
+            report: report,
+            onStatusSelected: (status) => _updateStatus(report, status),
+            onActionSelected: (action) => _runAction(report, action),
+          );
+        },
+      ),
     );
   }
 }
@@ -238,7 +312,7 @@ class _AdminReportCard extends StatelessWidget {
               spacing: 12,
               runSpacing: 6,
               children: [
-                AdminInfoText(icon: Icons.flag_outlined, text: report.type.name),
+                AdminInfoText(icon: Icons.flag_outlined, text: report.type.displayName),
                 AdminInfoText(
                   icon: Icons.person_outline,
                   text: report.reporterName.isEmpty

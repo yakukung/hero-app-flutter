@@ -4,9 +4,16 @@ import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/core/models/sheet_model.dart';
 
 class PreviewSheetContentSection extends StatelessWidget {
-  const PreviewSheetContentSection({super.key, required this.sheet});
+  const PreviewSheetContentSection({
+    super.key,
+    required this.sheet,
+    this.onAuthorTap,
+    this.onReportTap,
+  });
 
   final SheetModel sheet;
+  final VoidCallback? onAuthorTap;
+  final VoidCallback? onReportTap;
 
   @override
   Widget build(BuildContext context) {
@@ -81,11 +88,15 @@ class PreviewSheetContentSection extends StatelessWidget {
                   child: const Icon(Icons.person, size: 18, color: Colors.grey),
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  sheet.authorName ?? 'ไม่ระบุ',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                GestureDetector(
+                  onTap: onAuthorTap,
+                  child: Text(
+                    sheet.authorName ?? 'ไม่ระบุ',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
                 const Spacer(),
@@ -114,6 +125,22 @@ class PreviewSheetContentSection extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: onReportTap,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.flag_outlined,
+                      size: 18,
+                      color: Colors.redAccent,
+                    ),
                   ),
                 ),
               ],

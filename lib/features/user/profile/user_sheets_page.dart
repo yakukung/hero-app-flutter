@@ -4,10 +4,9 @@ import 'package:hero_app_flutter/core/models/sheet_model.dart';
 import 'package:hero_app_flutter/core/services/sheets_service.dart';
 import 'package:hero_app_flutter/features/user/profile/sheet_earnings_page.dart';
 import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
+import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
-
-enum _SheetTab { mySheets, purchasedSheets }
 
 class UserSheetsPage extends StatefulWidget {
   final String userId;
@@ -18,8 +17,9 @@ class UserSheetsPage extends StatefulWidget {
   State<UserSheetsPage> createState() => _UserSheetsPageState();
 }
 
-class _UserSheetsPageState extends State<UserSheetsPage> {
-  _SheetTab _selectedTab = _SheetTab.mySheets;
+class _UserSheetsPageState extends State<UserSheetsPage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
 
   bool _isLoading = false;
   String _errorMessage = '';
@@ -32,7 +32,22 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
   void initState() {
     super.initState();
     _currentUserId = GetStorage().read('uid')?.toString() ?? '';
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+        if (_tabController.index == 1 && !_purchasedLoaded) {
+          _fetchPurchasedSheets();
+        }
+      }
+    });
     _fetchMySheets();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchMySheets() async {
@@ -77,18 +92,10 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
   }
 
   Future<void> _refreshCurrentTab() async {
-    if (_selectedTab == _SheetTab.mySheets) {
+    if (_tabController.index == 0) {
       await _fetchMySheets();
     } else {
       await _fetchPurchasedSheets();
-    }
-  }
-
-  void _onTabSelected(_SheetTab tab) {
-    if (tab == _selectedTab) return;
-    setState(() => _selectedTab = tab);
-    if (tab == _SheetTab.purchasedSheets && !_purchasedLoaded) {
-      _fetchPurchasedSheets();
     }
   }
 
@@ -118,55 +125,39 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
       child: Container(
         height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F3F8),
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(999),
         ),
-        child: Row(
-          children: [
-            _buildTabItem(
-              label: 'ชีตของฉัน',
-              tab: _SheetTab.mySheets,
-            ),
-            _buildTabItem(
-              label: 'ชีตที่ซื้อแล้ว',
-              tab: _SheetTab.purchasedSheets,
-            ),
+        child: TabBar(
+          controller: _tabController,
+          indicator: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          indicatorSize: TabBarIndicatorSize.tab,
+          labelColor: const Color(0xFF1A1A1A),
+          unselectedLabelColor: Colors.grey,
+          labelStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+          dividerColor: Colors.transparent,
+          splashBorderRadius: BorderRadius.circular(999),
+          tabs: const [
+            Tab(text: 'ชีตของฉัน'),
+            Tab(text: 'ชีตที่ซื้อแล้ว'),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTabItem({required String label, required _SheetTab tab}) {
-    final bool isSelected = _selectedTab == tab;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _onTabSelected(tab),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          margin: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              color: isSelected ? AppColors.primary : Colors.black45,
-            ),
-          ),
         ),
       ),
     );
@@ -245,14 +236,16 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
       );
     }
 
-    final sheets = _selectedTab == _SheetTab.mySheets
-        ? _mySheets
-        : _purchasedSheets;
+    return IndexedStack(
+      index: _tabController.index,
+      children: [
+        _tabContent(_mySheets, emptyText: 'คุณยังไม่มีชีตที่สร้างไว้'),
+        _tabContent(_purchasedSheets, emptyText: 'คุณยังไม่มีชีตที่ซื้อ'),
+      ],
+    );
+  }
 
-    final emptyText = _selectedTab == _SheetTab.mySheets
-        ? 'คุณยังไม่มีชีตที่สร้างไว้'
-        : 'คุณยังไม่มีชีตที่ซื้อ';
-
+  Widget _tabContent(List<SheetModel> sheets, {required String emptyText}) {
     return RefreshIndicator(
       onRefresh: _refreshCurrentTab,
       child: sheets.isEmpty
@@ -295,7 +288,7 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
   }
 
   Widget _buildSheetCard(SheetModel sheet) {
-    final bool isMyTab = _selectedTab == _SheetTab.mySheets;
+    final bool isMyTab = _tabController.index == 0;
     final bool canManageSheet = isMyTab &&
         _currentUserId.isNotEmpty &&
         sheet.authorId == _currentUserId;
@@ -435,42 +428,24 @@ class _UserSheetsPageState extends State<UserSheetsPage> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('ยืนยันการลบชีต'),
-          content: Text('คุณต้องการลบชีต "${sheet.title}" ใช่หรือไม่?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('ยกเลิก'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text(
-                'ลบ',
-                style: TextStyle(color: Colors.redAccent),
-              ),
-            ),
-          ],
+    await showCustomDialog(
+      title: 'ยืนยันการลบชีต',
+      message: 'คุณต้องการลบชีต "${sheet.title}" ใช่หรือไม่?',
+      isConfirm: true,
+      isDanger: true,
+      okButtonLabel: 'ลบ',
+      onOk: () async {
+        final result = await SheetsService.deleteSheet(
+          sheetId: sheet.id,
+          buyerCount: sheet.buyerCount,
         );
+        if (!mounted) return;
+        _showSnackBar(result.message, isError: !result.success);
+        if (result.success) {
+          await _fetchMySheets();
+        }
       },
     );
-
-    if (confirmed != true) return;
-
-    final result = await SheetsService.deleteSheet(
-      sheetId: sheet.id,
-      buyerCount: sheet.buyerCount,
-    );
-
-    if (!mounted) return;
-
-    _showSnackBar(result.message, isError: !result.success);
-    if (result.success) {
-      await _fetchMySheets();
-    }
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
