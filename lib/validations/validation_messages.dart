@@ -5,6 +5,18 @@ class ValidationMessages {
     return 'รหัสผ่านต้องมีอย่างน้อย $minLength ตัวอักษร';
   }
 
+  static const String usernameRequired = 'กรุณากรอกชื่อผู้ใช้';
+  static String usernameLengthRange(int min, int max) {
+    return 'ชื่อผู้ใช้ต้องมีความยาว $min ถึง $max ตัวอักษร';
+  }
+
+  static const String usernameInvalidChars =
+      'ชื่อผู้ใช้สามารถใช้ได้เฉพาะตัวอักษร A-Z, a-z, 0-9 และ _';
+  static const String passwordRequireUppercase =
+      'รหัสผ่านต้องมีตัวพิมพ์ใหญ่อย่างน้อย 1 ตัว';
+  static const String passwordRequireDigit =
+      'รหัสผ่านต้องมีตัวเลขอย่างน้อย 1 ตัว';
+
   static const String emailRequired = 'กรุณากรอกอีเมล';
 
   static const String incompleteInfoTitle = 'ข้อมูลไม่ครบถ้วน';

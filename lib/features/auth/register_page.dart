@@ -79,7 +79,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   TextFormField(
                     key: const Key('register_username_field'),
                     controller: _usernameCtl,
-                    validator: validateUsernameOrEmail,
+                    validator: validateUsername,
                     decoration: _inputDecoration(
                       hintText: 'ชื่อผู้ใช้',
                       icon: Icons.person,
@@ -102,7 +102,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     key: const Key('register_password_field'),
                     controller: _passwordCtl,
                     obscureText: _obscurePassword,
-                    validator: validatePassword,
+                    validator: validateStrongPassword,
                     decoration: _passwordDecoration(
                       hintText: 'รหัสผ่าน',
                       obscureValue: _obscurePassword,
