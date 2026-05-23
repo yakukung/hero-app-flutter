@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -22,6 +23,7 @@ class AppController extends GetxController {
   final RxString errorMessage = ''.obs;
 
   final SessionStore _sessionStore;
+  Timer? _subscriptionCheckTimer;
 
   String get uid => user.value?.id ?? '';
   String get username => user.value?.username ?? '';
@@ -55,7 +57,22 @@ class AppController extends GetxController {
     }
 
     await fetchUserData();
+    _startSubscriptionMonitor();
     isReady.value = true;
+  }
+
+  void _startSubscriptionMonitor() {
+    _subscriptionCheckTimer?.cancel();
+    _subscriptionCheckTimer = Timer.periodic(
+      const Duration(minutes: 5),
+      (_) => refreshSubscriptionStatus(),
+    );
+  }
+
+  @override
+  void onClose() {
+    _subscriptionCheckTimer?.cancel();
+    super.onClose();
   }
 
   void setProfileImage(String url) {
@@ -123,6 +140,16 @@ class AppController extends GetxController {
     if (result.success && result.data != null) {
       subscriptionStatus.value = result.data;
     }
+
+    _syncRoleWithSubscription();
+  }
+
+  void _syncRoleWithSubscription() {
+    if (hasPremiumSubscription) return;
+    final current = user.value?.roleName;
+    if (current == null || !current.contains('PREMIUM')) return;
+    user.value = user.value!.copyWith(roleName: 'MEMBER');
+    _sessionStore.writeRoleName('MEMBER');
   }
 
   Map<String, dynamic> _extractUserMap(dynamic responseBody) {
@@ -171,6 +198,8 @@ class AppController extends GetxController {
   }
 
   void clearUserData({bool tokenExpired = false}) {
+    _subscriptionCheckTimer?.cancel();
+    _subscriptionCheckTimer = null;
     user.value = null;
     subscriptionStatus.value = null;
     errorMessage.value = '';

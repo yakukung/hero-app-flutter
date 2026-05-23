@@ -305,10 +305,11 @@ class _TopUpStateMessage extends StatelessWidget {
 }
 
 String _formatDateTime(DateTime dateTime) {
-  final day = dateTime.day.toString().padLeft(2, '0');
-  final month = dateTime.month.toString().padLeft(2, '0');
-  final year = dateTime.year.toString();
-  final hour = dateTime.hour.toString().padLeft(2, '0');
-  final minute = dateTime.minute.toString().padLeft(2, '0');
+  final local = dateTime.toLocal();
+  final day = local.day.toString().padLeft(2, '0');
+  final month = local.month.toString().padLeft(2, '0');
+  final year = local.year.toString();
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
   return '$day/$month/$year $hour:$minute';
 }

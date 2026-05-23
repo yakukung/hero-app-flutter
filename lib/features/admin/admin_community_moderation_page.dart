@@ -22,6 +22,7 @@ class _AdminCommunityModerationPageState
     extends State<AdminCommunityModerationPage> {
   final _sessionStore = SessionStore();
   final Set<String> _updatingPostIds = <String>{};
+  final Map<String, StatusFlag> _postStatusOverrides = <String, StatusFlag>{};
   late Future<List<PostModel>> _postsFuture;
   final _searchController = TextEditingController();
   String _searchQuery = '';
@@ -81,6 +82,7 @@ class _AdminCommunityModerationPageState
       if (!mounted) return false;
       final messenger = ScaffoldMessenger.of(context);
       if (_isOkResponse(response.statusCode)) {
+        setState(() => _postStatusOverrides[post.id] = status);
         messenger.showSnackBar(
           SnackBar(
             content: Text(
@@ -88,7 +90,6 @@ class _AdminCommunityModerationPageState
             ),
           ),
         );
-        await _refresh();
         return true;
       }
 
@@ -264,8 +265,13 @@ class _AdminCommunityModerationPageState
                 }
 
                 final post = posts[index - 1];
+                final overriddenStatus = _postStatusOverrides[post.id];
+                final statusFlag = overriddenStatus ?? post.statusFlag;
+                final visibleFlag = overriddenStatus == null
+                    ? post.visibleFlag
+                    : overriddenStatus == StatusFlag.ACTIVE;
                 final nextStatus =
-                    _isContentVisible(post.statusFlag, post.visibleFlag)
+                    _isContentVisible(statusFlag, visibleFlag)
                         ? StatusFlag.INACTIVE
                         : StatusFlag.ACTIVE;
                 return _AdminPostCard(
@@ -273,6 +279,8 @@ class _AdminCommunityModerationPageState
                   isUpdating: _updatingPostIds.contains(post.id),
                   onShowComments: () => _showComments(post),
                   onToggleStatus: () => _updatePostStatus(post, nextStatus),
+                  effectiveStatus: _effectiveContentStatus(statusFlag, visibleFlag),
+                  isVisible: _isContentVisible(statusFlag, visibleFlag),
                 );
               },
             ),
@@ -289,19 +297,20 @@ class _AdminPostCard extends StatelessWidget {
     required this.isUpdating,
     required this.onShowComments,
     required this.onToggleStatus,
+    required this.effectiveStatus,
+    required this.isVisible,
   });
 
   final PostModel post;
   final bool isUpdating;
   final VoidCallback onShowComments;
   final VoidCallback onToggleStatus;
+  final StatusFlag effectiveStatus;
+  final bool isVisible;
 
   @override
   Widget build(BuildContext context) {
-    final effectiveStatus =
-        _effectiveContentStatus(post.statusFlag, post.visibleFlag);
     final statusColor = _contentStatusColor(effectiveStatus);
-    final isVisible = _isContentVisible(post.statusFlag, post.visibleFlag);
     final authorName = post.author.username?.isNotEmpty == true
         ? post.author.username!
         : post.userId;
@@ -559,7 +568,6 @@ class _AdminPostCommentsSheetState extends State<_AdminPostCommentsSheet> {
             ),
           ),
         );
-        await _refresh();
         return;
       }
 

@@ -51,13 +51,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   String _timeAgo(DateTime date) {
+    final local = date.toLocal();
     final now = DateTime.now();
     final diff = now.difference(date);
     if (diff.inMinutes < 1) return 'เมื่อสักครู่';
     if (diff.inMinutes < 60) return '${diff.inMinutes} นาทีที่แล้ว';
     if (diff.inHours < 24) return '${diff.inHours} ชั่วโมงที่แล้ว';
     if (diff.inDays < 7) return '${diff.inDays} วันที่แล้ว';
-    return '${date.day}/${date.month}/${date.year}';
+    return '${local.day}/${local.month}/${local.year}';
   }
 
   @override

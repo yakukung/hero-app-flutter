@@ -507,6 +507,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
 }
 
 String _formatReviewDate(DateTime dt) {
+  final local = dt.toLocal();
   final now = DateTime.now();
   final diff = now.difference(dt);
   String dayStr;
@@ -515,10 +516,10 @@ String _formatReviewDate(DateTime dt) {
   } else if (diff.inDays == 1) {
     dayStr = 'เมื่อวาน';
   } else {
-    dayStr = '${dt.day}/${dt.month}/${dt.year}';
+    dayStr = '${local.day}/${local.month}/${local.year}';
   }
-  final hour = dt.hour.toString().padLeft(2, '0');
-  final minute = dt.minute.toString().padLeft(2, '0');
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
   return '$dayStr  $hour:$minute';
 }
 

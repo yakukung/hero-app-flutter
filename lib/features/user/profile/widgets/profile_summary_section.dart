@@ -14,6 +14,7 @@ class ProfileSummarySection extends StatelessWidget {
     required this.followingsCount,
     required this.onEditAvatar,
     this.isPremium = false,
+    this.expiresAt,
   });
 
   final String uid;
@@ -24,6 +25,7 @@ class ProfileSummarySection extends StatelessWidget {
   final int followingsCount;
   final VoidCallback onEditAvatar;
   final bool isPremium;
+  final DateTime? expiresAt;
 
   @override
   Widget build(BuildContext context) {
@@ -58,38 +60,52 @@ class ProfileSummarySection extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isPremium
-                        ? const Color(0xFFFFB800)
-                        : Colors.grey,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isPremium) ...[
-                        const Icon(
-                          Icons.auto_awesome,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      Text(
-                        isPremium ? 'PREMIUM' : 'สมาชิกทั่วไป',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isPremium ? const Color(0xFFFFB800) : Colors.grey,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isPremium) ...[
+                            const Icon(
+                              Icons.auto_awesome,
+                              size: 14,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(
+                            isPremium ? 'PREMIUM' : 'สมาชิกทั่วไป',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isPremium && expiresAt != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Text(
+                          'หมดอายุ ${expiresAt!.toLocal().day}/${expiresAt!.toLocal().month}/${expiresAt!.toLocal().year}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(

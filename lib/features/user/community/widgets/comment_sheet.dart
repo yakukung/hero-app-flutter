@@ -323,7 +323,7 @@ class _CommentSheetState extends State<CommentSheet> {
   Widget _buildCommentTile(PostCommentModel comment) {
     final displayName =
         comment.user?.username ?? 'ผู้ใช้ ${comment.userId}'.trim();
-    final rawDate = comment.createdAt.toString();
+    final rawDate = comment.createdAt.toLocal().toString();
     final formattedDate = rawDate.length >= 16
         ? rawDate.substring(0, 16)
         : rawDate;

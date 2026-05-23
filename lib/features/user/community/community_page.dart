@@ -115,7 +115,7 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   Widget _buildPostCard(PostModel post) {
-    final formattedDate = post.createdAt.toString().substring(0, 16);
+    final formattedDate = post.createdAt.toLocal().toString().substring(0, 16);
 
     return CommunityPostCard(
       post: post,

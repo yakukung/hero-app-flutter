@@ -126,11 +126,12 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   String _formatPostDate2(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final hour = date.hour.toString().padLeft(2, '0');
-    final minute = date.minute.toString().padLeft(2, '0');
-    return '$day/$month/${date.year}  $hour:$minute';
+    final local = date.toLocal();
+    final day = local.day.toString().padLeft(2, '0');
+    final month = local.month.toString().padLeft(2, '0');
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$day/$month/${local.year}  $hour:$minute';
   }
 
   Future<void> _toggleLikePost(
@@ -456,6 +457,8 @@ class _ProfilePageState extends State<ProfilePage>
                 followingsCount: appController.followingsCount,
                 isPremium:
                     appController.subscriptionStatus.value?.isPremium ?? false,
+                expiresAt:
+                    appController.subscriptionStatus.value?.expiresAt,
                 onEditAvatar: _pickProfileImage,
               ),
               const SizedBox(height: 24),
