@@ -9,10 +9,12 @@ class AdminPaymentDetailPage extends StatefulWidget {
     super.key,
     required this.payment,
     required this.onStatusChanged,
+    this.expiresAt,
   });
 
   final AdminPaymentItem payment;
   final Future<bool> Function(PaymentStatus status) onStatusChanged;
+  final DateTime? expiresAt;
 
   @override
   State<AdminPaymentDetailPage> createState() => _AdminPaymentDetailPageState();
@@ -29,8 +31,6 @@ class _AdminPaymentDetailPageState extends State<AdminPaymentDetailPage> {
         return AdminColors.success;
       case PaymentStatus.FAILED:
         return AdminColors.danger;
-      case PaymentStatus.REFUNDED:
-        return AdminColors.muted;
     }
   }
 
@@ -42,8 +42,6 @@ class _AdminPaymentDetailPageState extends State<AdminPaymentDetailPage> {
         return 'สำเร็จ';
       case PaymentStatus.FAILED:
         return 'ไม่ผ่าน';
-      case PaymentStatus.REFUNDED:
-        return 'คืนเงิน';
     }
   }
 
@@ -247,6 +245,18 @@ class _AdminPaymentDetailPageState extends State<AdminPaymentDetailPage> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  if (widget.expiresAt != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'หมดอายุ ${_formatDate(widget.expiresAt!)}',
+                      style: const TextStyle(
+                        fontFamily: AppFonts.sukhumvit,
+                        color: AdminColors.muted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                   const Divider(height: 24),
                   _InfoRow(
                     icon: Icons.tag,
@@ -330,6 +340,13 @@ class _AdminPaymentDetailPageState extends State<AdminPaymentDetailPage> {
     );
   }
 }
+
+String _formatDate(DateTime dateTime) {
+  final local = dateTime.toLocal();
+  return '${_two(local.day)}/${_two(local.month)}/${local.year}';
+}
+
+String _two(int value) => value.toString().padLeft(2, '0');
 
 class _InfoRow extends StatelessWidget {
   const _InfoRow({

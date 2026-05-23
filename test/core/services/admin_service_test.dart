@@ -42,13 +42,6 @@ API_PORT=3000
         return http.Response('{}', 200);
       });
 
-      await AdminService.updateReportStatus(
-        reportId: 'report-1',
-        referenceTable: 'posts',
-        statusFlag: 'REVIEWING',
-        token: 'admin-token',
-        client: client,
-      );
       await AdminService.submitReportAction(
         reportId: 'report-1',
         referenceTable: 'posts',
@@ -57,12 +50,7 @@ API_PORT=3000
         client: client,
       );
 
-      expect(seen, hasLength(2));
-      expect(seen.first, startsWith('PATCH /admin/reports/report-1/status'));
-      expect(jsonDecode(seen.first.split(' ').skip(2).join(' ')), {
-        'reference_table': 'posts',
-        'status_flag': 'REVIEWING',
-      });
+      expect(seen, hasLength(1));
       expect(seen.last, startsWith('POST /admin/reports/report-1/action'));
       expect(jsonDecode(seen.last.split(' ').skip(2).join(' ')), {
         'reference_table': 'posts',
@@ -91,14 +79,6 @@ API_PORT=3000
         token: 'admin-token',
         client: client,
       );
-      await AdminService.updatePaymentStatus(
-        paymentId: 'sheet-1',
-        paymentType: 'SHEET_PURCHASE',
-        paymentStatus: 'REFUNDED',
-        token: 'admin-token',
-        client: client,
-      );
-
       expect(
         seen[0],
         startsWith('PATCH /admin/wallet-top-ups/wallet-1/status'),

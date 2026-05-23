@@ -5,6 +5,7 @@ import 'package:hero_app_flutter/core/utils/api_utils.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/validations/auth_validators.dart';
 
 class ChangeUsernamePage extends StatefulWidget {
   const ChangeUsernamePage({super.key});
@@ -15,6 +16,7 @@ class ChangeUsernamePage extends StatefulWidget {
 
 class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
   final AppController _appController = Get.find<AppController>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final _usernameCtl = TextEditingController();
   bool _isLoading = false;
 
@@ -31,16 +33,10 @@ class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
   }
 
   Future<void> _changeUsername() async {
+    final formState = _formKey.currentState;
+    if (formState == null || !formState.validate()) return;
+
     final newUsername = _usernameCtl.text.trim();
-
-    if (newUsername.isEmpty) {
-      showCustomDialog(
-        title: 'ข้อมูลไม่ครบถ้วน',
-        message: 'กรุณากรอกชื่อผู้ใช้',
-      );
-      return;
-    }
-
     if (newUsername == _appController.username) {
       Get.back();
       return;
@@ -99,47 +95,52 @@ class _ChangeUsernamePageState extends State<ChangeUsernamePage> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            TextField(
-              controller: _usernameCtl,
-              decoration: InputDecoration(
-                labelText: 'ชื่อผู้ใช้ใหม่',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _changeUsername,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
+        child: Form(
+          key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _usernameCtl,
+                validator: validateUsername,
+                decoration: InputDecoration(
+                  labelText: 'ชื่อผู้ใช้ใหม่',
+                  border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 0,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
                 ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'บันทึกชื่อผู้ใช้ใหม่',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
               ),
-            ),
-          ],
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _changeUsername,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text(
+                          'บันทึกชื่อผู้ใช้ใหม่',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

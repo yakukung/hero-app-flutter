@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/models/sheet_model.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 
 class PreviewSheetContentSection extends StatelessWidget {
   const PreviewSheetContentSection({
@@ -82,10 +84,12 @@ class PreviewSheetContentSection extends StatelessWidget {
             const SizedBox(height: 16),
             Row(
               children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Colors.grey[200],
-                  child: const Icon(Icons.person, size: 18, color: Colors.grey),
+                ProfileAvatar(
+                  uid: sheet.authorId,
+                  username: sheet.authorName,
+                  imageUrl: sheet.authorAvatar,
+                  size: 32,
+                  apiEndpoint: apiEndpoint,
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(

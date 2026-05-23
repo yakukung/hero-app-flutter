@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/constants/app_fonts.dart';
-import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/controllers/admin_controller.dart';
 import 'package:hero_app_flutter/core/controllers/navigation_controller.dart';
 import 'package:hero_app_flutter/core/models/enums.dart';
@@ -12,6 +11,7 @@ import 'package:hero_app_flutter/features/admin/admin_user_profile_page.dart';
 import 'package:hero_app_flutter/shared/widgets/layout/main_sidebar.dart';
 import 'package:hero_app_flutter/shared/widgets/navigation/admin_navbottom.dart';
 import 'package:hero_app_flutter/shared/widgets/navigation/admin_navbar.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 import 'package:get/get.dart';
 
 class AdminHomePage extends StatefulWidget {
@@ -346,25 +346,11 @@ class _AdminUserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final profileImage = user.profileImage;
-    return Container(
-      width: 54,
-      height: 54,
-      decoration: BoxDecoration(
-        color: AdminColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: profileImage != null && profileImage.isNotEmpty
-          ? Image.network(
-              profileImage.startsWith('http')
-                  ? profileImage
-                  : '$apiEndpoint/$profileImage',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.person, color: AdminColors.primary),
-            )
-          : const Icon(Icons.person, color: AdminColors.primary),
+    return ProfileAvatar(
+      uid: user.id,
+      username: user.username,
+      imageUrl: user.profileImage,
+      size: 54,
     );
   }
 }

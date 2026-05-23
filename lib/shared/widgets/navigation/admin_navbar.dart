@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:hero_app_flutter/constants/app_assets.dart';
 import 'package:hero_app_flutter/core/controllers/app_controller.dart';
 import 'package:hero_app_flutter/features/admin/admin_design.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 import 'package:get/get.dart';
 
 class AdminNavbar extends GetView<AppController>
@@ -68,24 +68,11 @@ class AdminNavbar extends GetView<AppController>
               onTap: () {
                 Scaffold.of(context).openDrawer();
               },
-              child: CircleAvatar(
-                radius: 21,
-                backgroundColor: AdminColors.surface,
-                child: ClipOval(
-                  child: controller.profileImage.isNotEmpty
-                      ? Image.network(
-                          controller.profileImage,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                        )
-                      : Image.asset(
-                          AppAssets.defaultAvatar,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                        ),
-                ),
+              child: ProfileAvatar(
+                uid: controller.uid,
+                username: controller.username,
+                imageUrl: controller.profileImage,
+                size: 42,
               ),
             ),
           ],

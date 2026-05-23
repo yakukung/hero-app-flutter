@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/core/models/post_model.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 
 class CommunityPostCard extends StatelessWidget {
   final PostModel post;
   final String formattedDate;
-  final ImageProvider? avatarProvider;
   final VoidCallback onUserTap;
   final VoidCallback onReportTap;
   final VoidCallback? onSheetTap;
@@ -17,7 +17,6 @@ class CommunityPostCard extends StatelessWidget {
     super.key,
     required this.post,
     required this.formattedDate,
-    required this.avatarProvider,
     required this.onUserTap,
     required this.onReportTap,
     required this.onLikeTap,
@@ -42,15 +41,11 @@ class CommunityPostCard extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: onUserTap,
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.grey[300],
-                  backgroundImage:
-                      avatarProvider ??
-                      const NetworkImage(
-                            'https://cdn-icons-png.flaticon.com/512/847/847969.png',
-                          )
-                          as ImageProvider,
+                child: ProfileAvatar(
+                  uid: post.author.id,
+                  username: post.author.username,
+                  imageUrl: post.author.profileImage,
+                  size: 40,
                 ),
               ),
               const SizedBox(width: 12),

@@ -45,8 +45,7 @@ enum BillingInterval {
 enum PaymentStatus {
   PENDING,
   SUCCESSFUL,
-  FAILED,
-  REFUNDED;
+  FAILED;
 
   static PaymentStatus fromString(String status) {
     return PaymentStatus.values.firstWhere(
@@ -106,7 +105,6 @@ enum ReportType {
 
 enum ReportStatus {
   PENDING,
-  REVIEWING,
   RESOLVED,
   REJECTED;
 

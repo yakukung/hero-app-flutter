@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:hero_app_flutter/constants/app_assets.dart';
 import 'package:hero_app_flutter/core/controllers/app_controller.dart';
 import 'package:hero_app_flutter/core/controllers/navigation_controller.dart';
 import 'package:hero_app_flutter/core/session/app_session_coordinator.dart';
 import 'package:hero_app_flutter/features/auth/intro_page.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 
 class NavbarUser extends GetView<AppController> implements PreferredSizeWidget {
   const NavbarUser({super.key});
@@ -115,24 +115,11 @@ class NavbarUser extends GetView<AppController> implements PreferredSizeWidget {
                   ),
                 ),
               ],
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: Colors.grey[200],
-                child: ClipOval(
-                  child: controller.profileImage.isNotEmpty
-                      ? Image.network(
-                          controller.profileImage,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                        )
-                      : Image.asset(
-                          AppAssets.defaultAvatar,
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.cover,
-                        ),
-                ),
+              child: ProfileAvatar(
+                uid: controller.uid,
+                username: controller.username,
+                imageUrl: controller.profileImage,
+                size: 40,
               ),
             ),
           ],

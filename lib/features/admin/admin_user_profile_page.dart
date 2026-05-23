@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/controllers/admin_controller.dart';
 import 'package:hero_app_flutter/core/models/user_model.dart';
 import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/features/admin/admin_design.dart';
-import 'package:hero_app_flutter/features/admin/admin_edit_user_profile_page.dart'; // Import the new page
+import 'package:hero_app_flutter/features/admin/admin_edit_user_profile_page.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 import 'package:get/get.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/constants/app_fonts.dart';
@@ -102,34 +102,11 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AdminColors.border, width: 3),
-            color: AdminColors.surfaceAlt,
-          ),
-          child: ClipOval(
-            child: user.profileImage != null && user.profileImage!.isNotEmpty
-                ? Image.network(
-                    user.profileImage!.startsWith('http')
-                        ? user.profileImage!
-                        : '$apiEndpoint/${user.profileImage}',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(
-                          Icons.person_rounded,
-                          color: AdminColors.muted,
-                          size: 60,
-                        ),
-                  )
-                : const Icon(
-                    Icons.person_rounded,
-                    color: AdminColors.muted,
-                    size: 60,
-                  ),
-          ),
+        ProfileAvatar(
+          uid: user.id,
+          username: user.username,
+          imageUrl: user.profileImage,
+          size: 120,
         ),
         Positioned(
           right: 0,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/models/post_model.dart';
 import 'package:hero_app_flutter/core/models/user_model.dart';
@@ -10,9 +9,9 @@ import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
-import 'package:hero_app_flutter/constants/app_assets.dart';
 import 'package:hero_app_flutter/features/user/community/widgets/community_post_card.dart';
 import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 
 class UserProfileViewPage extends StatefulWidget {
   final String userId;
@@ -134,12 +133,7 @@ class _UserProfileViewPageState extends State<UserProfileViewPage>
     return user.followingsCount < listCount ? listCount : user.followingsCount;
   }
 
-  String? _resolveProfileImageUrl(String? profileImage) {
-    if (profileImage == null || profileImage.isEmpty) return null;
-    return profileImage.startsWith('http')
-        ? profileImage
-        : '$apiEndpoint/$profileImage';
-  }
+
 
   Future<void> _toggleFollow() async {
     final user = _user;
@@ -482,13 +476,6 @@ class _UserProfileViewPageState extends State<UserProfileViewPage>
               child: CommunityPostCard(
                 post: post,
                 formattedDate: _formatPostDate(post.createdAt),
-                avatarProvider: _resolveProfileImageUrl(
-                      post.author.profileImage,
-                    ) != null
-                    ? NetworkImage(
-                        _resolveProfileImageUrl(post.author.profileImage)!,
-                      )
-                    : null,
                 onUserTap: () {},
                 onReportTap: () {},
                 onSheetTap: post.sheetId == null
@@ -515,36 +502,16 @@ class _UserProfileViewPageState extends State<UserProfileViewPage>
   }
 
   Widget _buildProfile(UserModel user) {
-    final profileUrl = _resolveProfileImageUrl(user.profileImage);
     final isSelf = _currentUserId == user.id;
 
     return Column(
       children: [
         const SizedBox(height: 20),
-        CircleAvatar(
-          radius: 60,
-          backgroundColor: Colors.grey[200],
-          child: ClipOval(
-            child: profileUrl != null
-                ? Image.network(
-                    profileUrl,
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Image.asset(
-                      AppAssets.defaultAvatar,
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : Image.asset(
-                    AppAssets.defaultAvatar,
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
-                  ),
-          ),
+        ProfileAvatar(
+          uid: user.id,
+          username: user.username,
+          imageUrl: user.profileImage,
+          size: 120,
         ),
         const SizedBox(height: 16),
         Text(

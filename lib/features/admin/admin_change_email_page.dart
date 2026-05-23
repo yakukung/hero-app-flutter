@@ -3,47 +3,45 @@ import 'package:hero_app_flutter/core/controllers/admin_controller.dart';
 import 'package:hero_app_flutter/features/admin/admin_design.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
-import 'package:hero_app_flutter/validations/auth_validators.dart';
+import 'package:hero_app_flutter/validations/email_validators.dart';
 
-class AdminChangeUsernamePage extends StatefulWidget {
+class AdminChangeEmailPage extends StatefulWidget {
   final String userId;
-  final String currentUsername;
+  final String currentEmail;
 
-  const AdminChangeUsernamePage({
+  const AdminChangeEmailPage({
     super.key,
     required this.userId,
-    required this.currentUsername,
+    required this.currentEmail,
   });
 
   @override
-  State<AdminChangeUsernamePage> createState() =>
-      _AdminChangeUsernamePageState();
+  State<AdminChangeEmailPage> createState() => _AdminChangeEmailPageState();
 }
 
-class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
+class _AdminChangeEmailPageState extends State<AdminChangeEmailPage> {
   final AdminController _adminController = Get.find<AdminController>();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  late TextEditingController _usernameCtl;
+  final _emailCtl = TextEditingController();
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _usernameCtl = TextEditingController(text: widget.currentUsername);
+    _emailCtl.text = widget.currentEmail;
   }
 
   @override
   void dispose() {
-    _usernameCtl.dispose();
+    _emailCtl.dispose();
     super.dispose();
   }
 
-  Future<void> _changeUsername() async {
+  Future<void> _changeEmail() async {
     if (_formKey.currentState?.validate() != true) return;
 
-    final newUsername = _usernameCtl.text.trim();
-
-    if (newUsername == widget.currentUsername) {
+    final newEmail = _emailCtl.text.trim();
+    if (newEmail == widget.currentEmail) {
       Get.back();
       return;
     }
@@ -51,20 +49,18 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
     setState(() => _isLoading = true);
 
     try {
-      final success = await _adminController.updateUserUsername(
+      final success = await _adminController.updateUserEmail(
         widget.userId,
-        newUsername,
+        newEmail,
       );
 
       if (success) {
         if (mounted) {
           showCustomDialog(
             title: 'สำเร็จ',
-            message: 'เปลี่ยนชื่อผู้ใช้สำเร็จ',
+            message: 'เปลี่ยนอีเมลสำเร็จ',
             isSuccess: true,
-            onOk: () {
-              Get.back(result: true);
-            },
+            onOk: () => Get.back(result: true),
           );
         }
       } else {
@@ -73,12 +69,12 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
             title: 'เกิดข้อผิดพลาด',
             message: _adminController.errorMessage.value.isNotEmpty
                 ? _adminController.errorMessage.value
-                : 'ไม่สามารถเปลี่ยนชื่อผู้ใช้ได้ (อาจมีชื่อซ้ำ)',
+                : 'ไม่สามารถเปลี่ยนอีเมลได้',
           );
         }
       }
     } catch (e) {
-      debugPrint('Error changing username (admin): $e');
+      debugPrint('Error changing email (admin): $e');
       if (mounted) {
         showCustomDialog(
           title: 'เกิดข้อผิดพลาด',
@@ -96,7 +92,7 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
       backgroundColor: AdminColors.background,
       appBar: AppBar(
         title: const Text(
-          'เปลี่ยนชื่อผู้ใช้',
+          'เปลี่ยนอีเมล',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: AdminColors.text,
@@ -118,17 +114,17 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
           child: Column(
             children: [
               AdminPageHeader(
-                title: 'ชื่อผู้ใช้ใหม่',
-                subtitle: 'แก้ไขชื่อที่จะแสดงในระบบ',
-                icon: Icons.person_outline_rounded,
+                title: 'อีเมลใหม่',
+                subtitle: 'แก้ไขอีเมลของผู้ใช้',
+                icon: Icons.email_outlined,
               ),
               const SizedBox(height: 16),
               AdminCard(
                 child: TextFormField(
-                  controller: _usernameCtl,
-                  validator: validateUsername,
+                  controller: _emailCtl,
+                  validator: validateEmail,
                   decoration: const InputDecoration(
-                    labelText: 'ชื่อผู้ใช้ใหม่',
+                    labelText: 'อีเมลใหม่',
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
                   ),
@@ -139,7 +135,7 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _changeUsername,
+                  onPressed: _isLoading ? null : _changeEmail,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AdminColors.primary,
                     foregroundColor: Colors.white,
@@ -151,7 +147,7 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
-                          'บันทึกชื่อผู้ใช้ใหม่',
+                          'บันทึกอีเมลใหม่',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,

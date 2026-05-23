@@ -5,66 +5,61 @@ import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:get/get.dart';
 import 'package:hero_app_flutter/validations/auth_validators.dart';
 
-class AdminChangeUsernamePage extends StatefulWidget {
+class AdminChangePasswordPage extends StatefulWidget {
   final String userId;
-  final String currentUsername;
 
-  const AdminChangeUsernamePage({
-    super.key,
-    required this.userId,
-    required this.currentUsername,
-  });
+  const AdminChangePasswordPage({super.key, required this.userId});
 
   @override
-  State<AdminChangeUsernamePage> createState() =>
-      _AdminChangeUsernamePageState();
+  State<AdminChangePasswordPage> createState() =>
+      _AdminChangePasswordPageState();
 }
 
-class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
+class _AdminChangePasswordPageState extends State<AdminChangePasswordPage> {
   final AdminController _adminController = Get.find<AdminController>();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  late TextEditingController _usernameCtl;
+  final _passwordCtl = TextEditingController();
+  final _cfPasswordCtl = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureCfPassword = true;
   bool _isLoading = false;
 
   @override
-  void initState() {
-    super.initState();
-    _usernameCtl = TextEditingController(text: widget.currentUsername);
-  }
-
-  @override
   void dispose() {
-    _usernameCtl.dispose();
+    _passwordCtl.dispose();
+    _cfPasswordCtl.dispose();
     super.dispose();
   }
 
-  Future<void> _changeUsername() async {
+  Future<void> _changePassword() async {
     if (_formKey.currentState?.validate() != true) return;
 
-    final newUsername = _usernameCtl.text.trim();
+    final newPassword = _passwordCtl.text;
+    final cfPassword = _cfPasswordCtl.text;
 
-    if (newUsername == widget.currentUsername) {
-      Get.back();
+    if (newPassword != cfPassword) {
+      showCustomDialog(
+        title: 'รหัสผ่านไม่ตรงกัน',
+        message: 'รหัสผ่านใหม่ไม่ตรงกัน',
+      );
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final success = await _adminController.updateUserUsername(
+      final success = await _adminController.updateUserPassword(
         widget.userId,
-        newUsername,
+        newPassword,
       );
 
       if (success) {
         if (mounted) {
           showCustomDialog(
             title: 'สำเร็จ',
-            message: 'เปลี่ยนชื่อผู้ใช้สำเร็จ',
+            message: 'เปลี่ยนรหัสผ่านสำเร็จ',
             isSuccess: true,
-            onOk: () {
-              Get.back(result: true);
-            },
+            onOk: () => Get.back(result: true),
           );
         }
       } else {
@@ -73,12 +68,12 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
             title: 'เกิดข้อผิดพลาด',
             message: _adminController.errorMessage.value.isNotEmpty
                 ? _adminController.errorMessage.value
-                : 'ไม่สามารถเปลี่ยนชื่อผู้ใช้ได้ (อาจมีชื่อซ้ำ)',
+                : 'ไม่สามารถเปลี่ยนรหัสผ่านได้',
           );
         }
       }
     } catch (e) {
-      debugPrint('Error changing username (admin): $e');
+      debugPrint('Error changing password (admin): $e');
       if (mounted) {
         showCustomDialog(
           title: 'เกิดข้อผิดพลาด',
@@ -96,7 +91,7 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
       backgroundColor: AdminColors.background,
       appBar: AppBar(
         title: const Text(
-          'เปลี่ยนชื่อผู้ใช้',
+          'เปลี่ยนรหัสผ่าน',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: AdminColors.text,
@@ -118,19 +113,52 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
           child: Column(
             children: [
               AdminPageHeader(
-                title: 'ชื่อผู้ใช้ใหม่',
-                subtitle: 'แก้ไขชื่อที่จะแสดงในระบบ',
-                icon: Icons.person_outline_rounded,
+                title: 'รหัสผ่านใหม่',
+                subtitle: 'ตั้งรหัสผ่านใหม่ให้ผู้ใช้',
+                icon: Icons.lock_outline_rounded,
               ),
               const SizedBox(height: 16),
               AdminCard(
                 child: TextFormField(
-                  controller: _usernameCtl,
-                  validator: validateUsername,
-                  decoration: const InputDecoration(
-                    labelText: 'ชื่อผู้ใช้ใหม่',
+                  controller: _passwordCtl,
+                  obscureText: _obscurePassword,
+                  validator: validateStrongPassword,
+                  decoration: InputDecoration(
+                    labelText: 'รหัสผ่านใหม่',
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              AdminCard(
+                child: TextFormField(
+                  controller: _cfPasswordCtl,
+                  obscureText: _obscureCfPassword,
+                  validator: validateRequiredPassword,
+                  decoration: InputDecoration(
+                    labelText: 'ยืนยันรหัสผ่านใหม่',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureCfPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () => setState(
+                        () => _obscureCfPassword = !_obscureCfPassword,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -139,7 +167,7 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _changeUsername,
+                  onPressed: _isLoading ? null : _changePassword,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AdminColors.primary,
                     foregroundColor: Colors.white,
@@ -151,7 +179,7 @@ class _AdminChangeUsernamePageState extends State<AdminChangeUsernamePage> {
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
-                          'บันทึกชื่อผู้ใช้ใหม่',
+                          'บันทึกรหัสผ่านใหม่',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,

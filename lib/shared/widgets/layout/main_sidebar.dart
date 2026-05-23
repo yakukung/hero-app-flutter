@@ -10,7 +10,7 @@ import 'package:get/get.dart';
 import 'package:hero_app_flutter/shared/widgets/layout/sidebar_menu_item.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/constants/app_fonts.dart';
-import 'package:hero_app_flutter/constants/app_assets.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 
 class MainSidebar extends StatefulWidget {
   const MainSidebar({super.key, this.sessionCoordinator});
@@ -160,24 +160,11 @@ class _MainSidebarState extends State<MainSidebar> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(left: 12),
-                        child: CircleAvatar(
-                          radius: 40,
-                          backgroundColor: Colors.white,
-                          child: ClipOval(
-                            child: appController.profileImage.isNotEmpty
-                                ? Image.network(
-                                    appController.profileImage,
-                                    width: 90,
-                                    height: 90,
-                                    fit: BoxFit.cover,
-                                  )
-                                : Image.asset(
-                                    AppAssets.defaultAvatar,
-                                    width: 90,
-                                    height: 90,
-                                    fit: BoxFit.cover,
-                                  ),
-                          ),
+                        child: ProfileAvatar(
+                          uid: appController.uid,
+                          username: appController.username,
+                          imageUrl: appController.profileImage,
+                          size: 80,
                         ),
                       ),
                       Positioned(
@@ -365,7 +352,6 @@ class _MainSidebarState extends State<MainSidebar> {
                         icon: Icons.people_alt_rounded,
                         label: 'คอมมูนิตี้',
                         selected: navigationController.currentIndex.value == 3,
-                        badge: 6,
                         onTap: () {
                           navigationController.changeIndex(3);
                           Get.back();

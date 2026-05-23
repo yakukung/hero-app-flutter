@@ -124,7 +124,7 @@ class SheetModel {
           : null,
       updatedBy: json['updated_by'] ?? operationData?['updated_by'],
       authorName: json['author_name'],
-      authorAvatar: json['user_avatar'] ?? json['author_avatar'],
+      authorAvatar: json['user_avatar'] ?? json['author_avatar'] ?? json['profile_image'] ?? (json['author'] is Map ? (json['author'] as Map)['profile_image'] : null),
       files:
           (json['files'] as List?)
               ?.map((e) => SheetFileModel.fromJson(e))

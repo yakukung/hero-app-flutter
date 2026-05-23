@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
-import 'package:hero_app_flutter/constants/app_assets.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 
 class ProfileSummarySection extends StatelessWidget {
   const ProfileSummarySection({
     super.key,
+    required this.uid,
     required this.profileImage,
     required this.username,
     required this.email,
@@ -15,6 +16,7 @@ class ProfileSummarySection extends StatelessWidget {
     this.isPremium = false,
   });
 
+  final String uid;
   final String profileImage;
   final String username;
   final String email;
@@ -34,24 +36,11 @@ class ProfileSummarySection extends StatelessWidget {
             child: Stack(
               alignment: Alignment.bottomRight,
               children: [
-                CircleAvatar(
-                  radius: 60,
-                  backgroundColor: Colors.white,
-                  child: ClipOval(
-                    child: profileImage.isNotEmpty
-                        ? Image.network(
-                            profileImage,
-                            width: 120,
-                            height: 120,
-                            fit: BoxFit.cover,
-                          )
-                        : Image.asset(
-                            AppAssets.defaultAvatar,
-                            width: 120,
-                            height: 120,
-                            fit: BoxFit.cover,
-                          ),
-                  ),
+                ProfileAvatar(
+                  uid: uid,
+                  username: username,
+                  imageUrl: profileImage,
+                  size: 120,
                 ),
                 Container(
                   padding: const EdgeInsets.all(6),

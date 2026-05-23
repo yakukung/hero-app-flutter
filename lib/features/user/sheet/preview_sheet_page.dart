@@ -15,6 +15,7 @@ import 'package:hero_app_flutter/features/user/sheet/widgets/preview_sheet_botto
 import 'package:hero_app_flutter/features/user/sheet/widgets/preview_sheet_content_section.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_wallet_page.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 
 class PreviewSheetPage extends StatefulWidget {
   const PreviewSheetPage({super.key, required this.sheetId, this.controller});
@@ -781,16 +782,11 @@ class _ReviewTile extends StatelessWidget {
         children: [
           Row(
             children: [
-              ClipOval(
-                child: review.profileImage != null
-                    ? Image.network(
-                        review.profileImage!,
-                        width: 34,
-                        height: 34,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _avatarFallback(),
-                      )
-                    : _avatarFallback(),
+              ProfileAvatar(
+                uid: review.userId,
+                username: review.username,
+                imageUrl: review.profileImage,
+                size: 34,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -909,31 +905,6 @@ class _ReviewTile extends StatelessWidget {
       ),
     );
   }
-
-  Widget _avatarFallback() {
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        color: (review.username != null
-            ? Color(review.username!.hashCode).withValues(alpha: 0.15)
-            : const Color(0xFFE4E8F0)),
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          review.username != null && review.username!.isNotEmpty
-              ? review.username![0].toUpperCase()
-              : '?',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF8E8EA0),
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _LeaderboardSection extends StatelessWidget {
@@ -1029,16 +1000,11 @@ class _LeaderboardSection extends StatelessWidget {
         children: [
           Icon(rankIcon, color: rankColor, size: 22),
           const SizedBox(width: 10),
-          ClipOval(
-            child: entry.profileImage != null
-                ? Image.network(
-                    entry.profileImage!,
-                    width: 32,
-                    height: 32,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _buildAvatarFallback(entry),
-                  )
-                : _buildAvatarFallback(entry),
+          ProfileAvatar(
+            uid: entry.userId,
+            username: entry.username,
+            imageUrl: entry.profileImage,
+            size: 32,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1059,26 +1025,6 @@ class _LeaderboardSection extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildAvatarFallback(QuizLeaderboardEntryModel entry) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: const BoxDecoration(
-        color: Color(0xFFE4E8F0),
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          entry.username.isNotEmpty ? entry.username[0].toUpperCase() : '?',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.grey,
-          ),
-        ),
       ),
     );
   }

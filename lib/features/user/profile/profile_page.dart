@@ -12,7 +12,6 @@ import 'package:hero_app_flutter/features/user/profile/preferences_page.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_payments_page.dart';
 import 'package:hero_app_flutter/features/user/profile/profile_wallet_page.dart';
 import 'package:hero_app_flutter/features/user/profile/user_sheets_page.dart';
-import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/models/post_model.dart';
 import 'package:hero_app_flutter/core/services/posts_service.dart';
@@ -132,14 +131,6 @@ class _ProfilePageState extends State<ProfilePage>
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
     return '$day/$month/${date.year}  $hour:$minute';
-  }
-
-  ImageProvider? _resolveAvatar(String? profileImage) {
-    if (profileImage == null || profileImage.isEmpty) return null;
-    final url = profileImage.startsWith('http')
-        ? profileImage
-        : '$apiEndpoint/$profileImage';
-    return NetworkImage(url);
   }
 
   Future<void> _toggleLikePost(
@@ -409,9 +400,6 @@ class _ProfilePageState extends State<ProfilePage>
                       child: CommunityPostCard(
                         post: post,
                         formattedDate: _formatPostDate2(post.createdAt),
-                        avatarProvider: _resolveAvatar(
-                          post.author.profileImage,
-                        ),
                         onUserTap: () {},
                         onReportTap: () => _showReportPost(post),
                         onSheetTap: post.sheetId == null
@@ -460,6 +448,7 @@ class _ProfilePageState extends State<ProfilePage>
             children: [
               const SizedBox(height: 32),
               ProfileSummarySection(
+                uid: appController.uid,
                 profileImage: appController.profileImage,
                 username: appController.username,
                 email: appController.email,

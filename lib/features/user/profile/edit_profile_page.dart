@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:hero_app_flutter/constants/app_assets.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/core/controllers/app_controller.dart';
 import 'package:hero_app_flutter/core/models/upload_state.dart';
@@ -9,6 +8,7 @@ import 'package:hero_app_flutter/core/services/users_service.dart';
 import 'package:hero_app_flutter/features/user/profile/change_email_page.dart';
 import 'package:hero_app_flutter/features/user/profile/change_password_page.dart';
 import 'package:hero_app_flutter/features/user/profile/change_username_page.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 import 'package:hero_app_flutter/shared/widgets/upload/upload_progress_dialog.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
@@ -188,20 +188,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           ),
                         ],
                       ),
-                      child: CircleAvatar(
-                        radius: 65,
-                        backgroundColor: Colors.grey[200],
-                        backgroundImage: _pickedImage != null
-                            ? FileImage(_pickedImage!)
-                            : (_appController.profileImage.isNotEmpty
-                                      ? NetworkImage(
-                                          _appController.profileImage,
-                                        )
-                                      : const AssetImage(
-                                          AppAssets.defaultAvatar,
-                                        ))
-                                  as ImageProvider,
-                      ),
+                      child: _pickedImage != null
+                          ? CircleAvatar(
+                              radius: 65,
+                              backgroundColor: Colors.grey[200],
+                              backgroundImage: FileImage(_pickedImage!),
+                            )
+                          : ProfileAvatar(
+                              uid: _appController.uid,
+                              username: _appController.username,
+                              imageUrl: _appController.profileImage,
+                              size: 130,
+                            ),
                     ),
                     Container(
                       padding: const EdgeInsets.all(8),

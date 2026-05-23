@@ -309,7 +309,6 @@ const Map<PaymentStatus, String> topUpPaymentStatusMessages = {
   PaymentStatus.PENDING: 'ระบบได้รับข้อมูลแล้ว กรุณารอการตรวจสอบสลิป',
   PaymentStatus.SUCCESSFUL: 'เติมเงินสำเร็จ ยอดเงินพร้อมใช้งาน',
   PaymentStatus.FAILED: 'เติมเงินไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง',
-  PaymentStatus.REFUNDED: 'รายการเติมเงินนี้ได้รับการคืนเงินแล้ว',
 };
 
 class PaymentStatusViewData {
@@ -342,12 +341,6 @@ class PaymentStatusViewData {
           color: Color(0xFFF92A47),
           icon: Icons.error_outline,
           message: 'ชำระเงินไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง',
-        );
-      case PaymentStatus.REFUNDED:
-        return const PaymentStatusViewData(
-          color: Color(0xFF2A5DB9),
-          icon: Icons.replay_circle_filled_outlined,
-          message: 'รายการนี้ได้รับการคืนเงินแล้ว',
         );
     }
   }

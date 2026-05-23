@@ -8,6 +8,7 @@ import 'package:hero_app_flutter/core/session/session_store.dart';
 import 'package:hero_app_flutter/core/utils/api_utils.dart';
 import 'package:hero_app_flutter/features/admin/admin_design.dart';
 import 'package:hero_app_flutter/features/admin/admin_widgets.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 
 class AdminCommunityModerationPage extends StatefulWidget {
   const AdminCommunityModerationPage({super.key});
@@ -22,11 +23,20 @@ class _AdminCommunityModerationPageState
   final _sessionStore = SessionStore();
   final Set<String> _updatingPostIds = <String>{};
   late Future<List<PostModel>> _postsFuture;
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+  StatusFlag? _statusFilter;
 
   @override
   void initState() {
     super.initState();
     _postsFuture = PostsService.getPosts();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -35,6 +45,24 @@ class _AdminCommunityModerationPageState
       _postsFuture = nextPostsFuture;
     });
     await nextPostsFuture;
+  }
+
+  List<PostModel> _applyFilters(List<PostModel> posts) {
+    var result = posts;
+    if (_searchQuery.trim().isNotEmpty) {
+      final q = _searchQuery.trim().toLowerCase();
+      result = result.where((p) {
+        final author = p.author.username?.toLowerCase() ?? p.userId.toLowerCase();
+        return author.contains(q) || p.content.toLowerCase().contains(q);
+      }).toList();
+    }
+    if (_statusFilter != null) {
+      result = result.where((p) {
+        final effective = _effectiveContentStatus(p.statusFlag, p.visibleFlag);
+        return effective == _statusFilter;
+      }).toList();
+    }
+    return result;
   }
 
   Future<bool> _updatePostStatus(PostModel post, StatusFlag status) async {
@@ -77,6 +105,90 @@ class _AdminCommunityModerationPageState
     }
   }
 
+  Widget _buildSearchBar() {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        onChanged: (value) => setState(() => _searchQuery = value),
+        style: const TextStyle(
+          fontFamily: AppFonts.sukhumvit,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: AdminColors.text,
+        ),
+        decoration: InputDecoration(
+          hintText: 'ค้นหาชื่อผู้ใช้ หรือเนื้อหาโพสต์',
+          hintStyle: const TextStyle(
+            fontFamily: AppFonts.sukhumvit,
+            color: AdminColors.muted,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+          prefixIcon: const Padding(
+            padding: EdgeInsets.only(left: 14, right: 8),
+            child: Icon(Icons.search_rounded, size: 22, color: AdminColors.muted),
+          ),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  color: AdminColors.muted,
+                )
+              : null,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips() {
+    const statuses = [StatusFlag.ACTIVE, StatusFlag.INACTIVE];
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: statuses.length + 1,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return _FilterChip(
+              label: 'ทั้งหมด',
+              selected: _statusFilter == null,
+              onTap: () => setState(() => _statusFilter = null),
+            );
+          }
+          final status = statuses[index - 1];
+          return _FilterChip(
+            label: status == StatusFlag.ACTIVE ? 'แสดง' : 'ซ่อน',
+            color: _contentStatusColor(status),
+            selected: _statusFilter == status,
+            onTap: () => setState(() => _statusFilter = status),
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _showComments(PostModel post) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -108,8 +220,9 @@ class _AdminCommunityModerationPageState
             );
           }
 
-          final posts = snapshot.data ?? const <PostModel>[];
-          if (posts.isEmpty) {
+          final allPosts = (snapshot.data ?? const <PostModel>[])
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          if (allPosts.isEmpty) {
             return AdminEmptyStatePage(
               title: 'จัดการชุมชน',
               icon: Icons.forum_outlined,
@@ -117,6 +230,8 @@ class _AdminCommunityModerationPageState
               onRefresh: _refresh,
             );
           }
+
+          final posts = _applyFilters(allPosts);
 
           return RefreshIndicator(
             onRefresh: _refresh,
@@ -132,10 +247,14 @@ class _AdminCommunityModerationPageState
                     children: [
                       AdminPageHeader(
                         title: 'จัดการชุมชน',
-                        subtitle: '${posts.length} โพสต์ในระบบ',
+                        subtitle: '${allPosts.length} โพสต์ในระบบ',
                         icon: Icons.forum_outlined,
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 14),
+                      _buildSearchBar(),
+                      const SizedBox(height: 12),
+                      _buildFilterChips(),
+                      const SizedBox(height: 14),
                       AdminSectionHeader(
                         title: 'โพสต์ทั้งหมด',
                         subtitle: '${posts.length} รายการ',
@@ -204,18 +323,11 @@ class _AdminPostCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AdminColors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: AdminColors.primary,
-                  size: 22,
-                ),
+              ProfileAvatar(
+                uid: post.author.id,
+                username: post.author.username,
+                imageUrl: post.author.profileImage,
+                size: 40,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -664,6 +776,62 @@ class _CommentStatusButton extends StatelessWidget {
   }
 }
 
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color? color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? (color ?? AdminColors.primary) : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: selected
+              ? Border.all(
+                  color: (color ?? AdminColors.primary).withValues(alpha: 0.3),
+                )
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: AppFonts.sukhumvit,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : AdminColors.muted,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 bool _isOkResponse(int statusCode) => statusCode >= 200 && statusCode < 300;
 
 String _formatDateTime(DateTime dateTime) {
@@ -679,7 +847,7 @@ String _contentStatusLabel(StatusFlag status) {
     case StatusFlag.PENDING:
       return 'รอตรวจ';
     case StatusFlag.ACTIVE:
-      return 'เปิดใช้งาน';
+      return 'แสดง';
     case StatusFlag.INACTIVE:
       return 'ซ่อน';
     case StatusFlag.SUSPENDED:

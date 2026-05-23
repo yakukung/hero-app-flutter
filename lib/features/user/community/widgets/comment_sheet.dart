@@ -3,10 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hero_app_flutter/constants/app_colors.dart';
-import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/models/post_model.dart';
 import 'package:hero_app_flutter/core/services/posts_service.dart';
 import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 
 class CommentSheet extends StatefulWidget {
   final PostModel post;
@@ -323,16 +323,10 @@ class _CommentSheetState extends State<CommentSheet> {
   Widget _buildCommentTile(PostCommentModel comment) {
     final displayName =
         comment.user?.username ?? 'ผู้ใช้ ${comment.userId}'.trim();
-    final profileImage = comment.user?.profileImage;
-    final initial = (displayName.isNotEmpty ? displayName : 'ผู้ใช้').trim();
-    final displayInitial = initial.length >= 2
-        ? initial.substring(0, 2).toUpperCase()
-        : initial.toUpperCase();
     final rawDate = comment.createdAt.toString();
     final formattedDate = rawDate.length >= 16
         ? rawDate.substring(0, 16)
         : rawDate;
-    final avatarProvider = _resolveAvatar(profileImage);
     final currentUserId = _currentUserId;
     final isCommentOwner =
         currentUserId != null &&
@@ -351,19 +345,11 @@ class _CommentSheetState extends State<CommentSheet> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: const Color(0xFFE6EBF5),
-            backgroundImage: avatarProvider,
-            child: avatarProvider == null
-                ? Text(
-                    displayInitial,
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                : null,
+          ProfileAvatar(
+            uid: comment.user?.id ?? comment.userId,
+            username: comment.user?.username,
+            imageUrl: comment.user?.profileImage,
+            size: 36,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -417,13 +403,6 @@ class _CommentSheetState extends State<CommentSheet> {
         ],
       ),
     );
-  }
-
-  ImageProvider? _resolveAvatar(String? profileImage) {
-    if (profileImage == null || profileImage.isEmpty) return null;
-    final isFullUrl = profileImage.startsWith('http');
-    final url = isFullUrl ? profileImage : '$apiEndpoint/$profileImage';
-    return NetworkImage(url);
   }
 
   bool _isSyntheticId(String id) =>

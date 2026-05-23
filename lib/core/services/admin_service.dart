@@ -44,8 +44,44 @@ class AdminService {
     }
 
     return _api.patchJson(
-      path: '/users/update-username',
+      path: '/admin/users/$userId/username',
       body: {'username': username},
+      token: token,
+      client: client,
+    );
+  }
+
+  static Future<http.Response> updateUserEmail({
+    required String userId,
+    required String email,
+    String? token,
+    http.Client? client,
+  }) async {
+    if (userId.isEmpty) {
+      return http.Response('{"message":"BAD_REQUEST"}', 400);
+    }
+
+    return _api.patchJson(
+      path: '/admin/users/$userId/email',
+      body: {'email': email},
+      token: token,
+      client: client,
+    );
+  }
+
+  static Future<http.Response> updateUserPassword({
+    required String userId,
+    required String newPassword,
+    String? token,
+    http.Client? client,
+  }) async {
+    if (userId.isEmpty) {
+      return http.Response('{"message":"BAD_REQUEST"}', 400);
+    }
+
+    return _api.patchJson(
+      path: '/admin/users/$userId/password',
+      body: {'new_password': newPassword},
       token: token,
       client: client,
     );

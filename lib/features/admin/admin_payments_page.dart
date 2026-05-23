@@ -20,6 +20,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
   final _sessionStore = SessionStore();
   final Set<String> _updatingIds = <String>{};
   late Future<List<AdminPaymentItem>> _future;
+  final Map<String, DateTime> _subscriptionExpiry = {};
   final _searchController = TextEditingController();
   String _searchQuery = '';
   PaymentStatus? _statusFilter;
@@ -43,19 +44,40 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
   }
 
   Future<List<AdminPaymentItem>> _fetch() async {
-    final response =
+    final paymentsResponse =
         await AdminService.fetchPayments(token: _sessionStore.token);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+    if (paymentsResponse.statusCode < 200 || paymentsResponse.statusCode >= 300) {
       throw Exception(
-        getErrorMessage(response, fallback: 'โหลดรายการชำระเงินไม่สำเร็จ'),
+        getErrorMessage(paymentsResponse, fallback: 'โหลดรายการชำระเงินไม่สำเร็จ'),
       );
     }
 
-    final list = getApiList(response.body, const ['payments', 'items', 'data']);
-    return list
+    final list = getApiList(paymentsResponse.body, const ['payments', 'items', 'data']);
+    final payments = list
         .whereType<Map>()
         .map((e) => AdminPaymentItem.fromJson(Map.from(e)))
         .toList();
+
+    final subsResponse =
+        await AdminService.fetchSubscriptions(token: _sessionStore.token);
+    _subscriptionExpiry.clear();
+    if (subsResponse.statusCode >= 200 && subsResponse.statusCode < 300) {
+      final root = getApiData(subsResponse.body);
+      List<dynamic> subList;
+      if (root is Map<String, dynamic> && root['subscriptions'] is List) {
+        subList = root['subscriptions'] as List;
+      } else if (root is List) {
+        subList = root;
+      } else {
+        subList = getApiList(subsResponse.body, const ['subscriptions', 'items', 'data']);
+      }
+      for (final s in subList.whereType<Map>()) {
+        final sItem = AdminSubscriptionItem.fromJson(Map.from(s));
+        _subscriptionExpiry[sItem.userId] = sItem.expiresAt;
+      }
+    }
+
+    return payments;
   }
 
   Future<bool> _updatePaymentStatus(
@@ -359,6 +381,9 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
                           payment: payment,
                           onStatusChanged: (status) =>
                               _updatePaymentStatus(payment, status),
+                          expiresAt: payment.type == 'SUBSCRIPTION'
+                              ? _subscriptionExpiry[payment.userId]
+                              : null,
                         ),
                       ),
                     );
@@ -464,8 +489,6 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
         return AdminColors.success;
       case PaymentStatus.FAILED:
         return AdminColors.danger;
-      case PaymentStatus.REFUNDED:
-        return AdminColors.muted;
     }
   }
 }
@@ -534,7 +557,5 @@ String _statusLabel(PaymentStatus status) {
       return 'สำเร็จ';
     case PaymentStatus.FAILED:
       return 'ไม่ผ่าน';
-    case PaymentStatus.REFUNDED:
-      return 'คืนเงิน';
   }
 }

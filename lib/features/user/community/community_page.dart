@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/models/post_model.dart';
 import 'package:hero_app_flutter/core/models/user_model.dart';
@@ -117,12 +116,10 @@ class _CommunityPageState extends State<CommunityPage> {
 
   Widget _buildPostCard(PostModel post) {
     final formattedDate = post.createdAt.toString().substring(0, 16);
-    final avatarProvider = _resolveAvatar(post.author.profileImage);
 
     return CommunityPostCard(
       post: post,
       formattedDate: formattedDate,
-      avatarProvider: avatarProvider,
       onUserTap: () => _openUserProfile(post.author),
       onReportTap: () => _showReportOptions(post),
       onSheetTap: post.sheetId == null
@@ -314,16 +311,5 @@ class _CommunityPageState extends State<CommunityPage> {
         );
       },
     );
-  }
-
-  ImageProvider? _resolveAvatar(String? profileImage) {
-    if (profileImage == null || profileImage.isEmpty) {
-      return null;
-    }
-
-    final url = profileImage.startsWith('http')
-        ? profileImage
-        : '$apiEndpoint/$profileImage';
-    return NetworkImage(url);
   }
 }

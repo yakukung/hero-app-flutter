@@ -3,17 +3,18 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/controllers/admin_controller.dart';
-import 'package:hero_app_flutter/core/models/user_model.dart'; // Ensure UserModel is imported
+import 'package:hero_app_flutter/core/models/user_model.dart';
 import 'package:hero_app_flutter/core/models/upload_state.dart';
 import 'package:hero_app_flutter/core/services/users_service.dart';
+import 'package:hero_app_flutter/features/admin/admin_change_email_page.dart';
+import 'package:hero_app_flutter/features/admin/admin_change_password_page.dart';
 import 'package:hero_app_flutter/features/admin/admin_change_username_page.dart';
 import 'package:hero_app_flutter/features/admin/admin_design.dart';
-import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart'; // Needed for showCustomDialog if used, or standard dialogs
+import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
 import 'package:hero_app_flutter/shared/widgets/upload/upload_progress_dialog.dart';
-import 'package:get_storage/get_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:get/get.dart';
-import 'package:hero_app_flutter/constants/app_assets.dart';
+import 'package:hero_app_flutter/core/models/enums.dart';
 
 class AdminEditUserProfilePage extends StatefulWidget {
   final UserModel user;
@@ -59,16 +60,6 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
   }
 
   Future<void> _uploadProfileImage(File imageFile) async {
-    final String currentUid = GetStorage().read('uid')?.toString() ?? '';
-    if (currentUid.isEmpty || currentUid != _currentUser.id) {
-      showCustomDialog(
-        title: 'ยังไม่รองรับ',
-        message:
-            'แบ็กเอนด์เวอร์ชันปัจจุบันยังไม่รองรับให้แอดมินเปลี่ยนรูปโปรไฟล์ของผู้ใช้อื่น',
-      );
-      return;
-    }
-
     final stateNotifier = ValueNotifier(const UploadState(isUploading: true));
     if (mounted) {
       UploadProgressDialog.show(stateNotifier: stateNotifier);
@@ -89,8 +80,7 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
         if (updatedUser != null) {
           setState(() {
             _currentUser = updatedUser;
-            _pickedImage =
-                null; // Reset picked image as we now have the updated network image
+            _pickedImage = null;
           });
         }
 
@@ -113,6 +103,27 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
         isSuccess: false,
         errorMessage: 'อัปเดตรูปภาพไม่สำเร็จ: ${e.toString()}',
       );
+    }
+  }
+
+  Future<void> _changeEmail() async {
+    final result = await Get.to(
+      () => AdminChangeEmailPage(
+        userId: _currentUser.id,
+        currentEmail: _currentUser.email ?? '',
+      ),
+    );
+    if (result == true && mounted) {
+      await _refreshCurrentUser();
+    }
+  }
+
+  Future<void> _changePassword() async {
+    final result = await Get.to(
+      () => AdminChangePasswordPage(userId: _currentUser.id),
+    );
+    if (result == true && mounted) {
+      await _refreshCurrentUser();
     }
   }
 
@@ -155,6 +166,8 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isGoogle = _currentUser.authProvider == AuthProvider.GOOGLE;
+
     return Scaffold(
       backgroundColor: AdminColors.background,
       appBar: AppBar(
@@ -172,7 +185,7 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AdminColors.text),
           onPressed: () =>
-              Get.back(result: _currentUser), // Return updated user
+              Get.back(result: _currentUser),
         ),
       ),
       body: SingleChildScrollView(
@@ -196,25 +209,20 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
                             borderRadius: BorderRadius.circular(24),
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: Image(
-                            image: _pickedImage != null
-                                ? FileImage(_pickedImage!)
-                                : (_currentUser.profileImage != null &&
-                                              _currentUser
-                                                  .profileImage!
-                                                  .isNotEmpty
-                                          ? NetworkImage(
-                                              _currentUser.profileImage!
-                                                      .startsWith('http')
-                                                  ? _currentUser.profileImage!
-                                                  : '$apiEndpoint/${_currentUser.profileImage}',
-                                            )
-                                          : const AssetImage(
-                                              AppAssets.defaultAvatar,
-                                            ))
-                                      as ImageProvider,
-                            fit: BoxFit.cover,
-                          ),
+                          child: _pickedImage != null
+                              ? Image.file(
+                                  _pickedImage!,
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                )
+                              : ProfileAvatar(
+                                  uid: _currentUser.id,
+                                  username: _currentUser.username,
+                                  imageUrl: _currentUser.profileImage,
+                                  size: 120,
+                                  apiEndpoint: apiEndpoint,
+                                ),
                         ),
                         Container(
                           padding: const EdgeInsets.all(8),
@@ -258,17 +266,6 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
               title: 'เปลี่ยนชื่อผู้ใช้',
               icon: Icons.person_outline_rounded,
               onPressed: () async {
-                final String currentUid =
-                    GetStorage().read('uid')?.toString() ?? '';
-                if (currentUid.isEmpty || currentUid != _currentUser.id) {
-                  showCustomDialog(
-                    title: 'ยังไม่รองรับ',
-                    message:
-                        'แบ็กเอนด์เวอร์ชันปัจจุบันยังไม่รองรับให้แอดมินเปลี่ยนชื่อผู้ใช้ของผู้ใช้อื่น',
-                  );
-                  return;
-                }
-
                 final result = await Get.to(
                   () => AdminChangeUsernamePage(
                     userId: _currentUser.id,
@@ -282,32 +279,67 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
                 }
               },
             ),
-            Opacity(
-              opacity: 0.5,
-              child: _buildMenuButton(
-                title: 'เปลี่ยนอีเมล (ยังไม่เปิดใช้งาน)',
+            if (isGoogle)
+              AdminCard(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AdminColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Image.asset(
+                        'assets/images/logo/google-icon-logo.png',
+                        width: 22,
+                        height: 22,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.g_mobiledata, size: 22),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'เชื่อมต่อผ่าน Google',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: AdminColors.text,
+                              fontSize: 15,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'ไม่สามารถเปลี่ยนอีเมลหรือรหัสผ่านได้',
+                            style: TextStyle(
+                              color: AdminColors.muted,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.check_circle_rounded, color: Color(0xFF2AB950)),
+                  ],
+                ),
+              ),
+            if (!isGoogle) ...[
+              _buildMenuButton(
+                title: 'เปลี่ยนอีเมล',
                 icon: Icons.email_outlined,
-                onPressed: () {
-                  showCustomDialog(
-                    title: 'แจ้งเตือน',
-                    message: 'ฟีเจอร์นี้ยังไม่เปิดใช้งานสำหรับ Admin',
-                  );
-                },
+                onPressed: _changeEmail,
               ),
-            ),
-            Opacity(
-              opacity: 0.5,
-              child: _buildMenuButton(
-                title: 'เปลี่ยนรหัสผ่าน (ยังไม่เปิดใช้งาน)',
+              _buildMenuButton(
+                title: 'เปลี่ยนรหัสผ่าน',
                 icon: Icons.lock_outline_rounded,
-                onPressed: () {
-                  showCustomDialog(
-                    title: 'แจ้งเตือน',
-                    message: 'ฟีเจอร์นี้ยังไม่เปิดใช้งานสำหรับ Admin',
-                  );
-                },
+                onPressed: _changePassword,
               ),
-            ),
+            ],
           ],
         ),
       ),

@@ -76,23 +76,57 @@ class AdminController extends GetxController {
 
   Future<bool> updateUserUsername(String userId, String newUsername) async {
     final String token = _sessionStore.token;
-    final String currentUserId = _sessionStore.uid;
-
-    if (currentUserId.isEmpty || currentUserId != userId) {
-      errorMessage.value =
-          'แบ็กเอนด์ปัจจุบันรองรับการเปลี่ยนชื่อได้เฉพาะบัญชีของตนเอง';
-      return false;
-    }
-
     try {
       final response = await AdminService.updateUserUsername(
         userId: userId,
         username: newUsername,
         token: token.isNotEmpty ? token : null,
       );
-      return response.statusCode == 204;
+      if (response.statusCode == 204) return true;
+      final body = jsonDecode(response.body);
+      errorMessage.value = body['message'] ?? 'ไม่สามารถเปลี่ยนชื่อผู้ใช้ได้';
+      return false;
     } catch (e) {
       debugPrint('Error updating username by admin: $e');
+      errorMessage.value = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้';
+      return false;
+    }
+  }
+
+  Future<bool> updateUserEmail(String userId, String newEmail) async {
+    final String token = _sessionStore.token;
+    try {
+      final response = await AdminService.updateUserEmail(
+        userId: userId,
+        email: newEmail,
+        token: token.isNotEmpty ? token : null,
+      );
+      if (response.statusCode == 204) return true;
+      final body = jsonDecode(response.body);
+      errorMessage.value = body['message'] ?? 'ไม่สามารถเปลี่ยนอีเมลได้';
+      return false;
+    } catch (e) {
+      debugPrint('Error updating email by admin: $e');
+      errorMessage.value = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้';
+      return false;
+    }
+  }
+
+  Future<bool> updateUserPassword(String userId, String newPassword) async {
+    final String token = _sessionStore.token;
+    try {
+      final response = await AdminService.updateUserPassword(
+        userId: userId,
+        newPassword: newPassword,
+        token: token.isNotEmpty ? token : null,
+      );
+      if (response.statusCode == 204) return true;
+      final body = jsonDecode(response.body);
+      errorMessage.value = body['message'] ?? 'ไม่สามารถเปลี่ยนรหัสผ่านได้';
+      return false;
+    } catch (e) {
+      debugPrint('Error updating password by admin: $e');
+      errorMessage.value = 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้';
       return false;
     }
   }

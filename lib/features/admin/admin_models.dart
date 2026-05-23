@@ -81,8 +81,6 @@ class AdminPaymentItem {
         return 'สำเร็จ';
       case PaymentStatus.FAILED:
         return 'ไม่ผ่าน';
-      case PaymentStatus.REFUNDED:
-        return 'คืนเงิน';
     }
   }
 
@@ -114,6 +112,7 @@ class AdminReportItem {
     required this.status,
     required this.createdAt,
     required this.rawJson,
+    this.referenceData,
   });
 
   final String id;
@@ -126,8 +125,17 @@ class AdminReportItem {
   final ReportStatus status;
   final DateTime createdAt;
   final Map<String, dynamic> rawJson;
+  final Map<String, dynamic>? referenceData;
 
   factory AdminReportItem.fromJson(Map<dynamic, dynamic> json) {
+    final raw = json['reference_data'];
+    final Map<String, dynamic>? refData;
+    if (raw is Map) {
+      refData = raw.map((k, v) => MapEntry(k.toString(), v));
+    } else {
+      refData = null;
+    }
+
     return AdminReportItem(
       id: (json['id'] ?? '').toString(),
       referenceTable: (json['reference_table'] ?? '').toString().toLowerCase(),
@@ -143,6 +151,7 @@ class AdminReportItem {
           DateTime.tryParse((json['created_at'] ?? '').toString()) ??
               DateTime.now(),
       rawJson: json.map((key, value) => MapEntry(key.toString(), value)),
+      referenceData: refData,
     );
   }
 
