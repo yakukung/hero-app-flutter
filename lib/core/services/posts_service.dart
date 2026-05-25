@@ -373,6 +373,45 @@ class PostsService {
     return const ShareActionResult(success: false);
   }
 
+  static Future<bool> updatePost({
+    required String postId,
+    required String content,
+    String? sheetId,
+  }) async {
+    final String token = _sessionStore.token;
+    if (token.isEmpty) return false;
+    try {
+      final body = <String, dynamic>{
+        'content': content,
+        if (sheetId != null && sheetId.isNotEmpty) 'sheet_id': sheetId,
+      };
+      final response = await _api.patchJson(
+        path: '/posts/$postId',
+        body: body,
+        token: token,
+      );
+      return _isDeleteSuccess(response.statusCode);
+    } catch (e) {
+      debugPrint('Error updating post: $e');
+      return false;
+    }
+  }
+
+  static Future<bool> deletePost(String postId) async {
+    final String token = _sessionStore.token;
+    if (token.isEmpty) return false;
+    try {
+      final response = await _api.delete(
+        path: '/posts/$postId',
+        token: token,
+      );
+      return _isDeleteSuccess(response.statusCode);
+    } catch (e) {
+      debugPrint('Error deleting post: $e');
+      return false;
+    }
+  }
+
   static Future<bool> createPost({
     required String content,
     String? sheetId,

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'package:get/get.dart';
+
+import 'package:hero_app_flutter/core/controllers/app_controller.dart';
 import 'package:hero_app_flutter/core/models/notification_model.dart';
 import 'package:hero_app_flutter/core/services/notification_service.dart';
+import 'package:hero_app_flutter/core/services/payment_service.dart';
+import 'package:hero_app_flutter/features/user/profile/widgets/profile_subscription.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -14,11 +19,21 @@ class _NotificationsPageState extends State<NotificationsPage> {
   bool _isLoading = true;
   String _errorMessage = '';
   List<AppNotificationModel> _notifications = const [];
+  final AppController _appController = Get.find<AppController>();
 
   @override
   void initState() {
     super.initState();
     _loadNotifications();
+  }
+
+  bool get _hasPremiumExpiryBanner {
+    final status = _appController.subscriptionStatus.value;
+    if (status == null || !status.isPremium) return false;
+    final expiresAt = status.expiresAt;
+    if (expiresAt == null) return false;
+    final daysRemaining = expiresAt.difference(DateTime.now()).inDays;
+    return daysRemaining <= 7;
   }
 
   Future<void> _loadNotifications() async {
@@ -35,12 +50,166 @@ class _NotificationsPageState extends State<NotificationsPage> {
     });
   }
 
+  void _showSubscriptionSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => ProfileSubscription(
+        fetchPlans: () => PaymentService.fetchPlans(),
+      ),
+    );
+  }
+
+  Widget _buildPremiumExpiryBanner() {
+    final status = _appController.subscriptionStatus.value!;
+    final expiresAt = status.expiresAt!;
+    final now = DateTime.now();
+    final diff = expiresAt.difference(now);
+    final daysRemaining = diff.inDays;
+    final isExpired = daysRemaining < 0;
+
+    Color bgColor;
+    Color iconColor;
+    IconData icon;
+    String title;
+    String message;
+    String subtitle;
+
+    if (isExpired) {
+      bgColor = const Color(0xFFFDE8E8);
+      iconColor = const Color(0xFFC62828);
+      icon = Icons.error_outline;
+      title = 'พรีเมียมหมดอายุแล้ว';
+      message = 'สิทธิ์การใช้งานพรีเมียมของคุณหมดอายุแล้ว';
+      subtitle = 'หมดอายุแล้ว';
+    } else if (daysRemaining < 1) {
+      bgColor = const Color(0xFFFFF3E0);
+      iconColor = const Color(0xFFB26A00);
+      icon = Icons.timer_off_outlined;
+      title = 'พรีเมียมจะหมดอายุวันนี้';
+      message = 'สิทธิ์การใช้งานพรีเมียมของคุณจะหมดอายุในวันนี้';
+      subtitle = 'หมดอายุวันนี้';
+    } else if (daysRemaining <= 3) {
+      bgColor = const Color(0xFFFFF8E1);
+      iconColor = const Color(0xFFB26A00);
+      icon = Icons.timer_outlined;
+      title = 'พรีเมียมใกล้หมดอายุ';
+      message = 'สิทธิ์พรีเมียมของคุณจะหมดอายุในอีก $daysRemaining วัน';
+      subtitle = 'เหลืออีก $daysRemaining วัน';
+    } else {
+      bgColor = const Color(0xFFE8F0FE);
+      iconColor = const Color(0xFF1A73E8);
+      icon = Icons.info_outline;
+      title = 'พรีเมียมใกล้หมดอายุ';
+      message = 'สิทธิ์พรีเมียมของคุณจะหมดอายุในอีก $daysRemaining วัน';
+      subtitle = 'เหลืออีก $daysRemaining วัน';
+    }
+
+    if (status.autoRenew && !isExpired) {
+      message += ' (ต่ออายุอัตโนมัติ)';
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: _showSubscriptionSheet,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: iconColor, size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          color: iconColor,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        message,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: iconColor,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: iconColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              'พรีเมียม',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: iconColor,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            Icons.chevron_right,
+                            color: iconColor,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _markAsRead(int index) {
-    final item = _notifications[index];
+    final notificationIndex = _hasPremiumExpiryBanner ? index - 1 : index;
+    if (notificationIndex < 0) return;
+    final item = _notifications[notificationIndex];
     if (item.isRead) return;
     NotificationService.markAsRead(item.id);
     setState(() {
-      _notifications[index] = AppNotificationModel(
+      _notifications[notificationIndex] = AppNotificationModel(
         id: item.id,
         title: item.title,
         message: item.message,
@@ -101,7 +270,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
       );
     }
 
-    if (_notifications.isEmpty) {
+    final int itemCount = _notifications.length + (_hasPremiumExpiryBanner ? 1 : 0);
+
+    if (itemCount == 0) {
       return ListView(
         children: const [
           SizedBox(height: 160),
@@ -121,9 +292,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      itemCount: _notifications.length,
+      itemCount: itemCount,
       itemBuilder: (context, index) {
-        final item = _notifications[index];
+        if (_hasPremiumExpiryBanner && index == 0) {
+          return _buildPremiumExpiryBanner();
+        }
+        final notificationIndex = _hasPremiumExpiryBanner ? index - 1 : index;
+        final item = _notifications[notificationIndex];
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Material(

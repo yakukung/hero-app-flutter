@@ -58,7 +58,9 @@ class CommunityPageController extends ChangeNotifier {
 
     try {
       final loaded = await _loadPosts();
-      _posts = List.of(loaded)
+      _posts = loaded
+          .where((post) => post.statusFlag == StatusFlag.ACTIVE)
+          .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     } catch (error) {
       _errorMessage = error.toString();

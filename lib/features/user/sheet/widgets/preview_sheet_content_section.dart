@@ -10,12 +10,10 @@ class PreviewSheetContentSection extends StatelessWidget {
     super.key,
     required this.sheet,
     this.onAuthorTap,
-    this.onReportTap,
   });
 
   final SheetModel sheet;
   final VoidCallback? onAuthorTap;
-  final VoidCallback? onReportTap;
 
   @override
   Widget build(BuildContext context) {
@@ -131,22 +129,7 @@ class PreviewSheetContentSection extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: onReportTap,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.flag_outlined,
-                      size: 18,
-                      color: Colors.redAccent,
-                    ),
-                  ),
-                ),
+
               ],
             ),
             const SizedBox(height: 32),

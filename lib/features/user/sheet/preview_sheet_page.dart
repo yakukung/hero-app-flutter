@@ -84,7 +84,6 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
                   PreviewSheetContentSection(
                     sheet: sheet,
                     onAuthorTap: () => _openAuthorProfile(sheet),
-                    onReportTap: () => _reportSheet(sheet.id),
                   ),
                   _SheetReviewsSection(
                     reviews: _controller.reviews,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:hero_app_flutter/constants/app_colors.dart';
+import 'package:hero_app_flutter/core/services/posts_service.dart';
 import 'package:hero_app_flutter/features/user/community/controllers/create_post_page_controller.dart';
 import 'package:hero_app_flutter/features/user/community/widgets/create_post_composer.dart';
 import 'package:hero_app_flutter/features/user/community/widgets/selected_sheet_card.dart';
@@ -9,9 +10,13 @@ import 'package:hero_app_flutter/features/user/community/widgets/sheet_selection
 import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
 
 class CreatePostPage extends StatefulWidget {
-  const CreatePostPage({super.key, this.controller});
+  const CreatePostPage({super.key, this.controller, this.postId, this.initialContent});
 
   final CreatePostPageController? controller;
+  final String? postId;
+  final String? initialContent;
+
+  bool get isEditing => postId != null;
 
   @override
   State<CreatePostPage> createState() => _CreatePostPageState();
@@ -26,6 +31,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
   void initState() {
     super.initState();
     _controller = widget.controller ?? CreatePostPageController();
+    if (widget.initialContent != null) {
+      _controller.contentController.text = widget.initialContent!;
+    }
   }
 
   @override
@@ -47,6 +55,20 @@ class _CreatePostPageState extends State<CreatePostPage> {
   }
 
   Future<void> _submit() async {
+    if (widget.isEditing) {
+      final success = await PostsService.updatePost(
+        postId: widget.postId!,
+        content: _controller.contentController.text,
+        sheetId: _controller.selectedSheet?.id,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(success ? 'แก้ไขโพสต์สำเร็จ' : 'เกิดข้อผิดพลาด')),
+      );
+      if (success) Get.back(result: true);
+      return;
+    }
+
     final result = await _controller.submit();
     if (!mounted) {
       return;
@@ -71,9 +93,9 @@ class _CreatePostPageState extends State<CreatePostPage> {
         return Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
-            title: const Text(
-              'สร้างโพสต์',
-              style: TextStyle(
+            title: Text(
+              widget.isEditing ? 'แก้ไขโพสต์' : 'สร้างโพสต์',
+              style: const TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
               ),
@@ -89,7 +111,11 @@ class _CreatePostPageState extends State<CreatePostPage> {
                 key: const Key('create_post_submit_button'),
                 onPressed: _controller.isSubmitting ? null : _submit,
                 child: Text(
-                  _controller.isSubmitting ? 'กำลังโพสต์...' : 'โพสต์',
+                  _controller.isSubmitting
+                      ? 'กำลังโพสต์...'
+                      : widget.isEditing
+                      ? 'บันทึก'
+                      : 'โพสต์',
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontSize: 16,
