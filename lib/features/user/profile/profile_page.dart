@@ -156,57 +156,6 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  Future<void> _toggleSharePost(PostModel post) async {
-    final result = await PostsService.sharePost(post.id);
-    if (result.success) {
-      _updatePostInAllLists(
-        post,
-        (p) => p.copyWith(
-          isShared: true,
-          shareCount: result.shareCount ?? p.shareCount,
-        ),
-      );
-    }
-  }
-
-  Future<void> _unsharePost(PostModel post) async {
-    final result = await PostsService.unsharePost(post.id);
-    if (!result.success) return;
-    _removePostFromShared(post);
-    _updatePostInAllLists(
-      post,
-      (p) => p.copyWith(
-        isShared: false,
-        shareCount: result.shareCount ?? p.shareCount,
-      ),
-    );
-  }
-
-  void _updatePostInAllLists(
-    PostModel post,
-    PostModel Function(PostModel) transform,
-  ) {
-    for (final notifier in [_controller.userPosts, _controller.sharedPosts]) {
-      final list = notifier.value;
-      final index = list.indexWhere((p) => p.id == post.id);
-      if (index != -1) {
-        final newList = [...list];
-        newList[index] = transform(newList[index]);
-        notifier.value = newList;
-      }
-    }
-  }
-
-  void _removePostFromShared(PostModel post) {
-    final list = _controller.sharedPosts.value;
-    final index = list.indexWhere((p) => p.id == post.id);
-    if (index != -1) {
-      final newList = [...list];
-      newList.removeAt(index);
-      _controller.sharedPosts.value = newList;
-    }
-  }
-
   Future<void> _openComments(PostModel post) async {
     final currentUserId = _controller.appController.uid;
     if (currentUserId.isEmpty) {
@@ -457,13 +406,6 @@ class _ProfilePageState extends State<ProfilePage>
                               ),
                         onLikeTap: () => _toggleLikePost(post, postsNotifier),
                         onCommentTap: () => _openComments(post),
-                        onShareTap: () {
-                          if (post.isShared) {
-                            _unsharePost(post);
-                          } else {
-                            _toggleSharePost(post);
-                          }
-                        },
                       ),
                     ),
                   )

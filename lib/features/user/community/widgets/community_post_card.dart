@@ -11,7 +11,7 @@ class CommunityPostCard extends StatelessWidget {
   final VoidCallback? onSheetTap;
   final VoidCallback onLikeTap;
   final VoidCallback onCommentTap;
-  final VoidCallback onShareTap;
+  final VoidCallback? onShareTap;
 
   const CommunityPostCard({
     super.key,
@@ -21,7 +21,7 @@ class CommunityPostCard extends StatelessWidget {
     required this.onReportTap,
     required this.onLikeTap,
     required this.onCommentTap,
-    required this.onShareTap,
+    this.onShareTap,
     this.onSheetTap,
   });
 
@@ -117,15 +117,16 @@ class CommunityPostCard extends StatelessWidget {
                 isActive: false,
                 onTap: onCommentTap,
               ),
-              const SizedBox(width: 8),
-              _ActionButton(
-                icon: Icons.share,
-                label: '${post.shareCount}',
-                color: post.isShared ? AppColors.primary : Colors.white,
-                textColor: post.isShared ? Colors.white : Colors.black54,
-                isActive: post.isShared,
-                onTap: onShareTap,
-              ),
+              if (onShareTap != null) const SizedBox(width: 8),
+              if (onShareTap != null)
+                _ActionButton(
+                  icon: Icons.share,
+                  label: '${post.shareCount}',
+                  color: post.isShared ? AppColors.primary : Colors.white,
+                  textColor: post.isShared ? Colors.white : Colors.black54,
+                  isActive: post.isShared,
+                  onTap: onShareTap,
+                ),
             ],
           ),
         ],

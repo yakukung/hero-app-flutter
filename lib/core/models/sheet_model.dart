@@ -21,6 +21,8 @@ class SheetModel {
   final List<QuestionModel>? questions;
   final List<String>? categoryIds;
   final List<String>? keywordIds;
+  final List<String>? categoryNames;
+  final List<String>? keywordNames;
   final int buyerCount;
   final bool isPurchased;
   final bool isFavorite;
@@ -44,6 +46,8 @@ class SheetModel {
     this.questions,
     this.categoryIds,
     this.keywordIds,
+    this.categoryNames,
+    this.keywordNames,
     this.buyerCount = 0,
     this.isPurchased = false,
     this.isFavorite = false,
@@ -137,6 +141,8 @@ class SheetModel {
             ?..sort((a, b) => a.index.compareTo(b.index)),
       categoryIds: parsedCategoryIds ?? parsedCategoryNames,
       keywordIds: parsedKeywordIds ?? parsedKeywordNames,
+      categoryNames: parsedCategoryNames,
+      keywordNames: parsedKeywordNames,
       buyerCount: resolvedBuyerCount,
       isPurchased:
           json['is_purchased'] == true ||
@@ -170,6 +176,10 @@ class SheetModel {
       'updated_at': updatedAt?.toIso8601String(),
       'updated_by': updatedBy,
       'author_name': authorName,
+      'category_ids': categoryIds,
+      'keyword_ids': keywordIds,
+      'category_names': categoryNames,
+      'keyword_names': keywordNames,
       'buyer_count': buyerCount,
     };
   }
@@ -258,6 +268,7 @@ class SheetReviewModel {
   final String? content;
   final int score;
   final DateTime createdAt;
+  final StatusFlag statusFlag;
 
   SheetReviewModel({
     required this.id,
@@ -268,6 +279,7 @@ class SheetReviewModel {
     this.content,
     required this.score,
     required this.createdAt,
+    this.statusFlag = StatusFlag.ACTIVE,
   });
 
   factory SheetReviewModel.fromJson(Map<String, dynamic> json) {
@@ -280,6 +292,11 @@ class SheetReviewModel {
       content: json['content'],
       score: json['score'] ?? 0,
       createdAt: DateTime.parse(json['created_at']),
+      statusFlag: json['status_flag'] != null
+          ? StatusFlag.fromString(json['status_flag'])
+          : StatusFlag.ACTIVE,
     );
   }
+
+  bool get isVisible => statusFlag == StatusFlag.ACTIVE;
 }

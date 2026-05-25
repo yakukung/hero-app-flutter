@@ -148,6 +148,72 @@ class PreviewSheetContentSection extends StatelessWidget {
                 height: 1.6,
               ),
             ),
+            if (sheet.categoryNames != null &&
+                sheet.categoryNames!.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              const Text(
+                'หมวดหมู่',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: sheet.categoryNames!
+                    .map((name) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0F4FF),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF3B5E8C),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ],
+            if (sheet.keywordNames != null &&
+                sheet.keywordNames!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'คีย์เวิร์ด',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: sheet.keywordNames!
+                    .map((name) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F5F5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            name,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF666666),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+            ],
             const SizedBox(height: 8),
           ],
         ),

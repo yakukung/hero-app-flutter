@@ -326,6 +326,8 @@ class PreviewSheetPageController extends ChangeNotifier {
       questions: source.questions,
       categoryIds: source.categoryIds,
       keywordIds: source.keywordIds,
+      categoryNames: source.categoryNames,
+      keywordNames: source.keywordNames,
       buyerCount: source.buyerCount,
       isPurchased: isPurchased ?? source.isPurchased,
       isFavorite: isFavorite ?? source.isFavorite,

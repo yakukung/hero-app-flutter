@@ -407,7 +407,7 @@ class _SheetEarningsPageState extends State<SheetEarningsPage>
             crossAxisAlignment: CrossAxisAlignment.end,
             children: trend.map((entry) {
               final fraction = entry.total / maxTotal;
-              final barHeight = math.min(fraction * 80, 80.0);
+              final barHeight = math.min(fraction * 70, 70.0);
               return Padding(
                 padding: EdgeInsets.only(
                   right: entry != trend.last ? 4 : 0,

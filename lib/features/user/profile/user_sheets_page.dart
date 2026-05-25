@@ -19,6 +19,10 @@ class UserSheetsPage extends StatefulWidget {
 
 class _UserSheetsPageState extends State<UserSheetsPage>
     with SingleTickerProviderStateMixin {
+  static const List<String> _availablePrices = [
+    '0', '50', '100', '150', '200', '250', '300',
+  ];
+
   late final TabController _tabController;
 
   bool _isLoading = false;
@@ -388,11 +392,34 @@ class _UserSheetsPageState extends State<UserSheetsPage>
                   color: Colors.black54,
                 ),
                 onSelected: (value) async {
-                  if (value == 'delete') {
+                  if (value == 'edit') {
+                    if (sheet.buyerCount > 0) {
+                      _showSnackBar('ไม่สามารถแก้ไขชีตนี้ได้ เพราะมีผู้ซื้อแล้ว',
+                          isError: true);
+                      return;
+                    }
+                    await _showEditSheet(sheet);
+                  } else if (value == 'delete') {
                     await _confirmDeleteSheet(sheet);
                   }
                 },
                 itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: Colors.black54,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          sheet.buyerCount > 0 ? 'แก้ไข (มีผู้ซื้อแล้ว)' : 'แก้ไข',
+                        ),
+                      ],
+                    ),
+                  ),
                   PopupMenuItem<String>(
                     value: 'delete',
                     child: Row(
@@ -444,6 +471,188 @@ class _UserSheetsPageState extends State<UserSheetsPage>
         if (result.success) {
           await _fetchMySheets();
         }
+      },
+    );
+  }
+
+  Future<void> _showEditSheet(SheetModel sheet) async {
+    final titleController = TextEditingController(text: sheet.title);
+    final descController = TextEditingController(text: sheet.description ?? '');
+    String selectedPrice = sheet.price == null || sheet.price == 0
+        ? '0'
+        : sheet.price!.toInt().toString();
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom + 24,
+          ),
+          child: StatefulBuilder(
+            builder: (context, setSheetState) => SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'แก้ไขชีต',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text('ชื่อหัวเรื่อง',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F7),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        hintText: 'ใส่ชื่อหัวเรื่อง',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('รายละเอียด',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F7),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: TextField(
+                      controller: descController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        hintText: 'ใส่รายละเอียด',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('ราคา',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _availablePrices.map((price) {
+                        final isSelected = price == selectedPrice;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: GestureDetector(
+                            onTap: () =>
+                                setSheetState(() => selectedPrice = price),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : const Color(0xFFF5F5F7),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                price,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : const Color(0xFF7B7B7C),
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final title = titleController.text.trim();
+                        if (title.isEmpty) {
+                          _showSnackBar('กรุณากรอกชื่อหัวเรื่อง', isError: true);
+                          return;
+                        }
+                        final price = double.tryParse(selectedPrice) ?? 0;
+                        Navigator.of(context).pop();
+                        final result = await SheetsService.updateSheet(
+                          sheetId: sheet.id,
+                          title: title,
+                          description: descController.text.trim(),
+                          price: price,
+                        );
+                        if (!mounted) return;
+                        _showSnackBar(
+                          result.message,
+                          isError: !result.success,
+                        );
+                        if (result.success) {
+                          await _fetchMySheets();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text(
+                        'บันทึก',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        );
       },
     );
   }

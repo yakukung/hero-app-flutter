@@ -310,13 +310,46 @@ class SheetsService {
     required String description,
     required double price,
   }) async {
-    debugPrint(
-      'updateSheet is not supported by current backend routes: $sheetId',
-    );
-    return const SheetActionResult(
-      success: false,
-      message: 'แบ็กเอนด์เวอร์ชันปัจจุบันยังไม่รองรับการแก้ไขชีต',
-    );
+    final String token = _sessionStore.token;
+
+    if (token.isEmpty) {
+      return const SheetActionResult(
+        success: false,
+        message: 'ไม่พบ token สำหรับยืนยันตัวตน',
+      );
+    }
+
+    try {
+      final response = await _api.patch(
+        path: '/sheets/$sheetId',
+        token: token,
+        body: jsonEncode({
+          'title': title,
+          'description': description,
+          'price': price,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return const SheetActionResult(
+          success: true,
+          message: 'แก้ไขชีตสำเร็จ',
+        );
+      }
+
+      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+      return SheetActionResult(
+        success: false,
+        message: jsonResponse['data']?['message'] ??
+            'ไม่สามารถแก้ไขชีตได้',
+      );
+    } catch (e) {
+      debugPrint('Error updating sheet: $e');
+      return const SheetActionResult(
+        success: false,
+        message: 'เกิดข้อผิดพลาดในการแก้ไขชีต',
+      );
+    }
   }
 
   static Future<SheetActionResult> deleteSheet({

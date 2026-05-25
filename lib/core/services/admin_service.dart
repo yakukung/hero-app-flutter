@@ -253,4 +253,45 @@ class AdminService {
       client: client,
     );
   }
+
+  static Future<http.Response> deleteSheetReview({
+    required String sheetId,
+    required String reviewId,
+    String? token,
+    http.Client? client,
+  }) {
+    return _api.delete(
+      path: '/admin/sheets/$sheetId/reviews/$reviewId',
+      token: token,
+      client: client,
+    );
+  }
+
+  static Future<http.Response> fetchSheetReviews({
+    required String sheetId,
+    String? token,
+    http.Client? client,
+  }) {
+    return _api.get(
+      path: '/admin/sheets/$sheetId/reviews',
+      token: token,
+      disableCache: true,
+      client: client,
+    );
+  }
+
+  static Future<http.Response> updateReviewStatus({
+    required String sheetId,
+    required String reviewId,
+    required String statusFlag,
+    String? token,
+    http.Client? client,
+  }) {
+    return _api.patchJson(
+      path: '/admin/sheets/$sheetId/reviews/$reviewId/status',
+      body: {'status_flag': statusFlag},
+      token: token,
+      client: client,
+    );
+  }
 }

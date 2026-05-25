@@ -5,6 +5,7 @@ import 'package:hero_app_flutter/features/admin/admin_payments_page.dart';
 import 'package:hero_app_flutter/features/admin/admin_reports_page.dart';
 import 'package:hero_app_flutter/features/admin/admin_revenue_page.dart';
 import 'package:hero_app_flutter/features/admin/admin_sheets_page.dart';
+import 'package:hero_app_flutter/features/admin/admin_sub_management_page.dart';
 
 // Dashboard page that shows menu grid
 class AdminReportsDashboardPage extends StatelessWidget {
@@ -34,6 +35,12 @@ class AdminReportsDashboardPage extends StatelessWidget {
       subtitle: 'ภาพรวมการเงิน',
       icon: Icons.analytics_outlined,
       page: AdminRevenuePage(),
+    ),
+    const _AdminManagementItem(
+      title: 'แพ็กพรีเมี่ยม',
+      subtitle: 'จัดการข้อมูลแพ็กเกจ',
+      icon: Icons.subscriptions_outlined,
+      page: AdminSubManagementPage(),
     ),
   ];
 

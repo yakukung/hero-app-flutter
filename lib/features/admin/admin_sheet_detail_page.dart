@@ -21,7 +21,9 @@ class AdminSheetDetailPage extends StatefulWidget {
 class _AdminSheetDetailPageState extends State<AdminSheetDetailPage> {
   final _sessionStore = SessionStore();
   SheetModel? _sheet;
+  List<SheetReviewModel> _reviews = [];
   bool _isLoading = true;
+  bool _isLoadingReviews = false;
   String? _error;
 
   @override
@@ -64,6 +66,7 @@ class _AdminSheetDetailPageState extends State<AdminSheetDetailPage> {
           _sheet = sheet;
           _isLoading = false;
         });
+        _fetchReviews();
       } else {
         setState(() {
           _error = 'โหลดรายละเอียดชีตไม่สำเร็จ';
@@ -75,6 +78,39 @@ class _AdminSheetDetailPageState extends State<AdminSheetDetailPage> {
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchReviews() async {
+    setState(() => _isLoadingReviews = true);
+    try {
+      final response = await AdminService.fetchSheetReviews(
+        sheetId: widget.sheetId,
+        token: _sessionStore.token,
+      );
+      if (!mounted) return;
+      if (response.statusCode == 200) {
+        final data = getApiData(response.body);
+        final List<dynamic> items = data?['reviews'] ?? [];
+        setState(() {
+          _reviews = items
+              .map((e) => SheetReviewModel.fromJson(
+                  Map<String, dynamic>.from(e)))
+              .toList();
+          _isLoadingReviews = false;
+        });
+      } else {
+        setState(() {
+          _reviews = [];
+          _isLoadingReviews = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _reviews = [];
+        _isLoadingReviews = false;
       });
     }
   }
@@ -250,11 +286,70 @@ class _AdminSheetDetailPageState extends State<AdminSheetDetailPage> {
                   ],
                 ),
               ],
+              const SizedBox(height: 24),
+              AdminSectionHeader(
+                title: 'รีวิว',
+                subtitle: '${_reviews.length} รายการ',
+              ),
+              const SizedBox(height: 8),
+              _buildReviewsSection(),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildReviewsSection() {
+    if (_isLoadingReviews) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    if (_reviews.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Text(
+            'ยังไม่มีรีวิวสำหรับชีตนี้',
+            style: TextStyle(
+              fontFamily: AppFonts.sukhumvit,
+              fontSize: 14,
+              color: AdminColors.muted,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: _reviews.map((review) => _AdminReviewTile(
+        review: review,
+        onToggle: () => _toggleReviewStatus(review),
+      )).toList(),
+    );
+  }
+
+  Future<void> _toggleReviewStatus(SheetReviewModel review) async {
+    final newStatus = review.isVisible ? 'INACTIVE' : 'ACTIVE';
+    final response = await AdminService.updateReviewStatus(
+      sheetId: widget.sheetId,
+      reviewId: review.id,
+      statusFlag: newStatus,
+      token: _sessionStore.token,
+    );
+    if (!mounted) return;
+    if (response.statusCode == 200) {
+      _fetchReviews();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ไม่สามารถเปลี่ยนสถานะรีวิวได้')),
+      );
+    }
   }
 
   PreferredSizeWidget _buildAppBar() {
@@ -557,5 +652,151 @@ Color _contentStatusColor(StatusFlag status) {
       return const Color(0xFFC62828);
     case StatusFlag.TERMINATED:
       return const Color(0xFF7F1D1D);
+  }
+}
+
+class _AdminReviewTile extends StatelessWidget {
+  const _AdminReviewTile({
+    required this.review,
+    required this.onToggle,
+  });
+
+  final SheetReviewModel review;
+  final VoidCallback onToggle;
+
+  bool get _isVisible => review.isVisible;
+  String get _buttonLabel => _isVisible ? 'ซ่อน' : 'แสดง';
+  IconData get _buttonIcon =>
+      _isVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined;
+  Color get _buttonColor =>
+      _isVisible ? const Color(0xFFE53935) : const Color(0xFF1B7F3A);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _isVisible ? AdminColors.border : const Color(0xFFFFCDD2),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        review.username ?? 'ไม่ระบุ',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: AppFonts.sukhumvit,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AdminColors.text,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Row(
+                      children: List.generate(
+                        5,
+                        (i) => Icon(
+                          i < review.score
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          size: 14,
+                          color: const Color(0xFFFFB300),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${review.score}',
+                      style: const TextStyle(
+                        fontFamily: AppFonts.sukhumvit,
+                        fontSize: 11,
+                        color: Color(0xFFFFB300),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (!_isVisible) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFCDD2),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'ซ่อน',
+                          style: TextStyle(
+                            fontFamily: AppFonts.sukhumvit,
+                            fontSize: 10,
+                            color: Color(0xFFC62828),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (review.content?.isNotEmpty == true) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    review.content!,
+                    style: TextStyle(
+                      fontFamily: AppFonts.sukhumvit,
+                      fontSize: 13,
+                      color: _isVisible
+                          ? AdminColors.muted
+                          : const Color(0xFF9E9E9E),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: onToggle,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _buttonColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(_buttonIcon, size: 16, color: _buttonColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    _buttonLabel,
+                    style: TextStyle(
+                      fontFamily: AppFonts.sukhumvit,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _buttonColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
