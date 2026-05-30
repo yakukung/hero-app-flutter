@@ -235,6 +235,7 @@ class _CommunityPageState extends State<CommunityPage> {
                   Get.to(() => CreatePostPage(
                     postId: post.id,
                     initialContent: post.content,
+                    initialSheetId: post.sheetId,
                   ));
                 },
               ),

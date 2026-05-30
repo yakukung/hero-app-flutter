@@ -240,6 +240,7 @@ class _ProfilePageState extends State<ProfilePage>
                   Get.to(() => CreatePostPage(
                     postId: post.id,
                     initialContent: post.content,
+                    initialSheetId: post.sheetId,
                   ));
                 },
               ),

@@ -5,7 +5,7 @@ import 'package:hero_app_flutter/core/config/api_connect.dart';
 import 'package:hero_app_flutter/core/controllers/admin_controller.dart';
 import 'package:hero_app_flutter/core/models/user_model.dart';
 import 'package:hero_app_flutter/core/models/upload_state.dart';
-import 'package:hero_app_flutter/core/services/users_service.dart';
+import 'package:hero_app_flutter/core/services/admin_service.dart';
 import 'package:hero_app_flutter/features/admin/admin_change_email_page.dart';
 import 'package:hero_app_flutter/features/admin/admin_change_password_page.dart';
 import 'package:hero_app_flutter/features/admin/admin_change_username_page.dart';
@@ -66,8 +66,8 @@ class _AdminEditUserProfilePageState extends State<AdminEditUserProfilePage> {
     }
 
     try {
-      final result = await UsersService.updateProfileImage(
-        uid: _currentUser.id,
+      final result = await AdminService.updateUserProfileImage(
+        userId: _currentUser.id,
         imageFile: imageFile,
       );
 

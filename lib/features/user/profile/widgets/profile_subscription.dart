@@ -282,12 +282,12 @@ class _ProfileSubscriptionState extends State<ProfileSubscription> {
     BuildContext context, {
     required SubscriptionPlanModel plan,
   }) async {
+    final result = await PaymentService.subscribePremium(planId: plan.id);
+    if (!context.mounted) return;
+
     final navigator = Navigator.of(context);
     if (navigator.canPop()) navigator.pop();
     if (navigator.canPop()) navigator.pop();
-
-    final result = await PaymentService.subscribePremium(planId: plan.id);
-    if (!context.mounted) return;
 
     if (result.success) {
       await Get.find<AppController>().refreshSubscriptionStatus();

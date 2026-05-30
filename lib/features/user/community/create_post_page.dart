@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/core/services/posts_service.dart';
+import 'package:hero_app_flutter/core/services/sheets_service.dart';
 import 'package:hero_app_flutter/features/user/community/controllers/create_post_page_controller.dart';
 import 'package:hero_app_flutter/features/user/community/widgets/create_post_composer.dart';
 import 'package:hero_app_flutter/features/user/community/widgets/selected_sheet_card.dart';
@@ -10,11 +11,12 @@ import 'package:hero_app_flutter/features/user/community/widgets/sheet_selection
 import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
 
 class CreatePostPage extends StatefulWidget {
-  const CreatePostPage({super.key, this.controller, this.postId, this.initialContent});
+  const CreatePostPage({super.key, this.controller, this.postId, this.initialContent, this.initialSheetId});
 
   final CreatePostPageController? controller;
   final String? postId;
   final String? initialContent;
+  final String? initialSheetId;
 
   bool get isEditing => postId != null;
 
@@ -33,6 +35,16 @@ class _CreatePostPageState extends State<CreatePostPage> {
     _controller = widget.controller ?? CreatePostPageController();
     if (widget.initialContent != null) {
       _controller.contentController.text = widget.initialContent!;
+    }
+    if (widget.initialSheetId != null) {
+      _initSheet(widget.initialSheetId!);
+    }
+  }
+
+  Future<void> _initSheet(String sheetId) async {
+    final sheet = await SheetsService.fetchSheetById(sheetId);
+    if (sheet != null && mounted) {
+      _controller.selectSheet(sheet);
     }
   }
 

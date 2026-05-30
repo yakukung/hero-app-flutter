@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:hero_app_flutter/core/network/api_client.dart';
+import 'package:hero_app_flutter/core/services/users_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 class AdminService {
   static final ApiClient _api = ApiClient();
@@ -225,6 +229,53 @@ class AdminService {
       token: token,
       client: client,
     );
+  }
+
+  static Future<UserProfileImageUploadResult> updateUserProfileImage({
+    required String userId,
+    required File imageFile,
+    String? token,
+  }) async {
+    final String? resolvedToken = _api.resolveToken(token);
+
+    try {
+      final request = http.MultipartRequest(
+        'PUT',
+        _api.buildUri('/admin/users/$userId/profile-image'),
+      );
+      if (resolvedToken != null && resolvedToken.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $resolvedToken';
+      }
+
+      final mediaType = imageFile.path.toLowerCase().endsWith('.png')
+          ? MediaType('image', 'png')
+          : MediaType('image', 'jpeg');
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'profile_image',
+          imageFile.path,
+          contentType: mediaType,
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final bool success =
+          response.statusCode == 200 || response.statusCode == 204;
+      return UserProfileImageUploadResult(
+        success: success,
+        statusCode: response.statusCode,
+        message: success ? 'อัปโหลดสำเร็จ' : 'อัปโหลดไม่สำเร็จ',
+      );
+    } catch (e) {
+      return UserProfileImageUploadResult(
+        success: false,
+        statusCode: 0,
+        message: e.toString(),
+      );
+    }
   }
 
   static Future<http.Response> fetchPostComments({

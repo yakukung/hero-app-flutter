@@ -95,34 +95,55 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
   Widget _buildProfileImage(UserModel user) {
     final statusColor = _statusColor(user.statusFlag);
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        ProfileAvatar(
-          uid: user.id,
-          username: user.username,
-          imageUrl: user.profileImage,
-          size: 120,
-        ),
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-            ),
-            child: Icon(
-              _statusIcon(user.statusFlag),
-              color: Colors.white,
-              size: 18,
+    return GestureDetector(
+      onTap: () => _openEditPage(user),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ProfileAvatar(
+            uid: user.id,
+            username: user.username,
+            imageUrl: user.profileImage,
+            size: 120,
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: statusColor,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 3),
+              ),
+              child: Icon(
+                _statusIcon(user.statusFlag),
+                color: Colors.white,
+                size: 18,
+              ),
             ),
           ),
-        ),
-      ],
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: AdminColors.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 3),
+              ),
+              child: const Icon(
+                Icons.edit,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -182,6 +203,13 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
     );
   }
 
+  Future<void> _openEditPage(UserModel user) async {
+    await Get.to(() => AdminEditUserProfilePage(user: user));
+    if (mounted) {
+      setState(_refreshUser);
+    }
+  }
+
   Widget _buildActionButtons(UserModel user) {
     return Column(
       children: [
@@ -189,12 +217,7 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
           label: 'แก้ไขข้อมูลส่วนตัว',
           icon: Icons.manage_accounts_outlined,
           color: AdminColors.primary,
-          onTap: () async {
-            await Get.to(() => AdminEditUserProfilePage(user: user));
-            if (mounted) {
-              setState(_refreshUser);
-            }
-          },
+          onTap: () => _openEditPage(user),
         ),
         const SizedBox(height: 10),
         _buildActionButton(

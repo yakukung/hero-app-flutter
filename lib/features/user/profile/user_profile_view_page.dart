@@ -394,6 +394,84 @@ class _UserProfileViewPageState extends State<UserProfileViewPage>
     );
   }
 
+  void _reportPost(PostModel post) {
+    final detailController = TextEditingController();
+    final reportTypes = ReportType.forTable('posts');
+    var selectedType = reportTypes.first;
+
+    showCustomDialog(
+      title: 'รายงานโพสต์',
+      message: 'ระบุเหตุผลที่ต้องการรายงาน',
+      isConfirm: true,
+      okButtonLabel: 'ส่งรายงาน',
+      isDanger: true,
+      content: StatefulBuilder(
+        builder: (context, setState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: DropdownButtonFormField<ReportType>(
+                isExpanded: true,
+                initialValue: selectedType,
+                decoration: const InputDecoration(
+                  labelText: 'เหตุผล',
+                  border: InputBorder.none,
+                ),
+                items: reportTypes
+                    .map((type) => DropdownMenuItem(
+                          value: type,
+                          child: Text(type.displayName),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => selectedType = value);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: detailController,
+              minLines: 3,
+              maxLines: 5,
+              decoration: InputDecoration(
+                labelText: 'รายละเอียดเพิ่มเติม',
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      onOk: () async {
+        final result = await ReportsService.submitReport(
+          referenceId: post.id,
+          referenceTable: 'posts',
+          reportType: selectedType,
+          content: detailController.text.trim(),
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.success ? 'ส่งรายงานแล้ว' : result.message,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildTabBar() {
     return Container(
       height: 44,
@@ -477,7 +555,7 @@ class _UserProfileViewPageState extends State<UserProfileViewPage>
                 post: post,
                 formattedDate: _formatPostDate(post.createdAt),
                 onUserTap: () {},
-                onReportTap: () {},
+                onReportTap: () => _reportPost(post),
                 onSheetTap: post.sheetId == null
                     ? null
                     : () => Get.to(

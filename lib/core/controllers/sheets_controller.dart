@@ -211,61 +211,63 @@ class SheetsController extends GetxController {
     final preferences = (preferencesService ?? PreferencesService()).load();
 
     Set<String>? followedIds;
-    if (preferences.followedOnly) {
-      try {
-        final appUser = Get.find<AppController>().user.value;
-        if (appUser != null && appUser.followingsUid.isNotEmpty) {
-          followedIds = appUser.followingsUid.toSet();
-        }
-      } catch (_) {}
-    }
+    try {
+      final appUser = Get.find<AppController>().user.value;
+      if (appUser != null && appUser.followingsUid.isNotEmpty) {
+        followedIds = appUser.followingsUid.toSet();
+      }
+    } catch (_) {}
 
     final hasKeywordOrSubject = preferences.keywords.isNotEmpty ||
         preferences.subjects.isNotEmpty;
 
-    final followed = followedIds;
-    if (!hasKeywordOrSubject) {
-      if (followed != null) {
-        final filtered = sheets
-            .where((sheet) => followed.contains(sheet.authorId))
-            .toList();
-        return filtered.isEmpty ? popularSheets : filtered;
-      }
-      return popularSheets;
+    List<SheetModel> filtered;
+    if (hasKeywordOrSubject) {
+      final keywords = preferences.keywords.map((e) => e.toLowerCase()).toSet();
+      final subjects = preferences.subjects.map((e) => e.toLowerCase()).toSet();
+      filtered = sheets.where((sheet) {
+        final keywordMatches =
+            sheet.keywordIds?.any((keyword) {
+              final lower = keyword.toLowerCase();
+              return keywords.any((preference) => lower.contains(preference));
+            }) ??
+            false;
+        final subjectMatches =
+            sheet.categoryIds?.any((subject) {
+              final lower = subject.toLowerCase();
+              return subjects.any((preference) => lower.contains(preference));
+            }) ??
+            false;
+        return keywordMatches || subjectMatches;
+      }).toList();
+    } else {
+      filtered = popularSheets;
     }
 
-    final keywords = preferences.keywords.map((e) => e.toLowerCase()).toSet();
-    final subjects = preferences.subjects.map((e) => e.toLowerCase()).toSet();
-    var filtered = sheets.where((sheet) {
-      final keywordMatches =
-          sheet.keywordIds?.any((keyword) {
-            final lower = keyword.toLowerCase();
-            return keywords.any((preference) => lower.contains(preference));
-          }) ??
-          false;
-      final subjectMatches =
-          sheet.categoryIds?.any((subject) {
-            final lower = subject.toLowerCase();
-            return subjects.any((preference) => lower.contains(preference));
-          }) ??
-          false;
-      return keywordMatches || subjectMatches;
-    }).toList();
-
-    if (followed != null && followed.isNotEmpty) {
-      filtered = filtered
-          .where((sheet) => followed.contains(sheet.authorId))
-          .toList();
+    if (preferences.followedOnly && followedIds != null && followedIds.isNotEmpty) {
+      final ids = followedIds;
+      final allFollowedSheets = sheets
+          .where((sheet) => ids.contains(sheet.authorId))
+          .toList()
+            ..sort(_sortByRatingAndDate);
+      final otherSheets = filtered
+          .where((sheet) => !ids.contains(sheet.authorId))
+          .toList()
+            ..sort(_sortByRatingAndDate);
+      allFollowedSheets.addAll(otherSheets);
+      if (allFollowedSheets.isNotEmpty) return allFollowedSheets;
     }
 
     if (filtered.isEmpty) {
       return popularSheets;
     }
-    return filtered..sort((a, b) {
-      final ratingCompare = (b.rating ?? 0).compareTo(a.rating ?? 0);
-      if (ratingCompare != 0) return ratingCompare;
-      return b.createdAt.compareTo(a.createdAt);
-    });
+    return filtered..sort(_sortByRatingAndDate);
+  }
+
+  static int _sortByRatingAndDate(SheetModel a, SheetModel b) {
+    final ratingCompare = (b.rating ?? 0).compareTo(a.rating ?? 0);
+    if (ratingCompare != 0) return ratingCompare;
+    return b.createdAt.compareTo(a.createdAt);
   }
 
   void resetState() {
