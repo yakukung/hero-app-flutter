@@ -134,6 +134,32 @@ class _ProfilePageState extends State<ProfilePage>
     return '$day/$month/${local.year}  $hour:$minute';
   }
 
+  Future<void> _toggleSharePost(
+    PostModel post,
+    ValueNotifier<List<PostModel>> notifier,
+  ) async {
+    final result = post.isShared
+        ? await PostsService.unsharePost(post.id)
+        : await PostsService.sharePost(post.id);
+    if (result.success) {
+      final list = notifier.value;
+      if (result.removed) {
+        notifier.value = list.where((p) => p.id != post.id).toList();
+      } else {
+        final updated = post.copyWith(
+          isShared: true,
+          shareCount: result.shareCount ?? post.shareCount + 1,
+        );
+        final index = list.indexWhere((p) => p.id == post.id);
+        if (index != -1) {
+          final newList = [...list];
+          newList[index] = updated;
+          notifier.value = newList;
+        }
+      }
+    }
+  }
+
   Future<void> _toggleLikePost(
     PostModel post,
     ValueNotifier<List<PostModel>> notifier,
@@ -356,6 +382,7 @@ class _ProfilePageState extends State<ProfilePage>
   Widget _buildPostsTabContent({
     required ValueNotifier<bool> isLoadingNotifier,
     required ValueNotifier<List<PostModel>> postsNotifier,
+    void Function(PostModel, ValueNotifier<List<PostModel>>)? onShareTap,
   }) {
     return ValueListenableBuilder<bool>(
       valueListenable: isLoadingNotifier,
@@ -406,6 +433,9 @@ class _ProfilePageState extends State<ProfilePage>
                               ),
                         onLikeTap: () => _toggleLikePost(post, postsNotifier),
                         onCommentTap: () => _openComments(post),
+                        onShareTap: onShareTap == null
+                            ? null
+                            : () => onShareTap(post, postsNotifier),
                       ),
                     ),
                   )
@@ -531,6 +561,7 @@ class _ProfilePageState extends State<ProfilePage>
                       _buildPostsTabContent(
                         isLoadingNotifier: _controller.isLoadingSharedPosts,
                         postsNotifier: _controller.sharedPosts,
+                        onShareTap: _toggleSharePost,
                       ),
                     ],
                   ),

@@ -44,6 +44,7 @@ class CommunityPageController extends ChangeNotifier {
   List<PostModel> _posts = const [];
   bool _isLoading = true;
   String? _errorMessage;
+  bool _disposed = false;
 
   List<PostModel> get posts => _posts;
   bool get isLoading => _isLoading;
@@ -54,7 +55,7 @@ class CommunityPageController extends ChangeNotifier {
   Future<void> loadPosts() async {
     _isLoading = true;
     _errorMessage = null;
-    notifyListeners();
+    if (!_disposed) notifyListeners();
 
     try {
       final loaded = await _loadPosts();
@@ -66,7 +67,7 @@ class CommunityPageController extends ChangeNotifier {
       _errorMessage = error.toString();
     } finally {
       _isLoading = false;
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     }
   }
 
@@ -92,7 +93,7 @@ class CommunityPageController extends ChangeNotifier {
         likeCount: current.likeCount + increment,
       );
     }).toList();
-    notifyListeners();
+    if (!_disposed) notifyListeners();
     return true;
   }
 
@@ -103,7 +104,7 @@ class CommunityPageController extends ChangeNotifier {
       }
       return post.copyWith(commentCount: commentCount);
     }).toList();
-    notifyListeners();
+    if (!_disposed) notifyListeners();
   }
 
   Future<ShareActionResult> toggleShare(PostModel post) async {
@@ -129,7 +130,7 @@ class CommunityPageController extends ChangeNotifier {
           shareCount: result.shareCount ?? fallbackShareCount,
         );
       }).toList();
-      notifyListeners();
+      if (!_disposed) notifyListeners();
     }
     return result;
   }
@@ -144,6 +145,12 @@ class CommunityPageController extends ChangeNotifier {
       reportType: reportType,
       content: content,
     );
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   static Future<bool> _defaultReportPost({
