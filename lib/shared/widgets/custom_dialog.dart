@@ -48,6 +48,7 @@ Future<void> showCustomDialog({
           child: Builder(
             builder: (context) {
               final bottomInset = MediaQuery.paddingOf(context).bottom;
+              final viewInset = MediaQuery.viewInsetsOf(context).bottom;
               return ConstrainedBox(
                 constraints: BoxConstraints(
                   maxHeight: MediaQuery.sizeOf(context).height * 0.82,
@@ -59,7 +60,7 @@ Future<void> showCustomDialog({
                       top: Radius.circular(45),
                     ),
                   ),
-                  padding: EdgeInsets.fromLTRB(20, 28, 20, 24 + bottomInset),
+                  padding: EdgeInsets.fromLTRB(20, 28, 20, 24 + bottomInset + viewInset),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [

@@ -32,8 +32,6 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
     _userFuture = _adminController.fetchUserById(widget.userId);
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,9 +81,7 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
   Widget _buildProfileSummary(UserModel user) {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(26),
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(26)),
       child: Column(
         children: [
           _buildProfileImage(user),
@@ -319,17 +315,17 @@ class _AdminUserProfilePageState extends State<AdminUserProfilePage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: StatusFlag.values.map((status) {
-                  return RadioListTile<StatusFlag>(
-                    title: Text(
-                      _statusLabel(status),
-                      style: const TextStyle(
-                        fontFamily: AppFonts.sukhumvit,
-                        fontWeight: FontWeight.bold,
-                      ),
+                return RadioListTile<StatusFlag>(
+                  title: Text(
+                    _statusLabel(status),
+                    style: const TextStyle(
+                      fontFamily: AppFonts.sukhumvit,
+                      fontWeight: FontWeight.bold,
                     ),
-                    value: status,
-                    activeColor: AppColors.primary,
-                  );
+                  ),
+                  value: status,
+                  activeColor: AppColors.primary,
+                );
               }).toList(),
             ),
           );
