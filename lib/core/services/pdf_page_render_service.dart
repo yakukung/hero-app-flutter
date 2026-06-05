@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfx/pdfx.dart';
@@ -35,6 +36,7 @@ class PdfPageRenderService {
 
   Future<List<File>> renderPages(
     File pdfFile, {
+    int? maxPages,
     PdfPageRenderProgress? onProgress,
   }) async {
     PdfDocument? document;
@@ -43,9 +45,7 @@ class PdfPageRenderService {
     try {
       document = await PdfDocument.openFile(pdfFile.path);
       final pageCount = document.pagesCount;
-      if (pageCount < 1) {
-        throw const PdfPageRenderException('PDF นี้ไม่มีหน้าที่สามารถแยกได้');
-      }
+      validatePageCount(pageCount, maxPages: maxPages);
 
       onProgress?.call(0, pageCount);
 
@@ -103,6 +103,16 @@ class PdfPageRenderService {
       throw PdfPageRenderException('ไม่สามารถแยกหน้า PDF ได้', error);
     } finally {
       await document?.close();
+    }
+  }
+
+  @visibleForTesting
+  static void validatePageCount(int pageCount, {int? maxPages}) {
+    if (pageCount < 1) {
+      throw const PdfPageRenderException('PDF นี้ไม่มีหน้าที่สามารถแยกได้');
+    }
+    if (maxPages != null && pageCount > maxPages) {
+      throw PdfPageRenderException('อัปโหลดชีตได้สูงสุด $maxPages หน้า');
     }
   }
 

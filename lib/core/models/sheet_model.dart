@@ -61,30 +61,18 @@ class SheetModel {
         : null;
     final dynamic buyers = json['buyers'];
     final dynamic buyersCount = json['buyers_count'] ?? json['buyer_count'];
-    final List<dynamic>? rawCategories = json['categories'] as List?;
-    final List<String>? parsedCategoryIds = (json['category_ids'] as List?)
-        ?.map((e) => e.toString())
-        .toList();
-    final List<String>? parsedCategoryNames = rawCategories
-        ?.whereType<Map>()
-        .map((e) {
-          final map = Map<String, dynamic>.from(e);
-          return map['name']?.toString() ?? map['id']?.toString() ?? '';
-        })
-        .where((e) => e.isNotEmpty)
-        .toList();
-    final List<dynamic>? rawKeywords = json['keywords'] as List?;
-    final List<String>? parsedKeywordIds = (json['keyword_ids'] as List?)
-        ?.map((e) => e.toString())
-        .toList();
-    final List<String>? parsedKeywordNames = rawKeywords
-        ?.whereType<Map>()
-        .map((e) {
-          final map = Map<String, dynamic>.from(e);
-          return map['name']?.toString() ?? map['id']?.toString() ?? '';
-        })
-        .where((e) => e.isNotEmpty)
-        .toList();
+    final List<String>? parsedCategoryIds = _readStringList(
+      json['category_ids'] ?? json['category_id'],
+    );
+    final List<String>? parsedCategoryNames = _readNamedList(
+      json['category_names'] ?? json['categories'] ?? json['category'],
+    );
+    final List<String>? parsedKeywordIds = _readStringList(
+      json['keyword_ids'] ?? json['keyword_id'],
+    );
+    final List<String>? parsedKeywordNames = _readNamedList(
+      json['keyword_names'] ?? json['keywords'] ?? json['keyword'],
+    );
     final int resolvedBuyerCount = buyers is List
         ? buyers.length
         : buyers is Map<String, dynamic>
@@ -128,7 +116,13 @@ class SheetModel {
           : null,
       updatedBy: json['updated_by'] ?? operationData?['updated_by'],
       authorName: json['author_name'],
-      authorAvatar: json['user_avatar'] ?? json['author_avatar'] ?? json['profile_image'] ?? (json['author'] is Map ? (json['author'] as Map)['profile_image'] : null),
+      authorAvatar:
+          json['user_avatar'] ??
+          json['author_avatar'] ??
+          json['profile_image'] ??
+          (json['author'] is Map
+              ? (json['author'] as Map)['profile_image']
+              : null),
       files:
           (json['files'] as List?)
               ?.map((e) => SheetFileModel.fromJson(e))
@@ -160,6 +154,42 @@ class SheetModel {
           json['favorite'] == 1,
     );
   }
+
+  static List<String>? _readStringList(dynamic value) {
+    if (value is List) {
+      return value.map((item) => item.toString()).where(_isNotBlank).toList();
+    }
+    if (value is String) {
+      return value.trim().isEmpty ? null : <String>[value.trim()];
+    }
+    return null;
+  }
+
+  static List<String>? _readNamedList(dynamic value) {
+    if (value is List) {
+      return value
+          .map((item) {
+            if (item is Map) {
+              final map = Map<String, dynamic>.from(item);
+              return map['name']?.toString() ?? map['id']?.toString() ?? '';
+            }
+            return item.toString();
+          })
+          .where(_isNotBlank)
+          .toList();
+    }
+    if (value is Map) {
+      final map = Map<String, dynamic>.from(value);
+      final name = map['name']?.toString() ?? map['id']?.toString() ?? '';
+      return name.trim().isEmpty ? null : <String>[name.trim()];
+    }
+    if (value is String) {
+      return value.trim().isEmpty ? null : <String>[value.trim()];
+    }
+    return null;
+  }
+
+  static bool _isNotBlank(String value) => value.trim().isNotEmpty;
 
   Map<String, dynamic> toJson() {
     return {

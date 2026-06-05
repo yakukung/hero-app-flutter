@@ -7,6 +7,8 @@ class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback? onFavoriteTap;
   final int colorIndex;
+  final bool isFeatured;
+  final int? featuredRank;
 
   // Fallback gradient pairs when no image
   static const List<List<Color>> gradients = [
@@ -25,16 +27,63 @@ class ProductCard extends StatelessWidget {
     required this.product,
     this.onFavoriteTap,
     this.colorIndex = 0,
+    this.isFeatured = false,
+    this.featuredRank,
   });
 
   @override
   Widget build(BuildContext context) {
     final hasImage = product.imageUrl != null && product.imageUrl!.isNotEmpty;
     final gradientPair = gradients[colorIndex % gradients.length];
+    final effectiveRank = switch (featuredRank) {
+      1 => 1,
+      2 => 2,
+      3 => 3,
+      _ => isFeatured ? 2 : null,
+    };
+    final cardWidth = switch (effectiveRank) {
+      1 => 215.0,
+      2 => 205.0,
+      3 => 195.0,
+      _ => 180.0,
+    };
+    final cardHeight = switch (effectiveRank) {
+      1 => 320.0,
+      2 => 305.0,
+      3 => 292.0,
+      _ => 270.0,
+    };
+    final titleFontSize = switch (effectiveRank) {
+      1 => 19.0,
+      2 => 18.0,
+      3 => 17.0,
+      _ => 16.0,
+    };
+    final ratingIconSize = switch (effectiveRank) {
+      1 => 19.0,
+      2 => 18.0,
+      3 => 16.0,
+      _ => 14.0,
+    };
+    final ratingFontSize = switch (effectiveRank) {
+      1 => 16.0,
+      2 => 15.0,
+      3 => 14.0,
+      _ => 12.0,
+    };
+    final ratingFontWeight = effectiveRank == null
+        ? FontWeight.w600
+        : FontWeight.w800;
+    final priceFontSize = switch (effectiveRank) {
+      1 => 16.0,
+      2 => 15.0,
+      3 => 15.0,
+      _ => 14.0,
+    };
 
     return Container(
-      width: 180,
-      height: 270,
+      width: cardWidth,
+      height: cardHeight,
       margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
@@ -124,11 +173,11 @@ class ProductCard extends StatelessWidget {
                   // Title with shadow
                   Text(
                     product.title ?? '-',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w800,
-                      fontSize: 16,
+                      fontSize: titleFontSize,
                       color: Colors.white,
-                      shadows: [
+                      shadows: const [
                         Shadow(
                           offset: Offset(0, 1),
                           blurRadius: 3,
@@ -162,18 +211,18 @@ class ProductCard extends StatelessWidget {
                   // Rating
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.emoji_events_rounded,
                         color: Colors.amber,
-                        size: 14,
+                        size: ratingIconSize,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         product.rating?.toStringAsFixed(1) ?? "-",
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.9),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
+                          fontWeight: ratingFontWeight,
+                          fontSize: ratingFontSize,
                         ),
                       ),
                     ],
@@ -191,9 +240,9 @@ class ProductCard extends StatelessWidget {
                     ),
                     child: Text(
                       product.price ?? '-',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w800,
-                        fontSize: 14,
+                        fontSize: priceFontSize,
                         color: AppColors.primary,
                       ),
                     ),

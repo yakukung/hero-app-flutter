@@ -16,6 +16,8 @@ import 'package:hero_app_flutter/shared/widgets/custom_dialog.dart';
 import 'package:hero_app_flutter/shared/widgets/upload/image_upload_section.dart';
 import 'package:hero_app_flutter/shared/widgets/upload/keyword_section.dart';
 import 'package:hero_app_flutter/shared/widgets/upload/upload_progress_dialog.dart';
+import 'package:hero_app_flutter/validations/upload_validators.dart';
+import 'package:hero_app_flutter/validations/validation_messages.dart';
 
 class UploadPage extends StatefulWidget {
   const UploadPage({super.key, this.controller});
@@ -61,6 +63,15 @@ class _UploadPageState extends State<UploadPage> {
       return;
     }
 
+    if (_controller.uploadedImages.length + images.length >
+        maxSheetUploadPageCount) {
+      await showCustomDialog(
+        title: ValidationMessages.invalidFormatTitle,
+        message: ValidationMessages.uploadPageCountTooLarge,
+      );
+      return;
+    }
+
     _controller.addImages(images.map((image) => File(image.path)));
   }
 
@@ -101,6 +112,7 @@ class _UploadPageState extends State<UploadPage> {
     try {
       renderedPages = await _pdfPageRenderService.renderPages(
         pdfFile,
+        maxPages: maxSheetUploadPageCount,
         onProgress: (pageNumber, pageCount) {
           _pdfRenderProgressNotifier.value = _PdfRenderProgress(
             pageNumber: pageNumber,

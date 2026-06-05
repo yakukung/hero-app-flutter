@@ -11,12 +11,14 @@ class HomeSheetSection extends StatelessWidget {
     required this.sheets,
     required this.onOpenSheet,
     required this.onFavoriteTap,
+    required this.onShowAll,
   });
 
   final String title;
   final List<SheetModel> sheets;
   final ValueChanged<SheetModel> onOpenSheet;
   final ValueChanged<SheetModel> onFavoriteTap;
+  final VoidCallback onShowAll;
 
   @override
   Widget build(BuildContext context) {
@@ -27,21 +29,34 @@ class HomeSheetSection extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black,
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Text(
-                'แสดงทั้งหมด',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.black,
+              TextButton(
+                onPressed: onShowAll,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.black,
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  textStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    fontFamily: 'SukhumvitSet',
+                  ),
                 ),
+                child: const Text('แสดงทั้งหมด'),
               ),
             ],
           ),
@@ -52,6 +67,7 @@ class HomeSheetSection extends StatelessWidget {
           clipBehavior: Clip.none,
           padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               for (int index = 0; index < sheets.length; index++)
                 GestureDetector(
@@ -71,6 +87,7 @@ class HomeSheetSection extends StatelessWidget {
                       isFavorite: sheets[index].isFavorite,
                     ),
                     colorIndex: index,
+                    featuredRank: index < 3 ? index + 1 : null,
                     onFavoriteTap: () => onFavoriteTap(sheets[index]),
                   ),
                 ),

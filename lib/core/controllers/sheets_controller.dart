@@ -204,11 +204,8 @@ class SheetsController extends GetxController {
   }
 
   List<SheetModel> recommendedSheets({PreferencesService? preferencesService}) {
-    if (backendRecommendedSheets.isNotEmpty) {
-      return backendRecommendedSheets.toList();
-    }
-
     final preferences = (preferencesService ?? PreferencesService()).load();
+    final backendRecommendations = backendRecommendedSheets.toList();
 
     Set<String>? followedIds;
     try {
@@ -218,41 +215,34 @@ class SheetsController extends GetxController {
       }
     } catch (_) {}
 
-    final hasKeywordOrSubject = preferences.keywords.isNotEmpty ||
-        preferences.subjects.isNotEmpty;
+    final hasKeywordOrSubject =
+        preferences.keywords.isNotEmpty || preferences.subjects.isNotEmpty;
 
     List<SheetModel> filtered;
     if (hasKeywordOrSubject) {
-      final keywords = preferences.keywords.map((e) => e.toLowerCase()).toSet();
-      final subjects = preferences.subjects.map((e) => e.toLowerCase()).toSet();
-      filtered = sheets.where((sheet) {
-        final keywordMatches =
-            sheet.keywordIds?.any((keyword) {
-              final lower = keyword.toLowerCase();
-              return keywords.any((preference) => lower.contains(preference));
-            }) ??
-            false;
-        final subjectMatches =
-            sheet.categoryIds?.any((subject) {
-              final lower = subject.toLowerCase();
-              return subjects.any((preference) => lower.contains(preference));
-            }) ??
-            false;
-        return keywordMatches || subjectMatches;
-      }).toList();
+      final candidates = backendRecommendations.isNotEmpty
+          ? backendRecommendations
+          : sheets.toList();
+      filtered = _filterByPreferences(candidates, preferences);
+
+      if (filtered.isEmpty && backendRecommendations.isNotEmpty) {
+        filtered = _filterByPreferences(sheets, preferences);
+      }
+    } else if (backendRecommendations.isNotEmpty) {
+      filtered = backendRecommendations;
     } else {
       filtered = popularSheets;
     }
 
-    if (preferences.followedOnly && followedIds != null && followedIds.isNotEmpty) {
+    if (preferences.followedOnly &&
+        followedIds != null &&
+        followedIds.isNotEmpty) {
       final ids = followedIds;
-      final allFollowedSheets = sheets
-          .where((sheet) => ids.contains(sheet.authorId))
-          .toList()
+      final allFollowedSheets =
+          sheets.where((sheet) => ids.contains(sheet.authorId)).toList()
             ..sort(_sortByRatingAndDate);
-      final otherSheets = filtered
-          .where((sheet) => !ids.contains(sheet.authorId))
-          .toList()
+      final otherSheets =
+          filtered.where((sheet) => !ids.contains(sheet.authorId)).toList()
             ..sort(_sortByRatingAndDate);
       allFollowedSheets.addAll(otherSheets);
       if (allFollowedSheets.isNotEmpty) return allFollowedSheets;
@@ -268,6 +258,62 @@ class SheetsController extends GetxController {
     final ratingCompare = (b.rating ?? 0).compareTo(a.rating ?? 0);
     if (ratingCompare != 0) return ratingCompare;
     return b.createdAt.compareTo(a.createdAt);
+  }
+
+  List<SheetModel> _filterByPreferences(
+    Iterable<SheetModel> source,
+    UserPreferences preferences,
+  ) {
+    final keywords = _normalizePreferences(preferences.keywords);
+    final subjects = _normalizePreferences(preferences.subjects);
+
+    return source.where((sheet) {
+      final keywordMatches = _matchesAnyPreference(
+        _keywordSearchValues(sheet),
+        keywords,
+      );
+      final subjectMatches = _matchesAnyPreference(
+        _subjectSearchValues(sheet),
+        subjects,
+      );
+      return keywordMatches || subjectMatches;
+    }).toList();
+  }
+
+  Set<String> _normalizePreferences(List<String> values) {
+    return values
+        .map((value) => value.trim().toLowerCase())
+        .where((value) => value.isNotEmpty)
+        .toSet();
+  }
+
+  bool _matchesAnyPreference(Iterable<String> values, Set<String> preferences) {
+    if (preferences.isEmpty) {
+      return false;
+    }
+
+    return values
+        .map((value) => value.trim().toLowerCase())
+        .where((value) => value.isNotEmpty)
+        .any(
+          (value) =>
+              preferences.any((preference) => value.contains(preference)),
+        );
+  }
+
+  Iterable<String> _keywordSearchValues(SheetModel sheet) sync* {
+    yield* sheet.keywordIds ?? const <String>[];
+    yield* sheet.keywordNames ?? const <String>[];
+    yield sheet.title;
+    final description = sheet.description;
+    if (description != null) {
+      yield description;
+    }
+  }
+
+  Iterable<String> _subjectSearchValues(SheetModel sheet) sync* {
+    yield* sheet.categoryIds ?? const <String>[];
+    yield* sheet.categoryNames ?? const <String>[];
   }
 
   void resetState() {
@@ -389,6 +435,8 @@ class SheetsController extends GetxController {
       questions: sheet.questions,
       categoryIds: sheet.categoryIds,
       keywordIds: sheet.keywordIds,
+      categoryNames: sheet.categoryNames,
+      keywordNames: sheet.keywordNames,
       buyerCount: sheet.buyerCount,
       isPurchased: isPurchased ?? sheet.isPurchased,
       isFavorite: isFavorite ?? sheet.isFavorite,

@@ -7,6 +7,7 @@ class PreviewSheetBottomActionBar extends StatelessWidget {
     super.key,
     required this.canReadFull,
     required this.hasQuestions,
+    required this.showQuizAction,
     required this.onReadPreview,
     required this.onReadFull,
     required this.onBuy,
@@ -15,6 +16,7 @@ class PreviewSheetBottomActionBar extends StatelessWidget {
 
   final bool canReadFull;
   final bool hasQuestions;
+  final bool showQuizAction;
   final VoidCallback onReadPreview;
   final VoidCallback onReadFull;
   final VoidCallback onBuy;
@@ -50,6 +52,7 @@ class PreviewSheetBottomActionBar extends StatelessWidget {
         child: canReadFull
             ? _PurchasedActions(
                 hasQuestions: hasQuestions,
+                showQuizAction: showQuizAction,
                 onReadFull: onReadFull,
                 onQuiz: onQuiz,
               )
@@ -62,11 +65,13 @@ class PreviewSheetBottomActionBar extends StatelessWidget {
 class _PurchasedActions extends StatelessWidget {
   const _PurchasedActions({
     required this.hasQuestions,
+    required this.showQuizAction,
     required this.onReadFull,
     required this.onQuiz,
   });
 
   final bool hasQuestions;
+  final bool showQuizAction;
   final VoidCallback onReadFull;
   final VoidCallback onQuiz;
 
@@ -103,7 +108,7 @@ class _PurchasedActions extends StatelessWidget {
             ),
           ),
         ),
-        if (hasQuestions) ...[
+        if (hasQuestions && showQuizAction) ...[
           const SizedBox(width: 12),
           Expanded(
             flex: 5,

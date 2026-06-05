@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:hero_app_flutter/core/models/sheet_model.dart';
+import 'package:hero_app_flutter/features/user/home/home_sheet_list_page.dart';
 import 'package:hero_app_flutter/features/user/home/controllers/home_page_controller.dart';
 import 'package:hero_app_flutter/features/user/home/widgets/home_sheet_section.dart';
 import 'package:hero_app_flutter/features/user/home/widgets/home_state_view.dart';
@@ -80,6 +81,10 @@ class _HomePageState extends State<HomePage> {
                           sheets: recommendedSheets,
                           onOpenSheet: _openSheet,
                           onFavoriteTap: _confirmToggleFavorite,
+                          onShowAll: () => _openSheetList(
+                            title: 'แนะนำสำหรับคุณ',
+                            listType: HomeSheetListType.recommended,
+                          ),
                         ),
                         const SizedBox(height: 20),
                         HomeSheetSection(
@@ -87,6 +92,10 @@ class _HomePageState extends State<HomePage> {
                           sheets: popularSheets,
                           onOpenSheet: _openSheet,
                           onFavoriteTap: _confirmToggleFavorite,
+                          onShowAll: () => _openSheetList(
+                            title: 'ชีตยอดนิยม',
+                            listType: HomeSheetListType.popular,
+                          ),
                         ),
                         const SizedBox(height: 20),
                         HomeSheetSection(
@@ -94,6 +103,10 @@ class _HomePageState extends State<HomePage> {
                           sheets: newestSheets,
                           onOpenSheet: _openSheet,
                           onFavoriteTap: _confirmToggleFavorite,
+                          onShowAll: () => _openSheetList(
+                            title: 'ชีตใหม่ล่าสุด',
+                            listType: HomeSheetListType.newest,
+                          ),
                         ),
                         const SizedBox(height: 140),
                       ],
@@ -107,6 +120,21 @@ class _HomePageState extends State<HomePage> {
 
   void _openSheet(SheetModel sheet) {
     Get.to(() => PreviewSheetPage(sheetId: sheet.id));
+  }
+
+  void _openSheetList({
+    required String title,
+    required HomeSheetListType listType,
+  }) {
+    Get.to(
+      () => HomeSheetListPage(
+        title: title,
+        listType: listType,
+        sheetsController: _controller.sheetsController,
+        onOpenSheet: _openSheet,
+        onFavoriteTap: _confirmToggleFavorite,
+      ),
+    );
   }
 
   void _confirmToggleFavorite(SheetModel sheet) {

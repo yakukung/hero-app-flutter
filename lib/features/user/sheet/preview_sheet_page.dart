@@ -29,6 +29,7 @@ class PreviewSheetPage extends StatefulWidget {
 
 class _PreviewSheetPageState extends State<PreviewSheetPage> {
   late final PreviewSheetPageController _controller;
+  bool _hasPressedBottomReadFull = false;
 
   bool get _ownsController => widget.controller == null;
 
@@ -107,8 +108,9 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
               PreviewSheetBottomActionBar(
                 canReadFull: _controller.canReadFull,
                 hasQuestions: sheet.questions?.isNotEmpty ?? false,
+                showQuizAction: _hasPressedBottomReadFull,
                 onReadPreview: () => _openReader(fullVersion: false),
-                onReadFull: () => _openReader(fullVersion: true),
+                onReadFull: _openFullReaderFromBottomAction,
                 onBuy: _buySheet,
                 onQuiz: _openQuiz,
               ),
@@ -119,10 +121,10 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
     );
   }
 
-  void _openReader({required bool fullVersion}) {
+  bool _openReader({required bool fullVersion}) {
     final sheet = _controller.sheet;
     if (sheet == null) {
-      return;
+      return false;
     }
 
     final previewImages = _controller.previewImages;
@@ -130,7 +132,7 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('ไม่มีเนื้อหาให้อ่าน')));
-      return;
+      return false;
     }
 
     final imagesToRead = fullVersion
@@ -144,6 +146,18 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
         title: fullVersion ? '${sheet.title} (ฉบับเต็ม)' : sheet.title,
       ),
     );
+    return true;
+  }
+
+  void _openFullReaderFromBottomAction() {
+    final didOpenReader = _openReader(fullVersion: true);
+    if (!didOpenReader || _hasPressedBottomReadFull) {
+      return;
+    }
+
+    setState(() {
+      _hasPressedBottomReadFull = true;
+    });
   }
 
   void _buySheet() {
@@ -354,8 +368,6 @@ class _PreviewSheetPageState extends State<PreviewSheetPage> {
       },
     );
   }
-
-  
 
   Widget _buildHeader(SheetModel sheet) {
     return SliverAppBar(

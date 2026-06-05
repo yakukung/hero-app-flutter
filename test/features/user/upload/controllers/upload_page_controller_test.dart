@@ -173,4 +173,52 @@ void main() {
       await tempDir.delete(recursive: true);
     }
   });
+
+  test(
+    'submit rejects more than 10 pages before upload service is called',
+    () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'upload_page_controller_page_count_test',
+      );
+      final imageFiles = List<File>.generate(
+        11,
+        (index) =>
+            File('${tempDir.path}/sheet_page_$index.jpg')
+              ..writeAsBytesSync(<int>[index]),
+      );
+      var wasUploadCalled = false;
+
+      final controller = UploadPageController(
+        fetchCategories: () async => const <CategoryModel>[],
+        submitUpload: ({required data, onProgress}) async {
+          wasUploadCalled = true;
+          return const SheetUploadResult(
+            success: true,
+            statusCode: 201,
+            message: 'unexpected',
+          );
+        },
+      );
+
+      try {
+        controller.addImages(imageFiles);
+        controller.titleController.text = 'Too Many Pages';
+        controller.descriptionController.text = 'Should stop locally';
+        controller.setSelectedSubject('cat-1');
+        controller.setSelectedPrice('0');
+
+        final result = await controller.submit();
+
+        expect(result.validationError, isNotNull);
+        expect(
+          result.validationError?.message,
+          ValidationMessages.uploadPageCountTooLarge,
+        );
+        expect(wasUploadCalled, isFalse);
+      } finally {
+        controller.dispose();
+        await tempDir.delete(recursive: true);
+      }
+    },
+  );
 }

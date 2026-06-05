@@ -5,6 +5,7 @@ import 'package:hero_app_flutter/validations/validation_error.dart';
 import 'package:hero_app_flutter/validations/validation_messages.dart';
 
 const int maxSheetUploadFileBytes = 5 * 1024 * 1024;
+const int maxSheetUploadPageCount = 10;
 
 ValidationError? validateSheetUpload({
   required List<File> images,
@@ -23,6 +24,12 @@ ValidationError? validateSheetUpload({
     return const ValidationError(
       title: ValidationMessages.incompleteInfoTitle,
       message: ValidationMessages.uploadImageRequired,
+    );
+  }
+  if (images.length > maxSheetUploadPageCount) {
+    return const ValidationError(
+      title: ValidationMessages.invalidFormatTitle,
+      message: ValidationMessages.uploadPageCountTooLarge,
     );
   }
   for (final image in images) {

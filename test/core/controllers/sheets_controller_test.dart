@@ -2,6 +2,7 @@ import 'package:hero_app_flutter/core/controllers/sheets_controller.dart';
 import 'package:hero_app_flutter/core/models/category_model.dart';
 import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/models/sheet_model.dart';
+import 'package:hero_app_flutter/core/services/preferences_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -100,6 +101,63 @@ void main() {
     expect(recommended.map((sheet) => sheet.id), ['sheet-2']);
   });
 
+  test('recommendedSheets matches saved keyword and subject names', () async {
+    final preferencesService = PreferencesService(storage: storage);
+    await preferencesService.save(
+      const UserPreferences(keywords: ['calculus'], subjects: ['science']),
+    );
+
+    controller.sheets.addAll([
+      _buildSheet(
+        id: 'sheet-1',
+        title: 'Math Sheet',
+        keywordIds: const ['kw-1'],
+        keywordNames: const ['Calculus'],
+      ),
+      _buildSheet(
+        id: 'sheet-2',
+        title: 'Lab Sheet',
+        categoryIds: const ['cat-1'],
+        categoryNames: const ['Science'],
+      ),
+      _buildSheet(id: 'sheet-3', title: 'History Sheet'),
+    ]);
+
+    final recommended = controller.recommendedSheets(
+      preferencesService: preferencesService,
+    );
+
+    expect(recommended.map((sheet) => sheet.id), ['sheet-1', 'sheet-2']);
+  });
+
+  test(
+    'recommendedSheets falls back to local preference matches when backend misses',
+    () async {
+      final preferencesService = PreferencesService(storage: storage);
+      await preferencesService.save(
+        const UserPreferences(keywords: ['biology']),
+      );
+
+      controller.sheets.addAll([
+        _buildSheet(
+          id: 'sheet-1',
+          title: 'Biology Basics',
+          keywordNames: const ['Biology'],
+        ),
+        _buildSheet(id: 'sheet-2', title: 'Unrelated Local Sheet'),
+      ]);
+      controller.backendRecommendedSheets.addAll([
+        _buildSheet(id: 'sheet-3', title: 'Backend Sheet'),
+      ]);
+
+      final recommended = controller.recommendedSheets(
+        preferencesService: preferencesService,
+      );
+
+      expect(recommended.map((sheet) => sheet.id), ['sheet-1']);
+    },
+  );
+
   test('markPurchased updates cached sheet lists', () {
     controller.sheets.addAll([_buildSheet(id: 'sheet-1', title: 'Sheet A')]);
     controller.favoriteSheets.addAll([
@@ -121,6 +179,9 @@ SheetModel _buildSheet({
   required String id,
   required String title,
   List<String>? categoryIds,
+  List<String>? keywordIds,
+  List<String>? categoryNames,
+  List<String>? keywordNames,
   bool isFavorite = false,
 }) {
   return SheetModel(
@@ -132,6 +193,9 @@ SheetModel _buildSheet({
     createdAt: DateTime.utc(2026, 1, 1),
     createdBy: 'tester',
     categoryIds: categoryIds,
+    keywordIds: keywordIds,
+    categoryNames: categoryNames,
+    keywordNames: keywordNames,
     isFavorite: isFavorite,
   );
 }

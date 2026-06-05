@@ -27,6 +27,7 @@ class ValidationMessages {
   static const String invalidEmailMessage = 'รูปแบบอีเมลไม่ถูกต้อง';
 
   static const String uploadImageRequired = 'กรุณาเลือกรูปภาพชีต';
+  static const String uploadPageCountTooLarge = 'อัปโหลดชีตได้สูงสุด 10 หน้า';
   static const String uploadFileTooLarge =
       'ไฟล์ชีตต้องมีขนาดไม่เกิน 5MB ต่อไฟล์';
   static const String uploadTitleRequired = 'กรุณาใส่ชื่อหัวเรื่อง';
