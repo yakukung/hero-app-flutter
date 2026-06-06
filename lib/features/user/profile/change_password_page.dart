@@ -68,7 +68,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           break;
         default:
           showCustomDialog(
-            title: 'เกิดข้อผิดพลาด',
+            title: 'เปลี่ยนรหัสผ่านไม่สำเร็จ',
             message: getErrorMessage(response),
           );
           break;
@@ -121,11 +121,14 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                 validator: validateRequiredPassword,
                 decoration: _decoration('รหัสผ่านเดิม').copyWith(
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureOldPassword
-                        ? Icons.visibility_off
-                        : Icons.visibility),
-                    onPressed: () =>
-                        setState(() => _obscureOldPassword = !_obscureOldPassword),
+                    icon: Icon(
+                      _obscureOldPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () => setState(
+                      () => _obscureOldPassword = !_obscureOldPassword,
+                    ),
                   ),
                 ),
               ),
@@ -136,9 +139,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                 validator: validateStrongPassword,
                 decoration: _decoration('รหัสผ่านใหม่').copyWith(
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword
-                        ? Icons.visibility_off
-                        : Icons.visibility),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
                     onPressed: () =>
                         setState(() => _obscurePassword = !_obscurePassword),
                   ),
@@ -151,11 +156,14 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                 validator: validateRequiredPassword,
                 decoration: _decoration('ยืนยันรหัสผ่านใหม่').copyWith(
                   suffixIcon: IconButton(
-                    icon: Icon(_obscureCfPassword
-                        ? Icons.visibility_off
-                        : Icons.visibility),
-                    onPressed: () =>
-                        setState(() => _obscureCfPassword = !_obscureCfPassword),
+                    icon: Icon(
+                      _obscureCfPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () => setState(
+                      () => _obscureCfPassword = !_obscureCfPassword,
+                    ),
                   ),
                 ),
               ),

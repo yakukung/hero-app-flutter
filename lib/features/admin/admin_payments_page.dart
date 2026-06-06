@@ -39,27 +39,39 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
 
   Future<void> _refresh() async {
     final next = _fetch();
-    setState(() { _future = next; });
+    setState(() {
+      _future = next;
+    });
     await next;
   }
 
   Future<List<AdminPaymentItem>> _fetch() async {
-    final paymentsResponse =
-        await AdminService.fetchPayments(token: _sessionStore.token);
-    if (paymentsResponse.statusCode < 200 || paymentsResponse.statusCode >= 300) {
+    final paymentsResponse = await AdminService.fetchPayments(
+      token: _sessionStore.token,
+    );
+    if (paymentsResponse.statusCode < 200 ||
+        paymentsResponse.statusCode >= 300) {
       throw Exception(
-        getErrorMessage(paymentsResponse, fallback: 'โหลดรายการชำระเงินไม่สำเร็จ'),
+        getErrorMessage(
+          paymentsResponse,
+          fallback: 'โหลดรายการชำระเงินไม่สำเร็จ',
+        ),
       );
     }
 
-    final list = getApiList(paymentsResponse.body, const ['payments', 'items', 'data']);
+    final list = getApiList(paymentsResponse.body, const [
+      'payments',
+      'items',
+      'data',
+    ]);
     final payments = list
         .whereType<Map>()
         .map((e) => AdminPaymentItem.fromJson(Map.from(e)))
         .toList();
 
-    final subsResponse =
-        await AdminService.fetchSubscriptions(token: _sessionStore.token);
+    final subsResponse = await AdminService.fetchSubscriptions(
+      token: _sessionStore.token,
+    );
     _subscriptionExpiry.clear();
     if (subsResponse.statusCode >= 200 && subsResponse.statusCode < 300) {
       final root = getApiData(subsResponse.body);
@@ -69,7 +81,11 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
       } else if (root is List) {
         subList = root;
       } else {
-        subList = getApiList(subsResponse.body, const ['subscriptions', 'items', 'data']);
+        subList = getApiList(subsResponse.body, const [
+          'subscriptions',
+          'items',
+          'data',
+        ]);
       }
       for (final s in subList.whereType<Map>()) {
         final sItem = AdminSubscriptionItem.fromJson(Map.from(s));
@@ -178,7 +194,7 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
                   tabs: const [
                     Tab(text: 'ชีต'),
                     Tab(text: 'เติมเงิน'),
-                    Tab(text: 'สมาชิก'),
+                    Tab(text: 'สมาชิกพรีเมียม'),
                   ],
                 ),
               ),
@@ -201,9 +217,10 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
                       return AdminEmptyStatePage(
                         title: 'การชำระเงิน',
                         icon: Icons.payments_outlined,
-                        message: snapshot.error
-                            .toString()
-                            .replaceFirst('Exception: ', ''),
+                        message: snapshot.error.toString().replaceFirst(
+                          'Exception: ',
+                          '',
+                        ),
                         onRefresh: _refresh,
                       );
                     }
@@ -254,7 +271,9 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
     var result = items;
     if (_searchQuery.trim().isNotEmpty) {
       final q = _searchQuery.trim().toLowerCase();
-      result = result.where((e) => e.username.toLowerCase().contains(q)).toList();
+      result = result
+          .where((e) => e.username.toLowerCase().contains(q))
+          .toList();
     }
     if (_statusFilter != null) {
       result = result.where((e) => e.status == _statusFilter).toList();
@@ -299,7 +318,11 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
                 ),
                 prefixIcon: const Padding(
                   padding: EdgeInsets.only(left: 14, right: 8),
-                  child: Icon(Icons.search_rounded, size: 22, color: AdminColors.muted),
+                  child: Icon(
+                    Icons.search_rounded,
+                    size: 22,
+                    color: AdminColors.muted,
+                  ),
                 ),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -389,15 +412,16 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
                     );
                   },
             child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+              padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
                   Container(
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: _paymentStatusColor(payment.status)
-                          .withValues(alpha: 0.18),
+                      color: _paymentStatusColor(
+                        payment.status,
+                      ).withValues(alpha: 0.18),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
