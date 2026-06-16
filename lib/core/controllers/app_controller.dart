@@ -4,11 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:hero_app_flutter/core/config/api_connect.dart';
+import 'package:hero_app_flutter/core/models/enums.dart';
 import 'package:hero_app_flutter/core/models/payment_history_model.dart';
 import 'package:hero_app_flutter/core/models/user_model.dart';
 import 'package:hero_app_flutter/core/session/session_store.dart';
 import 'package:hero_app_flutter/core/services/payment_service.dart';
 import 'package:hero_app_flutter/core/services/users_service.dart';
+import 'package:hero_app_flutter/features/auth/login_page.dart';
 
 class AppController extends GetxController {
   AppController({GetStorage? storage, SessionStore? sessionStore})
@@ -96,6 +98,13 @@ class AppController extends GetxController {
           final userData = _extractUserMap(jsonDecode(response.body));
           if (userData.isNotEmpty) {
             _applyUserData(userData);
+            if (user.value?.statusFlag != StatusFlag.ACTIVE) {
+              clearUserData(tokenExpired: true);
+              if (Get.context != null) {
+                Get.offAll(() => const LoginPage());
+              }
+              return;
+            }
             await refreshSubscriptionStatus();
             errorMessage.value = '';
           } else {

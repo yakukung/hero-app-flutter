@@ -19,6 +19,7 @@ class SheetsController extends GetxController {
   var categories = <CategoryModel>[].obs;
   var isLoading = false.obs;
   var errorMessage = ''.obs;
+  final RxInt _preferencesVersion = 0.obs;
 
   final SessionStore _sessionStore;
 
@@ -204,6 +205,7 @@ class SheetsController extends GetxController {
   }
 
   List<SheetModel> recommendedSheets({PreferencesService? preferencesService}) {
+    _preferencesVersion.value; // track reactivity
     final preferences = (preferencesService ?? PreferencesService()).load();
     final backendRecommendations = backendRecommendedSheets.toList();
 
@@ -253,6 +255,8 @@ class SheetsController extends GetxController {
     }
     return filtered..sort(_sortByRatingAndDate);
   }
+
+  void notifyPreferencesChanged() => _preferencesVersion.value++;
 
   static int _sortByRatingAndDate(SheetModel a, SheetModel b) {
     final ratingCompare = (b.rating ?? 0).compareTo(a.rating ?? 0);

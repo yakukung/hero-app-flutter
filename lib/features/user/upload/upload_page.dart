@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 
 import 'package:hero_app_flutter/core/controllers/navigation_controller.dart';
 import 'package:hero_app_flutter/core/services/pdf_page_render_service.dart';
@@ -30,7 +29,6 @@ class UploadPage extends StatefulWidget {
 
 class _UploadPageState extends State<UploadPage> {
   late final UploadPageController _controller;
-  final ImagePicker _picker = ImagePicker();
   final PdfPageRenderService _pdfPageRenderService =
       const PdfPageRenderService();
   final ValueNotifier<_PdfRenderProgress> _pdfRenderProgressNotifier =
@@ -58,10 +56,25 @@ class _UploadPageState extends State<UploadPage> {
   }
 
   Future<void> _pickImages() async {
-    final images = await _picker.pickMultiImage();
-    if (images.isEmpty) {
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'heic', 'heif'],
+        allowMultiple: true,
+      );
+    } catch (error) {
       return;
     }
+
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
+
+    final images = result.files
+        .where((f) => f.path != null)
+        .map((f) => File(f.path!))
+        .toList();
 
     if (_controller.uploadedImages.length + images.length >
         maxSheetUploadPageCount) {
@@ -72,7 +85,7 @@ class _UploadPageState extends State<UploadPage> {
       return;
     }
 
-    _controller.addImages(images.map((image) => File(image.path)));
+    _controller.addImages(images);
   }
 
   Future<void> _pickPdf() async {

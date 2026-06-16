@@ -12,6 +12,7 @@ import 'package:hero_app_flutter/constants/app_colors.dart';
 import 'package:hero_app_flutter/features/user/community/widgets/community_post_card.dart';
 import 'package:hero_app_flutter/features/user/sheet/preview_sheet_page.dart';
 import 'package:hero_app_flutter/shared/widgets/profile_avatar.dart';
+import 'package:hero_app_flutter/features/user/community/widgets/comment_sheet.dart';
 
 class UserProfileViewPage extends StatefulWidget {
   final String userId;
@@ -228,6 +229,93 @@ class _UserProfileViewPageState extends State<UserProfileViewPage>
         setState(() => _isFollowBusy = false);
       }
     }
+  }
+
+  Future<void> _toggleLike(PostModel post) async {
+    final success = post.isLiked
+        ? await PostsService.unlikePost(post.id)
+        : await PostsService.likePost(post.id);
+    if (!success || !mounted) return;
+
+    List<PostModel>? updateList(List<PostModel> list) {
+      final index = list.indexWhere((p) => p.id == post.id);
+      if (index == -1) return null;
+      final updated = list[index].copyWith(
+        isLiked: !list[index].isLiked,
+        likeCount: list[index].likeCount + (list[index].isLiked ? -1 : 1),
+      );
+      final newList = [...list];
+      newList[index] = updated;
+      return newList;
+    }
+
+    setState(() {
+      final updatedPosts = updateList(_posts);
+      if (updatedPosts != null) _posts = updatedPosts;
+      final updatedShared = updateList(_sharedPosts);
+      if (updatedShared != null) _sharedPosts = updatedShared;
+    });
+  }
+
+  Future<void> _openComments(PostModel post) async {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null || currentUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณาเข้าสู่ระบบเพื่อแสดงความคิดเห็น')),
+      );
+      return;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => CommentSheet(
+        post: post,
+        currentUserId: currentUserId,
+        onCommentCountChanged: (count) {},
+      ),
+    );
+  }
+
+  Future<void> _toggleSharePost(PostModel post) async {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null || currentUserId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณาเข้าสู่ระบบก่อนแชร์โพสต์')),
+      );
+      return;
+    }
+
+    final result = post.isShared
+        ? await PostsService.unsharePost(post.id)
+        : await PostsService.sharePost(post.id);
+    if (!result.success || !mounted) return;
+
+    List<PostModel>? updateList(List<PostModel> list) {
+      final index = list.indexWhere((p) => p.id == post.id);
+      if (index == -1) return null;
+      if (result.removed) {
+        return list.where((p) => p.id != post.id).toList();
+      }
+      final updated = list[index].copyWith(
+        isShared: true,
+        shareCount: result.shareCount ?? list[index].shareCount + 1,
+      );
+      final newList = [...list];
+      newList[index] = updated;
+      return newList;
+    }
+
+    setState(() {
+      final updatedPosts = updateList(_posts);
+      if (updatedPosts != null) _posts = updatedPosts;
+      final updatedShared = updateList(_sharedPosts);
+      if (updatedShared != null) _sharedPosts = updatedShared;
+    });
   }
 
   @override
@@ -561,9 +649,9 @@ class _UserProfileViewPageState extends State<UserProfileViewPage>
                     : () => Get.to(
                         () => PreviewSheetPage(sheetId: post.sheetId!),
                       ),
-                onLikeTap: () {},
-                onCommentTap: () {},
-                onShareTap: () {},
+                onLikeTap: () => _toggleLike(post),
+                onCommentTap: () => _openComments(post),
+                onShareTap: () => _toggleSharePost(post),
               ),
             ),
           )

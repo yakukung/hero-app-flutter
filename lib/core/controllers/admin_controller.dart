@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:hero_app_flutter/core/models/user_model.dart';
 import 'package:hero_app_flutter/core/session/session_store.dart';
 import 'package:hero_app_flutter/core/services/admin_service.dart';
+import 'package:hero_app_flutter/core/utils/api_utils.dart';
 
 class AdminController extends GetxController {
   AdminController({GetStorage? storage, SessionStore? sessionStore})
@@ -83,8 +84,20 @@ class AdminController extends GetxController {
         token: token.isNotEmpty ? token : null,
       );
       if (response.statusCode == 204) return true;
-      final body = jsonDecode(response.body);
-      errorMessage.value = body['message'] ?? 'ไม่สามารถเปลี่ยนชื่อผู้ใช้ได้';
+
+      final String rawMessage = getErrorMessage(
+        response,
+        fallback: 'ไม่สามารถเปลี่ยนชื่อผู้ใช้ได้',
+      );
+
+      if (response.statusCode == 409 || rawMessage == 'CONFLICT') {
+        errorMessage.value = 'ชื่อผู้ใช้นี้ถูกใช้งานแล้ว กรุณาใช้ชื่ออื่น';
+      } else if (response.statusCode == 400 || rawMessage == 'BAD_REQUEST') {
+        errorMessage.value = 'ข้อมูลชื่อผู้ใช้ไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
+      } else {
+        errorMessage.value = rawMessage;
+      }
+
       return false;
     } catch (e) {
       debugPrint('Error updating username by admin: $e');
@@ -102,8 +115,20 @@ class AdminController extends GetxController {
         token: token.isNotEmpty ? token : null,
       );
       if (response.statusCode == 204) return true;
-      final body = jsonDecode(response.body);
-      errorMessage.value = body['message'] ?? 'ไม่สามารถเปลี่ยนอีเมลได้';
+
+      final String rawMessage = getErrorMessage(
+        response,
+        fallback: 'ไม่สามารถเปลี่ยนอีเมลได้',
+      );
+
+      if (response.statusCode == 409 || rawMessage == 'CONFLICT') {
+        errorMessage.value = 'อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้ที่อยู่อีเมลอื่น';
+      } else if (response.statusCode == 400 || rawMessage == 'BAD_REQUEST') {
+        errorMessage.value = 'รูปแบบอีเมลไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง';
+      } else {
+        errorMessage.value = rawMessage;
+      }
+
       return false;
     } catch (e) {
       debugPrint('Error updating email by admin: $e');
@@ -121,8 +146,19 @@ class AdminController extends GetxController {
         token: token.isNotEmpty ? token : null,
       );
       if (response.statusCode == 204) return true;
-      final body = jsonDecode(response.body);
-      errorMessage.value = body['message'] ?? 'ไม่สามารถเปลี่ยนรหัสผ่านได้';
+
+      final String rawMessage = getErrorMessage(
+        response,
+        fallback: 'ไม่สามารถเปลี่ยนรหัสผ่านได้',
+      );
+
+      if (response.statusCode == 400 || rawMessage == 'BAD_REQUEST') {
+        errorMessage.value =
+            'รูปแบบรหัสผ่านไม่ถูกต้อง กรุณาใช้รหัสผ่านที่แข็งแรง';
+      } else {
+        errorMessage.value = rawMessage;
+      }
+
       return false;
     } catch (e) {
       debugPrint('Error updating password by admin: $e');

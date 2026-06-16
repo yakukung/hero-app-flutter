@@ -61,17 +61,16 @@ class _AdminSheetsPageState extends State<AdminSheetsPage> {
     List<SheetModel> sheets;
     if (_isOkResponse(adminResponse.statusCode)) {
       sheets = [];
-      for (final item in getApiList(
-        adminResponse.body,
-        const ['sheets', 'items', 'data'],
-      ).whereType<Map>()) {
+      for (final item in getApiList(adminResponse.body, const [
+        'sheets',
+        'items',
+        'data',
+      ]).whereType<Map>()) {
         final map = Map<String, dynamic>.from(item);
         sheets.add(SheetModel.fromJson(map));
       }
     } else {
-      sheets = await SheetsService.fetchSheets(
-        token: _sessionStore.token,
-      );
+      sheets = await SheetsService.fetchSheets(token: _sessionStore.token);
     }
 
     // admin API doesn't return categories, merge them from regular API
@@ -136,10 +135,10 @@ class _AdminSheetsPageState extends State<AdminSheetsPage> {
       final q = _searchQuery.trim().toLowerCase();
       result = result.where((e) {
         final titleMatch = e.title.toLowerCase().contains(q);
-        final authorMatch =
-            e.authorName?.toLowerCase().contains(q) ?? false;
-        final categoryMatch = (e.categoryIds ?? [])
-            .any((c) => c.toLowerCase().contains(q));
+        final authorMatch = e.authorName?.toLowerCase().contains(q) ?? false;
+        final categoryMatch = (e.categoryIds ?? []).any(
+          (c) => c.toLowerCase().contains(q),
+        );
         return titleMatch || authorMatch || categoryMatch;
       }).toList();
     }
@@ -224,7 +223,10 @@ class _AdminSheetsPageState extends State<AdminSheetsPage> {
             return AdminEmptyStatePage(
               title: 'จัดการชีต',
               icon: Icons.error_outline,
-              message: snapshot.error.toString().replaceFirst('Exception: ', ''),
+              message: snapshot.error.toString().replaceFirst(
+                'Exception: ',
+                '',
+              ),
               onRefresh: _refresh,
             );
           }
@@ -239,7 +241,8 @@ class _AdminSheetsPageState extends State<AdminSheetsPage> {
                     ? AdminEmptyStatePage(
                         title: 'จัดการชีต',
                         icon: Icons.description_outlined,
-                        message: _searchQuery.isNotEmpty ||
+                        message:
+                            _searchQuery.isNotEmpty ||
                                 _statusFilter != null ||
                                 _typeFilter != null
                             ? 'ไม่พบชีตที่ตรงกับที่ค้นหา'
@@ -257,7 +260,10 @@ class _AdminSheetsPageState extends State<AdminSheetsPage> {
                           itemBuilder: (context, index) {
                             if (index == 0) {
                               return Padding(
-                                padding: const EdgeInsets.only(top: 8, bottom: 4),
+                                padding: const EdgeInsets.only(
+                                  top: 8,
+                                  bottom: 4,
+                                ),
                                 child: AdminSectionHeader(
                                   title: 'ชีตทั้งหมด',
                                   subtitle: '${sheets.length} รายการ',
@@ -277,14 +283,14 @@ class _AdminSheetsPageState extends State<AdminSheetsPage> {
                               visibleFlag,
                             );
                             final displayBuyerCount =
-                                _sheetBuyerOverrides[sheet.id] ?? sheet.buyerCount;
+                                _sheetBuyerOverrides[sheet.id] ??
+                                sheet.buyerCount;
                             return _AdminSheetCard(
                               sheet: sheet,
                               statusFlag: statusFlag,
                               visibleFlag: visibleFlag,
                               buyerCount: displayBuyerCount,
-                              isUpdating:
-                                  _updatingSheetIds.contains(sheet.id),
+                              isUpdating: _updatingSheetIds.contains(sheet.id),
                               onTap: () => Get.to(
                                 () => AdminSheetDetailPage(sheetId: sheet.id),
                               ),
@@ -334,7 +340,7 @@ class _AdminSheetsPageState extends State<AdminSheetsPage> {
                 color: AdminColors.text,
               ),
               decoration: InputDecoration(
-                hintText: 'ค้นหาชื่อชีต, ประเภท, หรือชื่อเจ้าของ',
+                hintText: 'ค้นหาชื่อชีต, รายวิชา, หรือชื่อเจ้าของ',
                 hintStyle: const TextStyle(
                   fontFamily: AppFonts.sukhumvit,
                   color: AdminColors.muted,
@@ -393,14 +399,16 @@ class _AdminSheetsPageState extends State<AdminSheetsPage> {
                           label: 'แสดง',
                           color: _contentStatusColor(StatusFlag.ACTIVE),
                           selected: _statusFilter == StatusFlag.ACTIVE,
-                          onTap: () => setState(() => _statusFilter = StatusFlag.ACTIVE),
+                          onTap: () =>
+                              setState(() => _statusFilter = StatusFlag.ACTIVE),
                         );
                       }
                       return _FilterChip(
                         label: 'ซ่อน',
                         color: _contentStatusColor(StatusFlag.INACTIVE),
                         selected: _statusFilter == StatusFlag.INACTIVE,
-                        onTap: () => setState(() => _statusFilter = StatusFlag.INACTIVE),
+                        onTap: () =>
+                            setState(() => _statusFilter = StatusFlag.INACTIVE),
                       );
                     },
                   ),
@@ -484,8 +492,9 @@ class _AdminSheetCard extends StatelessWidget {
                 ? Icons.visibility_off_outlined
                 : Icons.visibility_outlined,
           );
-    final priceLabel =
-        sheet.price == null ? 'ฟรี' : '฿${sheet.price!.toStringAsFixed(2)}';
+    final priceLabel = sheet.price == null
+        ? 'ฟรี'
+        : '฿${sheet.price!.toStringAsFixed(2)}';
 
     return Material(
       color: Colors.white,
@@ -499,81 +508,81 @@ class _AdminSheetCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        sheet.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      if (sheet.description?.isNotEmpty == true) ...[
-                        const SizedBox(height: 4),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          sheet.description!,
-                          maxLines: 2,
+                          sheet.title,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.black87),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
+                        if (sheet.description?.isNotEmpty == true) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            sheet.description!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.black87),
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                AdminStatusPill(
-                  label: _contentStatusLabel(effectiveStatus),
-                  color: statusColor,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 6,
-              children: [
-                AdminInfoText(
-                  icon: Icons.person_outline,
-                  text: sheet.authorName?.isNotEmpty == true
-                      ? sheet.authorName!
-                      : sheet.authorId,
-                ),
-                AdminInfoText(icon: Icons.sell_outlined, text: priceLabel),
-                AdminInfoText(
-                  icon: Icons.shopping_bag_outlined,
-                  text: '$buyerCount ผู้ซื้อ',
-                ),
-                AdminInfoText(
-                  icon: Icons.schedule_outlined,
-                  text: _formatDateTime(sheet.createdAt),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: isVisible
-                  ? OutlinedButton.icon(
-                      onPressed: isUpdating ? null : onToggleStatus,
-                      icon: actionIcon,
-                      label: const Text('ซ่อนชีต'),
-                    )
-                  : FilledButton.icon(
-                      onPressed: isUpdating ? null : onToggleStatus,
-                      icon: actionIcon,
-                      label: const Text('แสดงชีต'),
                     ),
-            ),
-          ],
+                  ),
+                  const SizedBox(width: 12),
+                  AdminStatusPill(
+                    label: _contentStatusLabel(effectiveStatus),
+                    color: statusColor,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 6,
+                children: [
+                  AdminInfoText(
+                    icon: Icons.person_outline,
+                    text: sheet.authorName?.isNotEmpty == true
+                        ? sheet.authorName!
+                        : sheet.authorId,
+                  ),
+                  AdminInfoText(icon: Icons.sell_outlined, text: priceLabel),
+                  AdminInfoText(
+                    icon: Icons.shopping_bag_outlined,
+                    text: '$buyerCount ผู้ซื้อ',
+                  ),
+                  AdminInfoText(
+                    icon: Icons.schedule_outlined,
+                    text: _formatDateTime(sheet.createdAt),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: isVisible
+                    ? OutlinedButton.icon(
+                        onPressed: isUpdating ? null : onToggleStatus,
+                        icon: actionIcon,
+                        label: const Text('ซ่อนชีต'),
+                      )
+                    : FilledButton.icon(
+                        onPressed: isUpdating ? null : onToggleStatus,
+                        icon: actionIcon,
+                        label: const Text('แสดงชีต'),
+                      ),
+              ),
+            ],
           ),
         ),
       ),
@@ -676,7 +685,9 @@ class _FilterChip extends StatelessWidget {
           color: selected ? chipColor.withValues(alpha: 0.18) : Colors.white,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: selected ? chipColor.withValues(alpha: 0.4) : AdminColors.border,
+            color: selected
+                ? chipColor.withValues(alpha: 0.4)
+                : AdminColors.border,
           ),
         ),
         alignment: Alignment.center,

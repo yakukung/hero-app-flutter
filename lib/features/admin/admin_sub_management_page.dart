@@ -75,6 +75,13 @@ class _AdminSubManagementPageState extends State<AdminSubManagementPage> {
     final dur = int.tryParse(durTxt);
     if (dur == null || dur <= 0) return _snack('กรุณากรอกจำนวน${_intervalLabel(p.billingInterval)}ให้ถูกต้อง');
 
+    if (p.billingInterval == 'MONTH' && dur > 12) {
+      return _snack('ระยะเวลาเป็นเดือนต้องไม่เกิน 12 เดือน');
+    }
+    if (p.billingInterval == 'YEAR' && dur > 100) {
+      return _snack('ระยะเวลาเป็นปีต้องไม่เกิน 100 ปี');
+    }
+
     setState(() => _saving.add(i));
     final res = await _api.patchJson(
       path: '/admin/plans/${p.id}',
