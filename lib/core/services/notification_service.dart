@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
+import 'package:get_storage/get_storage.dart';
+import 'package:hero_app_flutter/core/controllers/sheets_controller.dart';
 import 'package:hero_app_flutter/core/models/notification_model.dart';
 import 'package:hero_app_flutter/core/models/service_result.dart';
+import 'package:hero_app_flutter/core/models/sheet_model.dart';
 import 'package:hero_app_flutter/core/network/api_client.dart';
 import 'package:hero_app_flutter/core/session/session_store.dart';
 import 'package:hero_app_flutter/core/utils/api_utils.dart';
@@ -85,5 +89,74 @@ class NotificationService {
         token: token,
       );
     } catch (_) {}
+  }
+
+  static List<AppNotificationModel> buildSheetNotifications({
+    required DateTime lastSeenAt,
+    List<SheetModel>? sheets,
+  }) {
+    final allSheets = sheets ?? Get.find<SheetsController>().sheets;
+    final results = <AppNotificationModel>[];
+
+    for (final sheet in allSheets) {
+      final isNew = sheet.createdAt.isAfter(lastSeenAt);
+      final isUpdated = sheet.updatedAt != null &&
+          sheet.updatedAt!.isAfter(lastSeenAt) &&
+          sheet.updatedAt!.difference(sheet.createdAt).inSeconds > 5;
+
+      if (!isNew && !isUpdated) continue;
+
+      results.add(AppNotificationModel(
+        id: 'sheet_${sheet.id}',
+        title: isNew ? 'ชีตใหม่' : 'ชีตอัปเดต',
+        message: isNew
+            ? 'มีชีตใหม่ "${sheet.title}"'
+            : 'ชีต "${sheet.title}" มีการอัปเดต',
+        createdAt: isNew ? sheet.createdAt : sheet.updatedAt!,
+        isRead: false,
+        referenceTable: 'sheets',
+        referenceId: sheet.id,
+      ));
+    }
+
+    results.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return results;
+  }
+
+  static int countUnreadSheets({
+    required DateTime lastSeenAt,
+    List<SheetModel>? sheets,
+  }) {
+    final allSheets = sheets ?? Get.find<SheetsController>().sheets;
+    return allSheets.where((s) {
+      if (s.createdAt.isAfter(lastSeenAt)) {
+        return true;
+      }
+      if (s.updatedAt != null &&
+          s.updatedAt!.isAfter(lastSeenAt) &&
+          s.updatedAt!.difference(s.createdAt).inSeconds > 5) {
+        return true;
+      }
+      return false;
+    }).length;
+  }
+}
+
+class NotificationPreferences {
+  NotificationPreferences._();
+
+  static final _box = GetStorage();
+
+  static DateTime? get lastSeenAt {
+    final ts = _box.read<String>('notificationLastSeenAt');
+    return ts != null ? DateTime.tryParse(ts) : null;
+  }
+
+  static set lastSeenAt(DateTime value) {
+    _box.write('notificationLastSeenAt', value.toIso8601String());
+  }
+
+  static void markAsSeen() {
+    lastSeenAt = DateTime.now();
   }
 }

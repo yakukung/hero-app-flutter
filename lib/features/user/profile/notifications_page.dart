@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:hero_app_flutter/core/controllers/app_controller.dart';
+import 'package:hero_app_flutter/core/controllers/navigation_controller.dart';
+import 'package:hero_app_flutter/core/controllers/sheets_controller.dart';
 import 'package:hero_app_flutter/core/models/notification_model.dart';
+import 'package:hero_app_flutter/core/models/service_result.dart';
+import 'package:hero_app_flutter/core/models/sheet_model.dart';
 import 'package:hero_app_flutter/core/services/notification_service.dart';
 import 'package:hero_app_flutter/core/services/payment_service.dart';
 import 'package:hero_app_flutter/features/user/profile/widgets/profile_subscription.dart';
@@ -27,6 +31,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
     _loadNotifications();
   }
 
+  @override
+  void dispose() {
+    NotificationPreferences.markAsSeen();
+    super.dispose();
+  }
+
   bool get _hasPremiumExpiryBanner {
     final status = _appController.subscriptionStatus.value;
     if (status == null || !status.isPremium) return false;
@@ -41,13 +51,65 @@ class _NotificationsPageState extends State<NotificationsPage> {
       _isLoading = true;
       _errorMessage = '';
     });
-    final result = await NotificationService.fetchNotifications();
+
+    final lastSeen = NotificationPreferences.lastSeenAt;
+    if (lastSeen == null) {
+      NotificationPreferences.markAsSeen();
+    }
+
+    final sheetsCtrl = Get.find<SheetsController>();
+    if (sheetsCtrl.sheets.isEmpty) {
+      await sheetsCtrl.fetchSheets();
+    } else {
+      await sheetsCtrl.fetchSheets(forceRefresh: true);
+    }
+
+    final results = await Future.wait([
+      NotificationService.fetchNotifications(),
+      Future(() => sheetsCtrl.sheets),
+    ]);
+
+    final result = results[0] as ServiceResult<List<AppNotificationModel>>;
+    final sheets = results[1] as List<SheetModel>;
+
     if (!mounted) return;
+
+    if (lastSeen != null) {
+      debugPrint('=== SHEET NOTIFICATION DEBUG ===');
+      debugPrint('lastSeenAt: $lastSeen');
+      debugPrint('total sheets: ${sheets.length}');
+      for (final s in sheets) {
+        final isNew = s.createdAt.isAfter(lastSeen);
+        final isUpdated = s.updatedAt != null &&
+            s.updatedAt!.isAfter(lastSeen) &&
+            s.updatedAt!.difference(s.createdAt).inSeconds > 5;
+        if (isNew || isUpdated) {
+          debugPrint('  MATCH: ${s.id} "${s.title}" created=${s.createdAt} new=$isNew updated=$isUpdated');
+        }
+      }
+    }
+
+    final sheetNotis = lastSeen != null
+        ? NotificationService.buildSheetNotifications(
+            lastSeenAt: lastSeen,
+            sheets: sheets,
+          )
+        : <AppNotificationModel>[];
+
+    final merged = <AppNotificationModel>[
+      ...?result.data,
+      ...sheetNotis,
+    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
     setState(() {
       _isLoading = false;
-      _notifications = result.data ?? const [];
+      _notifications = merged;
       _errorMessage = result.success ? '' : result.message;
     });
+
+    try {
+      Get.find<NavigationController>().refreshUnreadCount();
+    } catch (_) {}
   }
 
   void _showSubscriptionSheet() {
@@ -207,7 +269,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (notificationIndex < 0) return;
     final item = _notifications[notificationIndex];
     if (item.isRead) return;
-    NotificationService.markAsRead(item.id);
+
+    if (!item.id.startsWith('sheet_')) {
+      NotificationService.markAsRead(item.id);
+    }
+
     setState(() {
       _notifications[notificationIndex] = AppNotificationModel(
         id: item.id,
@@ -217,6 +283,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
         isRead: true,
       );
     });
+
+    try {
+      Get.find<NavigationController>().refreshUnreadCount();
+    } catch (_) {}
   }
 
   String _timeAgo(DateTime date) {
